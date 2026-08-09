@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,7 +12,8 @@ namespace CipherNest.Infrastructure.Services;
 public sealed class EncryptedBackupService : IBackupService
 {
     private const int ChunkSize = 1024 * 1024;
-    private static readonly byte[] Magic = "CNBK0001"u8.ToArray();
+    private const long MaxArchiveBytes = 1024L * 1024 * 1024;
+    private static readonly byte[] Magic = "CNBK0002"u8.ToArray();
     private readonly IVaultStore _store;
     private readonly ICryptoService _crypto;
 
@@ -25,45 +27,48 @@ public sealed class EncryptedBackupService : IBackupService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupPassphrase);
-        var snapshot = Path.Combine(Path.GetTempPath(), $"ciphernest-snapshot-{Guid.NewGuid():N}.db");
-        var temp = destinationPath + ".tmp";
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var kdf = CryptoService.DefaultKdf;
+        var working = Path.Combine(Path.GetTempPath(), $"ciphernest-backup-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(working);
+        var snapshot = Path.Combine(working, "vault.db");
+        var archive = Path.Combine(working, "payload.zip");
+        var tempOutput = destinationPath + ".tmp";
         byte[]? key = null;
         try
         {
             await _store.CreateConsistentSnapshotAsync(snapshot, cancellationToken).ConfigureAwait(false);
+            await CreateArchiveAsync(snapshot, archive, cancellationToken).ConfigureAwait(false);
+            var salt = RandomNumberGenerator.GetBytes(16);
+            var kdf = CryptoService.DefaultKdf;
             key = _crypto.DeriveKey(backupPassphrase.AsSpan(), salt, kdf);
-            var header = new BackupHeader(AppConstants.CryptoFormatVersion, salt, kdf, ChunkSize);
+            var header = new BackupHeader(2, salt, kdf, ChunkSize, DateTimeOffset.UtcNow);
             var headerJson = JsonSerializer.SerializeToUtf8Bytes(header);
-            await using var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
+            await using var output = new FileStream(tempOutput, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
             await output.WriteAsync(Magic, cancellationToken).ConfigureAwait(false);
             await WriteInt32Async(output, headerJson.Length, cancellationToken).ConfigureAwait(false);
             await output.WriteAsync(headerJson, cancellationToken).ConfigureAwait(false);
-            await using var input = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
+            await using var input = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
             var buffer = new byte[ChunkSize];
-            var chunkIndex = 0;
+            var index = 0;
             int read;
             while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
             {
                 var isFinal = input.Position == input.Length;
-                var aad = BuildChunkAad(headerJson, chunkIndex, isFinal);
-                var envelope = _crypto.Encrypt(buffer.AsSpan(0, read), key, aad);
+                var envelope = _crypto.Encrypt(buffer.AsSpan(0, read), key, BuildChunkAad(headerJson, index, isFinal));
                 await WriteInt32Async(output, read, cancellationToken).ConfigureAwait(false);
                 await output.WriteAsync(envelope.Nonce, cancellationToken).ConfigureAwait(false);
                 await output.WriteAsync(envelope.Tag, cancellationToken).ConfigureAwait(false);
                 await output.WriteAsync(envelope.Ciphertext, cancellationToken).ConfigureAwait(false);
-                chunkIndex++;
+                index++;
             }
             await WriteInt32Async(output, -1, cancellationToken).ConfigureAwait(false);
             await output.FlushAsync(cancellationToken).ConfigureAwait(false);
-            File.Move(temp, destinationPath, overwrite: true);
+            File.Move(tempOutput, destinationPath, overwrite: true);
         }
         finally
         {
             if (key is not null) CryptographicOperations.ZeroMemory(key);
-            if (File.Exists(snapshot)) File.Delete(snapshot);
-            if (File.Exists(temp)) File.Delete(temp);
+            if (File.Exists(tempOutput)) File.Delete(tempOutput);
+            TryDeleteDirectory(working);
         }
     }
 
@@ -71,45 +76,35 @@ public sealed class EncryptedBackupService : IBackupService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupPassphrase);
-        var restoreDb = Path.Combine(Path.GetTempPath(), $"ciphernest-restore-{Guid.NewGuid():N}.db");
+        var working = Path.Combine(Path.GetTempPath(), $"ciphernest-restore-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(working);
+        var archive = Path.Combine(working, "payload.zip");
+        var staged = Path.Combine(working, "staged");
+        var rollbackDb = Path.Combine(working, "rollback.db");
         byte[]? key = null;
         try
         {
-            await using var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
-            var magic = new byte[Magic.Length];
-            await ReadExactlyAsync(input, magic, cancellationToken).ConfigureAwait(false);
-            if (!CryptographicOperations.FixedTimeEquals(magic, Magic)) throw new InvalidDataException("Not a CipherNest backup.");
-            var headerLength = await ReadInt32Async(input, cancellationToken).ConfigureAwait(false);
-            if (headerLength is < 16 or > 16_384) throw new InvalidDataException("Invalid backup header size.");
-            var headerJson = new byte[headerLength];
-            await ReadExactlyAsync(input, headerJson, cancellationToken).ConfigureAwait(false);
-            var header = JsonSerializer.Deserialize<BackupHeader>(headerJson) ?? throw new InvalidDataException("Invalid backup header.");
-            if (header.Version != AppConstants.CryptoFormatVersion || header.ChunkSize is < 64 * 1024 or > 4 * 1024 * 1024) throw new InvalidDataException("Unsupported backup format.");
-            key = _crypto.DeriveKey(backupPassphrase.AsSpan(), header.Salt, header.Kdf);
-            await using (var output = new FileStream(restoreDb, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true))
+            await using (var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true))
             {
-                var index = 0;
-                while (true)
-                {
-                    var plainLength = await ReadInt32Async(input, cancellationToken).ConfigureAwait(false);
-                    if (plainLength == -1) break;
-                    if (plainLength is < 1 || plainLength > header.ChunkSize) throw new InvalidDataException("Invalid backup chunk size.");
-                    var nonce = new byte[12];
-                    var tag = new byte[16];
-                    var cipher = new byte[plainLength];
-                    await ReadExactlyAsync(input, nonce, cancellationToken).ConfigureAwait(false);
-                    await ReadExactlyAsync(input, tag, cancellationToken).ConfigureAwait(false);
-                    await ReadExactlyAsync(input, cipher, cancellationToken).ConfigureAwait(false);
-                    var isFinal = input.Position >= input.Length - sizeof(int);
-                    var plaintext = _crypto.Decrypt(new EncryptedEnvelope(header.Version, nonce, cipher, tag), key, BuildChunkAad(headerJson, index, isFinal));
-                    try { await output.WriteAsync(plaintext, cancellationToken).ConfigureAwait(false); }
-                    finally { CryptographicOperations.ZeroMemory(plaintext); }
-                    index++;
-                }
-                await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+                var magic = new byte[Magic.Length];
+                await ReadExactlyAsync(input, magic, cancellationToken).ConfigureAwait(false);
+                if (!CryptographicOperations.FixedTimeEquals(magic, Magic)) throw new InvalidDataException("Unsupported or invalid CipherNest backup.");
+                var headerLength = await ReadInt32Async(input, cancellationToken).ConfigureAwait(false);
+                if (headerLength is < 16 or > 16_384) throw new InvalidDataException("Invalid backup header size.");
+                var headerJson = new byte[headerLength];
+                await ReadExactlyAsync(input, headerJson, cancellationToken).ConfigureAwait(false);
+                var header = JsonSerializer.Deserialize<BackupHeader>(headerJson) ?? throw new InvalidDataException("Invalid backup header.");
+                if (header.Version != 2 || header.ChunkSize is < 64 * 1024 or > 4 * 1024 * 1024) throw new InvalidDataException("Unsupported backup format.");
+                key = _crypto.DeriveKey(backupPassphrase.AsSpan(), header.Salt, header.Kdf);
+                await DecryptArchiveAsync(input, archive, header, headerJson, key, cancellationToken).ConfigureAwait(false);
             }
-            await ValidateSqliteAsync(restoreDb, cancellationToken).ConfigureAwait(false);
-            await _store.ReplaceDatabaseAsync(restoreDb, cancellationToken).ConfigureAwait(false);
+
+            Directory.CreateDirectory(staged);
+            await ExtractAndValidateArchiveAsync(archive, staged, cancellationToken).ConfigureAwait(false);
+            var stagedDb = Path.Combine(staged, "vault.db");
+            await ValidateSqliteAsync(stagedDb, cancellationToken).ConfigureAwait(false);
+            await _store.CreateConsistentSnapshotAsync(rollbackDb, cancellationToken).ConfigureAwait(false);
+            await ReplaceDatabaseAndAttachmentsAsync(staged, rollbackDb, cancellationToken).ConfigureAwait(false);
         }
         catch (CryptographicException ex)
         {
@@ -118,7 +113,121 @@ public sealed class EncryptedBackupService : IBackupService
         finally
         {
             if (key is not null) CryptographicOperations.ZeroMemory(key);
-            if (File.Exists(restoreDb)) File.Delete(restoreDb);
+            TryDeleteDirectory(working);
+        }
+    }
+
+    private async Task CreateArchiveAsync(string snapshot, string archivePath, CancellationToken cancellationToken)
+    {
+        await using var stream = new FileStream(archivePath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 128 * 1024, useAsync: true);
+        using var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true);
+        await AddFileAsync(zip, snapshot, "vault.db", cancellationToken).ConfigureAwait(false);
+        var attachmentDirectory = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, AppConstants.AttachmentDirectoryName);
+        if (!Directory.Exists(attachmentDirectory)) return;
+        foreach (var file in Directory.EnumerateFiles(attachmentDirectory, "*.cna", SearchOption.TopDirectoryOnly))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var name = Path.GetFileName(file);
+            if (!Guid.TryParseExact(Path.GetFileNameWithoutExtension(name), "N", out _)) continue;
+            await AddFileAsync(zip, file, $"attachments/{name}", cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task AddFileAsync(ZipArchive zip, string sourcePath, string entryName, CancellationToken cancellationToken)
+    {
+        var entry = zip.CreateEntry(entryName, CompressionLevel.NoCompression);
+        await using var destination = entry.Open();
+        await using var source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
+        await source.CopyToAsync(destination, 128 * 1024, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task DecryptArchiveAsync(Stream input, string archivePath, BackupHeader header, byte[] headerJson, byte[] key, CancellationToken cancellationToken)
+    {
+        await using var output = new FileStream(archivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
+        long total = 0;
+        var index = 0;
+        while (true)
+        {
+            var plainLength = await ReadInt32Async(input, cancellationToken).ConfigureAwait(false);
+            if (plainLength == -1) break;
+            if (plainLength is < 1 || plainLength > header.ChunkSize) throw new InvalidDataException("Invalid backup chunk size.");
+            total += plainLength;
+            if (total > MaxArchiveBytes) throw new InvalidDataException("Backup archive exceeds the supported size limit.");
+            var nonce = new byte[12];
+            var tag = new byte[16];
+            var cipher = new byte[plainLength];
+            await ReadExactlyAsync(input, nonce, cancellationToken).ConfigureAwait(false);
+            await ReadExactlyAsync(input, tag, cancellationToken).ConfigureAwait(false);
+            await ReadExactlyAsync(input, cipher, cancellationToken).ConfigureAwait(false);
+            var isFinal = input.Position >= input.Length - sizeof(int);
+            var plaintext = _crypto.Decrypt(new EncryptedEnvelope(AppConstants.CryptoFormatVersion, nonce, cipher, tag), key, BuildChunkAad(headerJson, index, isFinal));
+            try { await output.WriteAsync(plaintext, cancellationToken).ConfigureAwait(false); }
+            finally { CryptographicOperations.ZeroMemory(plaintext); }
+            index++;
+        }
+        if (input.Position != input.Length) throw new InvalidDataException("Backup contains trailing unauthenticated data.");
+        await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task ExtractAndValidateArchiveAsync(string archivePath, string destination, CancellationToken cancellationToken)
+    {
+        using var archive = ZipFile.OpenRead(archivePath);
+        if (archive.Entries.Count > 10_001) throw new InvalidDataException("Backup contains too many files.");
+        var hasDatabase = false;
+        long total = 0;
+        foreach (var entry in archive.Entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (entry.Length < 0 || entry.Length > MaxArchiveBytes) throw new InvalidDataException("Backup entry is too large.");
+            total += entry.Length;
+            if (total > MaxArchiveBytes) throw new InvalidDataException("Backup content exceeds the supported size limit.");
+            var normalized = entry.FullName.Replace('\\', '/');
+            var allowedDb = normalized == "vault.db";
+            var allowedAttachment = normalized.StartsWith("attachments/", StringComparison.Ordinal) &&
+                                    normalized.Count(static c => c == '/') == 1 &&
+                                    normalized.EndsWith(".cna", StringComparison.OrdinalIgnoreCase) &&
+                                    Guid.TryParseExact(Path.GetFileNameWithoutExtension(normalized), "N", out _);
+            if (!allowedDb && !allowedAttachment) throw new InvalidDataException("Backup contains an unexpected path.");
+            if (allowedDb) hasDatabase = true;
+            var target = allowedDb
+                ? Path.Combine(destination, "vault.db")
+                : Path.Combine(destination, "attachments", Path.GetFileName(normalized));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            await using var source = entry.Open();
+            await using var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
+            await source.CopyToAsync(output, 128 * 1024, cancellationToken).ConfigureAwait(false);
+        }
+        if (!hasDatabase) throw new InvalidDataException("Backup does not contain a vault database.");
+    }
+
+    private async Task ReplaceDatabaseAndAttachmentsAsync(string staged, string rollbackDb, CancellationToken cancellationToken)
+    {
+        var root = Path.GetDirectoryName(_store.DatabasePath)!;
+        var currentAttachments = Path.Combine(root, AppConstants.AttachmentDirectoryName);
+        var stagedAttachments = Path.Combine(staged, "attachments");
+        var previousAttachments = currentAttachments + ".previous";
+        TryDeleteDirectory(previousAttachments);
+        try
+        {
+            await _store.ReplaceDatabaseAsync(Path.Combine(staged, "vault.db"), cancellationToken).ConfigureAwait(false);
+            if (Directory.Exists(currentAttachments)) Directory.Move(currentAttachments, previousAttachments);
+            if (Directory.Exists(stagedAttachments)) Directory.Move(stagedAttachments, currentAttachments);
+            else Directory.CreateDirectory(currentAttachments);
+            TryDeleteDirectory(previousAttachments);
+        }
+        catch
+        {
+            try
+            {
+                await _store.ReplaceDatabaseAsync(rollbackDb, cancellationToken).ConfigureAwait(false);
+                if (Directory.Exists(currentAttachments)) TryDeleteDirectory(currentAttachments);
+                if (Directory.Exists(previousAttachments)) Directory.Move(previousAttachments, currentAttachments);
+            }
+            catch
+            {
+                // Preserve the original restore exception. Recovery material remains in the app's previous/temporary files where the OS permits.
+            }
+            throw;
         }
     }
 
@@ -165,5 +274,12 @@ public sealed class EncryptedBackupService : IBackupService
         }
     }
 
-    private sealed record BackupHeader(int Version, byte[] Salt, KdfParameters Kdf, int ChunkSize);
+    private static void TryDeleteDirectory(string path)
+    {
+        try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private sealed record BackupHeader(int Version, byte[] Salt, KdfParameters Kdf, int ChunkSize, DateTimeOffset CreatedUtc);
 }
