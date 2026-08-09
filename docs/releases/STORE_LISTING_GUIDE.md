@@ -32,7 +32,7 @@ The MAUI app supports a build-time switch so a store package can omit the in-app
 dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestEnableFundingLink=false
 ```
 
-`CipherNestEnableFundingLink` defaults to `true`. When the property is not exactly `true`, the app defines `CIPHERNEST_DISABLE_FUNDING_LINK`; `BuildFeatureFlags.IsFundingLinkEnabled` becomes `false`, and the About funding surfaces are hidden. The repository README, SUPPORT file, and `.github/FUNDING.yml` are source-repository metadata and remain unchanged by that app-build switch.
+`CipherNestEnableFundingLink` defaults to `true`. Setting it explicitly to `false` defines `CIPHERNEST_DISABLE_FUNDING_LINK`; `BuildFeatureFlags.IsFundingLinkEnabled` becomes `false`, and the About funding surfaces are hidden. The repository README, SUPPORT file, and `.github/FUNDING.yml` are source-repository metadata and remain unchanged by that app-build switch.
 
 ## Visual assets
 
