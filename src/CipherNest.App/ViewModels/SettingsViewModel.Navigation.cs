@@ -13,4 +13,7 @@ public partial class SettingsViewModel
 
     [RelayCommand]
     private static async Task SecurityInfoAsync() => await Shell.Current.GoToAsync("//security-info");
+
+    [RelayCommand]
+    private static async Task AboutAsync() => await Shell.Current.GoToAsync("//about");
 }
