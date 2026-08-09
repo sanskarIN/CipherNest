@@ -7,14 +7,14 @@
       <Grid ColumnDefinitions="*,Auto"><Label Text="Generator" Style="{StaticResource TitleLabel}"/><Button Grid.Column="1" Text="Back" Command="{Binding BackCommand}" Style="{StaticResource SecondaryButton}"/></Grid>
       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"><Switch IsToggled="{Binding PassphraseMode}"/><Label Grid.Column="1" Text="Memorable passphrase mode" VerticalTextAlignment="Center"/></Grid>
       <Label Text="Password length" FontAttributes="Bold"/><Slider Minimum="8" Maximum="64" Value="{Binding Length}"/><Label Text="{Binding Length, StringFormat='Length: {0:F0}'}"/>
-      <Label Text="Passphrase word count" FontAttributes="Bold"/><Slider Minimum="3" Maximum="10" Value="{Binding WordCount}"/><Label Text="{Binding WordCount, StringFormat='Words: {0:F0}'}"/>
+      <Label Text="Passphrase word count" FontAttributes="Bold"/><Slider Minimum="6" Maximum="16" Value="{Binding WordCount}"/><Label Text="{Binding WordCount, StringFormat='Words: {0:F0}'}"/><Label Text="Passphrases select each word independently with a cryptographically secure random generator from a 256-entry local list. Eight or more words are recommended for high-value secrets; editing the result can reduce the stated selection entropy." Style="{StaticResource SubtitleLabel}"/>
       <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8">
         <CheckBox IsChecked="{Binding Uppercase}"/><Label Grid.Column="1" Text="Uppercase" VerticalTextAlignment="Center"/><CheckBox Grid.Column="2" IsChecked="{Binding Lowercase}"/><Label Grid.Column="3" Text="Lowercase" VerticalTextAlignment="Center"/>
         <CheckBox Grid.Row="1" IsChecked="{Binding Digits}"/><Label Grid.Row="1" Grid.Column="1" Text="Digits" VerticalTextAlignment="Center"/><CheckBox Grid.Row="1" Grid.Column="2" IsChecked="{Binding Symbols}"/><Label Grid.Row="1" Grid.Column="3" Text="Symbols" VerticalTextAlignment="Center"/>
       </Grid>
       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><CheckBox IsChecked="{Binding ExcludeAmbiguous}"/><Label Grid.Column="1" Text="Exclude ambiguous characters" VerticalTextAlignment="Center"/></Grid>
       <Frame><VerticalStackLayout Spacing="8"><Label Text="Generated value" FontAttributes="Bold"/><Entry Text="{Binding GeneratedValue}" IsReadOnly="True"/><Label Text="{Binding StrengthLabel}" Style="{StaticResource SubtitleLabel}"/></VerticalStackLayout></Frame>
-      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}"/>
+      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" SemanticProperties.LiveSetting="Polite"/>
       <Grid ColumnDefinitions="*,*" ColumnSpacing="10"><Button Text="Generate" Command="{Binding GenerateCommand}"/><Button Grid.Column="1" Text="Copy" Command="{Binding CopyCommand}" Style="{StaticResource SecondaryButton}"/></Grid>
       <Label Text="Copied values are cleared after your configured interval where the platform allows reliable clipboard clearing. Clipboard history may retain data." Style="{StaticResource SubtitleLabel}"/>
     </VerticalStackLayout>
