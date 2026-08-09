@@ -10,14 +10,21 @@ namespace CipherNest.App.ViewModels;
 public partial class VaultViewModel : ObservableObject
 {
     private readonly IVaultService _vault;
+    private readonly ISettingsStore _settings;
     private CancellationTokenSource? _searchCts;
     public ObservableCollection<VaultItem> Items { get; } = [];
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string errorMessage = string.Empty;
+    [ObservableProperty] private string backupReminderMessage = string.Empty;
     [ObservableProperty] private bool isEmpty;
 
-    public VaultViewModel(IVaultService vault) => _vault = vault;
+    public VaultViewModel(IVaultService vault, ISettingsStore settings)
+    {
+        _vault = vault;
+        _settings = settings;
+    }
+
     partial void OnSearchTextChanged(string value) { _searchCts?.Cancel(); _searchCts?.Dispose(); _searchCts = new CancellationTokenSource(); _ = SearchDelayedAsync(value, _searchCts.Token); }
 
     [RelayCommand]
@@ -25,7 +32,13 @@ public partial class VaultViewModel : ObservableObject
     {
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
         IsBusy = true; ErrorMessage = string.Empty;
-        try { ReplaceItems(await _vault.GetItemsAsync()); }
+        try
+        {
+            ReplaceItems(await _vault.GetItemsAsync());
+            var preferences = await _settings.LoadAsync();
+            var due = preferences.LastSuccessfulBackupUtc is null || DateTimeOffset.UtcNow - preferences.LastSuccessfulBackupUtc.Value >= TimeSpan.FromDays(Math.Clamp(preferences.BackupReminderDays, 1, 365));
+            BackupReminderMessage = due ? "Encrypted backup reminder: create and test a backup from Settings." : string.Empty;
+        }
         catch (Exception ex) { ErrorMessage = $"Could not load the vault: {ex.Message}"; }
         finally { IsBusy = false; }
     }
@@ -53,8 +66,6 @@ public partial class VaultViewModel : ObservableObject
 
     private void ReplaceItems(IReadOnlyList<VaultItem> items)
     {
-        Items.Clear();
-        foreach (var item in items) Items.Add(item);
-        IsEmpty = Items.Count == 0;
+        Items.Clear(); foreach (var item in items) Items.Add(item); IsEmpty = Items.Count == 0;
     }
 }

@@ -15,6 +15,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IVaultService _vault;
     private readonly IScreenshotProtectionService _screenshots;
     private readonly IPasswordGenerator _passwordGenerator;
+    private AppPreferences _loadedPreferences = new();
 
     public IReadOnlyList<AppThemePreference> Themes { get; } = Enum.GetValues<AppThemePreference>();
     [ObservableProperty] private AppThemePreference selectedTheme;
@@ -25,6 +26,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool reducedMotion;
     [ObservableProperty] private bool largerInterface;
     [ObservableProperty] private int trashRetentionDays = 30;
+    [ObservableProperty] private int backupReminderDays = 7;
     [ObservableProperty] private string backupPassphrase = string.Empty;
     [ObservableProperty] private string currentMasterPassphrase = string.Empty;
     [ObservableProperty] private string newMasterPassphrase = string.Empty;
@@ -37,53 +39,24 @@ public partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(ISettingsStore settings, IBackupService backup, IVaultService vault, IScreenshotProtectionService screenshots, IPasswordGenerator passwordGenerator)
     {
-        _settings = settings;
-        _backup = backup;
-        _vault = vault;
-        _screenshots = screenshots;
-        _passwordGenerator = passwordGenerator;
-        ScreenshotSupportMessage = screenshots.IsSupported
-            ? "Screenshot blocking is supported by the current platform implementation."
-            : "Reliable app-level screenshot blocking is not available through the current platform implementation; secret masking still applies.";
+        _settings = settings; _backup = backup; _vault = vault; _screenshots = screenshots; _passwordGenerator = passwordGenerator;
+        ScreenshotSupportMessage = screenshots.IsSupported ? "Screenshot blocking is supported by the current platform implementation." : "Reliable app-level screenshot blocking is not available through the current platform implementation; secret masking still applies.";
     }
 
     [RelayCommand]
     public async Task LoadAsync()
     {
-        var p = await _settings.LoadAsync();
-        SelectedTheme = p.Theme;
-        LockTimeoutSeconds = p.LockTimeoutSeconds;
-        LockOnBackground = p.LockOnBackground;
-        ClipboardClearSeconds = p.ClipboardClearSeconds;
-        ScreenshotProtection = p.ScreenshotProtection;
-        ReducedMotion = p.ReducedMotion;
-        LargerInterface = p.LargerInterface;
-        TrashRetentionDays = p.TrashRetentionDays;
-        ApplyTheme(p.Theme);
-        await _screenshots.ApplyAsync(p.ScreenshotProtection);
+        _loadedPreferences = await _settings.LoadAsync();
+        SelectedTheme = _loadedPreferences.Theme; LockTimeoutSeconds = _loadedPreferences.LockTimeoutSeconds; LockOnBackground = _loadedPreferences.LockOnBackground; ClipboardClearSeconds = _loadedPreferences.ClipboardClearSeconds; ScreenshotProtection = _loadedPreferences.ScreenshotProtection; ReducedMotion = _loadedPreferences.ReducedMotion; LargerInterface = _loadedPreferences.LargerInterface; TrashRetentionDays = _loadedPreferences.TrashRetentionDays; BackupReminderDays = _loadedPreferences.BackupReminderDays;
+        ApplyTheme(_loadedPreferences.Theme); await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection);
     }
 
     [RelayCommand]
     private async Task SaveAsync()
     {
-        LockTimeoutSeconds = Math.Clamp(LockTimeoutSeconds, 5, 3600);
-        ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300);
-        TrashRetentionDays = Math.Clamp(TrashRetentionDays, 1, 365);
-        var p = new AppPreferences
-        {
-            Theme = SelectedTheme,
-            LockTimeoutSeconds = LockTimeoutSeconds,
-            LockOnBackground = LockOnBackground,
-            ClipboardClearSeconds = ClipboardClearSeconds,
-            ScreenshotProtection = ScreenshotProtection,
-            ReducedMotion = ReducedMotion,
-            LargerInterface = LargerInterface,
-            TrashRetentionDays = TrashRetentionDays
-        };
-        await _settings.SaveAsync(p);
-        ApplyTheme(p.Theme);
-        await _screenshots.ApplyAsync(p.ScreenshotProtection);
-        StatusMessage = "Settings saved.";
+        LockTimeoutSeconds = Math.Clamp(LockTimeoutSeconds, 5, 3600); ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300); TrashRetentionDays = Math.Clamp(TrashRetentionDays, 1, 365); BackupReminderDays = Math.Clamp(BackupReminderDays, 1, 365);
+        _loadedPreferences = _loadedPreferences with { Theme = SelectedTheme, LockTimeoutSeconds = LockTimeoutSeconds, LockOnBackground = LockOnBackground, ClipboardClearSeconds = ClipboardClearSeconds, ScreenshotProtection = ScreenshotProtection, ReducedMotion = ReducedMotion, LargerInterface = LargerInterface, TrashRetentionDays = TrashRetentionDays, BackupReminderDays = BackupReminderDays };
+        await _settings.SaveAsync(_loadedPreferences); ApplyTheme(_loadedPreferences.Theme); await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection); StatusMessage = "Settings saved.";
     }
 
     [RelayCommand]
@@ -91,16 +64,21 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
         if (BackupPassphrase.Length < 12) { StatusMessage = "Use a backup passphrase of at least 12 characters."; return; }
+        var confirm = await Shell.Current.DisplayAlert("Create a consistent encrypted backup?", "CipherNest will lock the vault before taking the database and attachment snapshot so edits cannot race with the backup. You will unlock again afterward.", "Lock and back up", "Cancel");
+        if (!confirm) return;
         IsBusy = true;
         try
         {
-            var directory = Path.Combine(FileSystem.Current.AppDataDirectory, "Backups");
-            Directory.CreateDirectory(directory);
+            await _vault.LockAsync();
+            var directory = Path.Combine(FileSystem.Current.AppDataDirectory, "Backups"); Directory.CreateDirectory(directory);
             var path = Path.Combine(directory, $"CipherNest-{DateTimeOffset.Now:yyyyMMdd-HHmmss}{AppConstants.BackupExtension}");
             await _backup.ExportEncryptedAsync(path, BackupPassphrase);
             BackupPassphrase = string.Empty;
-            StatusMessage = "Authenticated encrypted backup created, including encrypted attachments. Keep the backup passphrase separately.";
+            _loadedPreferences = (await _settings.LoadAsync()) with { LastSuccessfulBackupUtc = DateTimeOffset.UtcNow };
+            await _settings.SaveAsync(_loadedPreferences);
+            StatusMessage = "Authenticated encrypted backup created, including encrypted attachments. The vault remains locked. Keep the backup passphrase separately and periodically test restore using disposable data.";
             await Share.Default.RequestAsync(new ShareFileRequest("CipherNest encrypted backup", new ShareFile(path)));
+            await Shell.Current.GoToAsync("//unlock");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
@@ -113,24 +91,24 @@ public partial class SettingsViewModel : ObservableObject
     private async Task RestoreBackupAsync()
     {
         if (BackupPassphrase.Length < 12) { StatusMessage = "Enter the backup passphrase before restoring."; return; }
-        var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CipherNest encrypted backup" });
-        if (file is null) return;
-        var confirm = await Shell.Current.DisplayAlert("Restore backup?", "The current vault database and attachment set will be replaced only after the backup container is authenticated and staged. Keep a separate backup before replacing important data.", "Restore", "Cancel");
-        if (!confirm) return;
+        var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CipherNest encrypted backup" }); if (file is null) return;
+        var confirm = await Shell.Current.DisplayAlert("Restore backup?", "The current vault database and attachment set will be replaced only after the backup container is authenticated and staged. Keep a separate backup before replacing important data.", "Restore", "Cancel"); if (!confirm) return;
         IsBusy = true;
+        var tempPath = Path.Combine(FileSystem.Current.CacheDirectory, $"restore-{Guid.NewGuid():N}{AppConstants.BackupExtension}");
         try
         {
             await _vault.LockAsync();
-            await _backup.RestoreEncryptedAsync(file.FullPath, BackupPassphrase);
-            BackupPassphrase = string.Empty;
-            StatusMessage = "Backup restored. Unlock the restored vault with its master passphrase or recovery key.";
-            await Shell.Current.GoToAsync("//unlock");
+            await using (var source = await file.OpenReadAsync())
+            await using (var destination = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true))
+                await source.CopyToAsync(destination);
+            await _backup.RestoreEncryptedAsync(tempPath, BackupPassphrase);
+            BackupPassphrase = string.Empty; StatusMessage = "Backup restored. Unlock the restored vault with its master passphrase or recovery key."; await Shell.Current.GoToAsync("//unlock");
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
         {
             StatusMessage = $"Restore failed safely: {ex.Message}";
         }
-        finally { IsBusy = false; }
+        finally { try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (IOException) { } IsBusy = false; }
     }
 
     [RelayCommand]
@@ -138,49 +116,23 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(CurrentMasterPassphrase)) { StatusMessage = "Enter the current master passphrase."; return; }
         if (!string.Equals(NewMasterPassphrase, ConfirmNewMasterPassphrase, StringComparison.Ordinal)) { StatusMessage = "The new passphrase confirmation does not match."; return; }
-        var strength = _passwordGenerator.Evaluate(NewMasterPassphrase);
-        if (NewMasterPassphrase.Length < 12 || strength.Score < 3) { StatusMessage = $"Choose a stronger new master passphrase. Current estimate: {strength.Label}."; return; }
+        var strength = _passwordGenerator.Evaluate(NewMasterPassphrase); if (NewMasterPassphrase.Length < 12 || strength.Score < 3) { StatusMessage = $"Choose a stronger new master passphrase. Current estimate: {strength.Label}."; return; }
         IsBusy = true;
-        try
-        {
-            await _vault.ChangeMasterPassphraseAsync(CurrentMasterPassphrase, NewMasterPassphrase);
-            CurrentMasterPassphrase = NewMasterPassphrase = ConfirmNewMasterPassphrase = string.Empty;
-            StatusMessage = "Master passphrase changed. Existing recovery key remains valid because it independently wraps the same vault key. Create a fresh encrypted backup after security-sensitive changes.";
-        }
-        catch (Exception ex) when (ex is CipherNest.Application.Exceptions.VaultAuthenticationException or ArgumentException)
-        {
-            StatusMessage = $"Master passphrase was not changed: {ex.Message}";
-        }
+        try { await _vault.ChangeMasterPassphraseAsync(CurrentMasterPassphrase, NewMasterPassphrase); CurrentMasterPassphrase = NewMasterPassphrase = ConfirmNewMasterPassphrase = string.Empty; StatusMessage = "Master passphrase changed. Existing recovery key remains valid because it independently wraps the same vault key. Create a fresh encrypted backup after security-sensitive changes."; }
+        catch (Exception ex) when (ex is CipherNest.Application.Exceptions.VaultAuthenticationException or ArgumentException) { StatusMessage = $"Master passphrase was not changed: {ex.Message}"; }
         finally { IsBusy = false; }
     }
 
     [RelayCommand]
     private async Task DeleteVaultAsync()
     {
-        if (!string.Equals(DeletionConfirmationPhrase.Trim(), DeletePhrase, StringComparison.Ordinal))
-        {
-            StatusMessage = $"Type exactly {DeletePhrase} before deleting the vault.";
-            return;
-        }
+        if (!string.Equals(DeletionConfirmationPhrase.Trim(), DeletePhrase, StringComparison.Ordinal)) { StatusMessage = $"Type exactly {DeletePhrase} before deleting the vault."; return; }
         if (string.IsNullOrWhiteSpace(DeletionMasterPassphrase)) { StatusMessage = "Confirm the current master passphrase. Recovery keys are not accepted for vault deletion."; return; }
-        var confirm = await Shell.Current.DisplayAlert("Permanently delete this local vault?", "This removes CipherNest's local encrypted database and attachment files. Flash storage, filesystem snapshots, operating-system backups, shared exports, and forensic remnants can remain outside CipherNest's control. This action cannot be undone from the app.", "Delete local vault", "Cancel");
-        if (!confirm) return;
+        var confirm = await Shell.Current.DisplayAlert("Permanently delete this local vault?", "This removes CipherNest's local encrypted database and attachment files. Flash storage, filesystem snapshots, operating-system backups, shared exports, and forensic remnants can remain outside CipherNest's control. This action cannot be undone from the app.", "Delete local vault", "Cancel"); if (!confirm) return;
         IsBusy = true;
-        try
-        {
-            await _vault.DeleteVaultAsync(DeletionMasterPassphrase);
-            DeletionMasterPassphrase = DeletionConfirmationPhrase = string.Empty;
-            StatusMessage = string.Empty;
-            await Shell.Current.GoToAsync("//onboarding");
-        }
-        catch (CipherNest.Application.Exceptions.VaultAuthenticationException)
-        {
-            StatusMessage = "Vault deletion was cancelled because master-passphrase confirmation failed.";
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            StatusMessage = $"Vault deletion could not finish: {ex.Message}";
-        }
+        try { await _vault.DeleteVaultAsync(DeletionMasterPassphrase); DeletionMasterPassphrase = DeletionConfirmationPhrase = string.Empty; StatusMessage = string.Empty; await Shell.Current.GoToAsync("//onboarding"); }
+        catch (CipherNest.Application.Exceptions.VaultAuthenticationException) { StatusMessage = "Vault deletion was cancelled because master-passphrase confirmation failed."; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { StatusMessage = $"Vault deletion could not finish: {ex.Message}"; }
         finally { IsBusy = false; }
     }
 

@@ -18,4 +18,6 @@ public sealed record AppPreferences
     public bool LargerInterface { get; init; }
     public int TrashRetentionDays { get; init; } = 30;
     public int RequireMasterPassphraseAfterHours { get; init; } = 24;
+    public int BackupReminderDays { get; init; } = 7;
+    public DateTimeOffset? LastSuccessfulBackupUtc { get; init; }
 }
