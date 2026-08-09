@@ -1,0 +1,1 @@
+CipherNest 0.1 includes a small built-in demonstrative passphrase word list in source. Before high-risk production use, replace it with a substantially larger reviewed local word list with documented provenance and entropy calculations. The generator uses cryptographically secure index selection but entropy is limited by list size.
