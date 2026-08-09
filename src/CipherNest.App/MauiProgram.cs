@@ -37,6 +37,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IClipboardSecurityService, ClipboardSecurityService>();
         builder.Services.AddSingleton<IScreenshotProtectionService, ScreenshotProtectionService>();
         builder.Services.AddSingleton<IBiometricUnlockService, BiometricUnlockService>();
+        builder.Services.AddSingleton<IStorageMaintenanceService, StorageMaintenanceService>();
         builder.Services.AddSingleton<UnlockRateLimiter>();
         builder.Services.AddSingleton<SessionSecurityState>();
 
