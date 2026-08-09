@@ -9,10 +9,12 @@ namespace CipherNest.App.ViewModels;
 
 public partial class VaultViewModel : ObservableObject
 {
+    private const int PageSize = 50;
     private readonly IVaultService _vault;
     private readonly ISettingsStore _settings;
     private CancellationTokenSource? _searchCts;
     private IReadOnlyList<VaultItem> _lastResults = Array.Empty<VaultItem>();
+    private IReadOnlyList<VaultItem> _orderedFilteredResults = Array.Empty<VaultItem>();
 
     public ObservableCollection<VaultItem> Items { get; } = [];
     public IReadOnlyList<string> SortModes { get; } = ["Favorites & title", "Recently used", "Recently modified", "Title"];
@@ -26,6 +28,8 @@ public partial class VaultViewModel : ObservableObject
     [ObservableProperty] private string backupReminderMessage = string.Empty;
     [ObservableProperty] private string reviewReminderMessage = string.Empty;
     [ObservableProperty] private bool isEmpty;
+    [ObservableProperty] private bool canLoadMore;
+    [ObservableProperty] private string resultCountMessage = string.Empty;
 
     public VaultViewModel(IVaultService vault, ISettingsStore settings)
     {
@@ -81,7 +85,14 @@ public partial class VaultViewModel : ObservableObject
         if (item is not null) await Shell.Current.GoToAsync($"{nameof(ItemEditorPage)}?id={item.Id:D}");
     }
 
-    [RelayCommand] private async Task LockAsync() { await _vault.LockAsync(); Items.Clear(); _lastResults = Array.Empty<VaultItem>(); await Shell.Current.GoToAsync("//unlock"); }
+    [RelayCommand]
+    private void LoadMore()
+    {
+        if (!CanLoadMore || IsBusy) return;
+        AppendNextPage();
+    }
+
+    [RelayCommand] private async Task LockAsync() { await _vault.LockAsync(); Items.Clear(); _lastResults = Array.Empty<VaultItem>(); _orderedFilteredResults = Array.Empty<VaultItem>(); CanLoadMore = false; ResultCountMessage = string.Empty; await Shell.Current.GoToAsync("//unlock"); }
     [RelayCommand] private async Task GeneratorAsync() => await Shell.Current.GoToAsync("//generator");
     [RelayCommand] private async Task AuditAsync() => await Shell.Current.GoToAsync("//audit");
     [RelayCommand] private async Task TrashAsync() => await Shell.Current.GoToAsync("//trash");
@@ -117,15 +128,25 @@ public partial class VaultViewModel : ObservableObject
             _ => filtered
         };
 
-        var sorted = SelectedSortMode switch
+        _orderedFilteredResults = SelectedSortMode switch
         {
-            "Recently used" => filtered.OrderByDescending(static x => x.LastAccessedUtc ?? DateTimeOffset.MinValue).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
-            "Recently modified" => filtered.OrderByDescending(static x => x.ModifiedUtc).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
-            "Title" => filtered.OrderBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
-            _ => filtered.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase)
+            "Recently used" => filtered.OrderByDescending(static x => x.LastAccessedUtc ?? DateTimeOffset.MinValue).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray(),
+            "Recently modified" => filtered.OrderByDescending(static x => x.ModifiedUtc).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray(),
+            "Title" => filtered.OrderBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray(),
+            _ => filtered.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray()
         };
+
         Items.Clear();
-        foreach (var item in sorted) Items.Add(item);
-        IsEmpty = Items.Count == 0;
+        AppendNextPage();
+        IsEmpty = _orderedFilteredResults.Count == 0;
+    }
+
+    private void AppendNextPage()
+    {
+        foreach (var item in _orderedFilteredResults.Skip(Items.Count).Take(PageSize)) Items.Add(item);
+        CanLoadMore = Items.Count < _orderedFilteredResults.Count;
+        ResultCountMessage = _orderedFilteredResults.Count == 0
+            ? "No matching items."
+            : $"Showing {Items.Count:N0} of {_orderedFilteredResults.Count:N0} matching item(s).";
     }
 }
