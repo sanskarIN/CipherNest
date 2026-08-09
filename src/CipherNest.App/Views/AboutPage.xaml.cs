@@ -15,6 +15,28 @@ public partial class AboutPage : ContentPage
 
     private async void OnBackClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//vault");
     private async void OnSecurityInfoClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//security-info");
+    private async void OnRepositoryClicked(object? sender, EventArgs e) => await OpenExternalAsync(AppConstants.RepositoryUrl, "repository");
+    private async void OnCreatorClicked(object? sender, EventArgs e) => await OpenExternalAsync(AppConstants.CreatorUrl, "creator profile");
+    private async void OnBuyMeACoffeeClicked(object? sender, EventArgs e) => await OpenExternalAsync(AppConstants.BuyMeACoffeeUrl, "Buy Me a Coffee page");
+
+    private async Task OpenExternalAsync(string url, string description)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            await DisplayAlert("Link unavailable", $"The configured {description} link is invalid.", "Close");
+            return;
+        }
+
+        try
+        {
+            if (!await Launcher.Default.OpenAsync(uri))
+                await DisplayAlert("Could not open link", $"The system could not open the {description}.", "Close");
+        }
+        catch (Exception ex) when (ex is FeatureNotSupportedException or InvalidOperationException)
+        {
+            await DisplayAlert("Could not open link", $"The {description} is not available through the current system launcher.", "Close");
+        }
+    }
 
     private async void OnVersionClicked(object? sender, EventArgs e)
     {
