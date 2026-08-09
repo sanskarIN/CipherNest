@@ -17,4 +17,7 @@ public interface IVaultService
     Task RestoreFromTrashAsync(Guid id, CancellationToken cancellationToken = default);
     Task DeletePermanentlyAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<VaultItem>> SearchAsync(string query, CancellationToken cancellationToken = default);
+    Task<AttachmentReference> AddAttachmentAsync(Guid itemId, Stream source, string displayName, string mediaType, CancellationToken cancellationToken = default);
+    Task RemoveAttachmentAsync(Guid itemId, Guid attachmentId, CancellationToken cancellationToken = default);
+    Task ExportAttachmentAsync(Guid itemId, Guid attachmentId, Stream destination, CancellationToken cancellationToken = default);
 }

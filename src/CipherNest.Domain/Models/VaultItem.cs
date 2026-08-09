@@ -9,6 +9,7 @@ public sealed record VaultItem
     public string Secret { get; init; } = string.Empty;
     public string Url { get; init; } = string.Empty;
     public string Notes { get; init; } = string.Empty;
+    public string Collection { get; init; } = string.Empty;
     public IReadOnlyList<string> Tags { get; init; } = Array.Empty<string>();
     public bool IsFavorite { get; init; }
     public IReadOnlyList<CustomField> CustomFields { get; init; } = Array.Empty<CustomField>();
@@ -21,18 +22,13 @@ public sealed record VaultItem
 
     public VaultItem Normalize(DateTimeOffset now)
     {
-        var tags = Tags
-            .Select(static tag => tag.Trim())
-            .Where(static tag => tag.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(static tag => tag, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
+        var tags = Tags.Select(static tag => tag.Trim()).Where(static tag => tag.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(static tag => tag, StringComparer.OrdinalIgnoreCase).ToArray();
         return this with
         {
             Title = Title.Trim(),
             Username = Username.Trim(),
             Url = Url.Trim(),
+            Collection = Collection.Trim(),
             Tags = tags,
             ModifiedUtc = now
         };
