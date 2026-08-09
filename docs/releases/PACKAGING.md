@@ -28,12 +28,26 @@ Packaging is intentionally separated from source compilation because release sig
 - Build/sign/notarize in the supported Apple environment.
 - Verify resizing, keyboard/mouse navigation, secure storage, biometric availability, share/file picker behavior, icon presentation, and privacy declarations.
 
+## Optional funding CTA per distribution
+
+The source repository uses `https://buymeacoffee.com/sanskarIN` for optional voluntary project support. Before packaging any store build, verify whether that exact store/distribution/region/app category permits an in-app external funding CTA.
+
+Normal builds use `CipherNestEnableFundingLink=true`. If the applicable policy requires the in-app funding CTA to be absent, build with:
+
+```bash
+dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestEnableFundingLink=false
+```
+
+That switch hides the About funding frame and funding metadata label in the compiled app. It does not remove repository README, SUPPORT, or `.github/FUNDING.yml` metadata. Record the chosen property value in release-build provenance so the packaged artifact can be reproduced consistently.
+
 ## Before signing
 
 - Run the complete `docs/RELEASE_CHECKLIST.md` gate.
+- Review `docs/NEXT_STEPS.md` and reconcile any release-blocking action applicable to the candidate.
 - Confirm `THIRD_PARTY_NOTICES.md` against the exact restored packages.
 - Confirm the audit status and threat model are current.
 - Confirm all screenshots/sample vaults contain synthetic data only.
+- Confirm the funding CTA build setting matches the verified policy for that exact distribution target.
 - Preserve the exact source commit/tag and environment metadata used for the candidate.
 
 ## Signing material
