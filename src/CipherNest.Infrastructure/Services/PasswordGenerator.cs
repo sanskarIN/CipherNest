@@ -12,7 +12,14 @@ public sealed class PasswordGenerator : IPasswordGenerator
     private const string Digits = "0123456789";
     private const string Symbols = "!@#$%^&*()-_=+[]{}:,.?";
     private const string Ambiguous = "Il1O0o|`'\"";
-    private static readonly string[] Words = ["amber", "anchor", "apple", "atlas", "bamboo", "beacon", "berry", "birch", "breeze", "canyon", "cedar", "cloud", "coral", "crystal", "dawn", "delta", "ember", "falcon", "fern", "forest", "galaxy", "garden", "glacier", "harbor", "hazel", "island", "jade", "jungle", "lantern", "lemon", "lilac", "lotus", "maple", "meadow", "meteor", "mist", "moon", "moss", "nebula", "oasis", "ocean", "olive", "orchid", "pearl", "pine", "planet", "plum", "prairie", "quartz", "rain", "reef", "river", "robin", "sage", "shell", "sky", "solar", "sparrow", "stone", "storm", "sunset", "tiger", "timber", "valley", "violet", "wave", "willow", "winter", "zenith", "zephyr"];
+
+    static PasswordGenerator()
+    {
+        if (PassphraseWordList.Words.Count != 256 || PassphraseWordList.Words.Distinct(StringComparer.Ordinal).Count() != 256)
+            throw new InvalidOperationException("The local passphrase word list must contain exactly 256 unique entries.");
+        if (PassphraseWordList.Words.Any(static word => word.Length < 3 || word.Length > 20 || word.Any(static ch => ch is < 'a' or > 'z')))
+            throw new InvalidOperationException("The local passphrase word list contains an invalid entry.");
+    }
 
     public string Generate(GeneratorOptions options)
     {
@@ -57,10 +64,10 @@ public sealed class PasswordGenerator : IPasswordGenerator
 
     private static string GeneratePassphrase(GeneratorOptions options)
     {
-        if (options.WordCount is < 3 or > 12) throw new ArgumentOutOfRangeException(nameof(options), "Passphrase word count must be between 3 and 12.");
+        if (options.WordCount is < 6 or > 16) throw new ArgumentOutOfRangeException(nameof(options), "Passphrase word count must be between 6 and 16. Eight or more words are recommended for high-value vault secrets.");
         if (options.Separator.Length > 4 || options.Separator.Any(char.IsControl)) throw new ArgumentException("Passphrase separator is invalid.", nameof(options));
         var words = new string[options.WordCount];
-        for (var i = 0; i < words.Length; i++) words[i] = Words[RandomNumberGenerator.GetInt32(Words.Length)];
+        for (var i = 0; i < words.Length; i++) words[i] = PassphraseWordList.Words[RandomNumberGenerator.GetInt32(PassphraseWordList.Words.Count)];
         return string.Join(options.Separator, words);
     }
 
