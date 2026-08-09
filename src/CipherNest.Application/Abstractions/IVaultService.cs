@@ -9,6 +9,9 @@ public interface IVaultService
     Task<bool> HasVaultAsync(CancellationToken cancellationToken = default);
     Task<string?> CreateAsync(string masterPassphrase, bool createRecoveryKey = true, CancellationToken cancellationToken = default);
     Task UnlockAsync(string masterPassphraseOrRecoveryKey, CancellationToken cancellationToken = default);
+    Task<bool> ReauthenticateAsync(string masterPassphrase, CancellationToken cancellationToken = default);
+    Task ChangeMasterPassphraseAsync(string currentMasterPassphrase, string newMasterPassphrase, CancellationToken cancellationToken = default);
+    Task DeleteVaultAsync(string masterPassphrase, CancellationToken cancellationToken = default);
     Task LockAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<VaultItem>> GetItemsAsync(bool includeTrash = false, CancellationToken cancellationToken = default);
     Task<VaultItem?> GetItemAsync(Guid id, CancellationToken cancellationToken = default);

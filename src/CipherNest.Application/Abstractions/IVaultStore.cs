@@ -13,5 +13,6 @@ public interface IVaultStore
     Task DeleteItemAsync(Guid id, CancellationToken cancellationToken = default);
     Task CreateConsistentSnapshotAsync(string destinationDatabasePath, CancellationToken cancellationToken = default);
     Task ReplaceDatabaseAsync(string sourceDatabasePath, CancellationToken cancellationToken = default);
+    Task DeleteDatabaseAsync(CancellationToken cancellationToken = default);
     string DatabasePath { get; }
 }

@@ -9,10 +9,7 @@ public sealed class SqliteVaultStore : IVaultStore
     private readonly SemaphoreSlim _gate = new(1, 1);
     public string DatabasePath { get; }
 
-    public SqliteVaultStore(string databasePath)
-    {
-        DatabasePath = databasePath ?? throw new ArgumentNullException(nameof(databasePath));
-    }
+    public SqliteVaultStore(string databasePath) => DatabasePath = databasePath ?? throw new ArgumentNullException(nameof(databasePath));
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -28,37 +25,29 @@ public sealed class SqliteVaultStore : IVaultStore
             await ExecuteAsync(connection, "CREATE TABLE IF NOT EXISTS VaultItems (Id TEXT PRIMARY KEY, Envelope BLOB NOT NULL);", cancellationToken).ConfigureAwait(false);
             await ExecuteAsync(connection, "CREATE TABLE IF NOT EXISTS AppSettings (Key TEXT PRIMARY KEY, Value TEXT NOT NULL);", cancellationToken).ConfigureAwait(false);
             await ExecuteAsync(connection, "CREATE TABLE IF NOT EXISTS MigrationHistory (Version INTEGER PRIMARY KEY, AppliedUtc TEXT NOT NULL);", cancellationToken).ConfigureAwait(false);
-
             await using var command = connection.CreateCommand();
             command.CommandText = "INSERT OR IGNORE INTO MigrationHistory(Version, AppliedUtc) VALUES ($version, $utc);";
             command.Parameters.AddWithValue("$version", AppConstants.DatabaseSchemaVersion);
             command.Parameters.AddWithValue("$utc", DateTimeOffset.UtcNow.ToString("O"));
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
-        finally
-        {
-            _gate.Release();
-        }
+        finally { _gate.Release(); }
     }
 
-    public async Task<bool> HasVaultAsync(CancellationToken cancellationToken = default) =>
-        await ReadHeaderAsync(cancellationToken).ConfigureAwait(false) is not null;
+    public async Task<bool> HasVaultAsync(CancellationToken cancellationToken = default) => await ReadHeaderAsync(cancellationToken).ConfigureAwait(false) is not null;
 
     public async Task<string?> ReadHeaderAsync(CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (!File.Exists(DatabasePath)) return null;
             await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT HeaderJson FROM VaultHeader WHERE Id = 1;";
-            var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            return result as string;
+            return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
         }
-        finally
-        {
-            _gate.Release();
-        }
+        finally { _gate.Release(); }
     }
 
     public async Task WriteHeaderAsync(string headerJson, CancellationToken cancellationToken = default)
@@ -73,10 +62,7 @@ public sealed class SqliteVaultStore : IVaultStore
             command.Parameters.AddWithValue("$header", headerJson);
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
-        finally
-        {
-            _gate.Release();
-        }
+        finally { _gate.Release(); }
     }
 
     public async Task<IReadOnlyList<StoredVaultItem>> ReadAllItemsAsync(CancellationToken cancellationToken = default)
@@ -89,15 +75,9 @@ public sealed class SqliteVaultStore : IVaultStore
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT Id, Envelope FROM VaultItems ORDER BY Id;";
             await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            {
-                items.Add(new StoredVaultItem(Guid.Parse(reader.GetString(0)), (byte[])reader[1]));
-            }
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false)) items.Add(new StoredVaultItem(Guid.Parse(reader.GetString(0)), (byte[])reader[1]));
         }
-        finally
-        {
-            _gate.Release();
-        }
+        finally { _gate.Release(); }
         return items;
     }
 
@@ -113,10 +93,7 @@ public sealed class SqliteVaultStore : IVaultStore
             command.Parameters.Add("$envelope", SqliteType.Blob).Value = item.Envelope;
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
-        finally
-        {
-            _gate.Release();
-        }
+        finally { _gate.Release(); }
     }
 
     public async Task DeleteItemAsync(Guid id, CancellationToken cancellationToken = default)
@@ -130,10 +107,7 @@ public sealed class SqliteVaultStore : IVaultStore
             command.Parameters.AddWithValue("$id", id.ToString("D"));
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
-        finally
-        {
-            _gate.Release();
-        }
+        finally { _gate.Release(); }
     }
 
     public async Task CreateConsistentSnapshotAsync(string destinationDatabasePath, CancellationToken cancellationToken = default)
@@ -142,22 +116,15 @@ public sealed class SqliteVaultStore : IVaultStore
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (!File.Exists(DatabasePath)) throw new InvalidOperationException("No vault database exists.");
             if (File.Exists(destinationDatabasePath)) File.Delete(destinationDatabasePath);
             await using var source = await OpenAsync(cancellationToken).ConfigureAwait(false);
             await ExecuteAsync(source, "PRAGMA wal_checkpoint(FULL);", cancellationToken).ConfigureAwait(false);
-            await using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
-            {
-                DataSource = destinationDatabasePath,
-                Mode = SqliteOpenMode.ReadWriteCreate,
-                Cache = SqliteCacheMode.Private
-            }.ToString());
+            await using var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = destinationDatabasePath, Mode = SqliteOpenMode.ReadWriteCreate, Cache = SqliteCacheMode.Private }.ToString());
             await destination.OpenAsync(cancellationToken).ConfigureAwait(false);
             await Task.Run(() => source.BackupDatabase(destination), cancellationToken).ConfigureAwait(false);
         }
-        finally
-        {
-            _gate.Release();
-        }
+        finally { _gate.Release(); }
     }
 
     public async Task ReplaceDatabaseAsync(string sourceDatabasePath, CancellationToken cancellationToken = default)
@@ -167,47 +134,48 @@ public sealed class SqliteVaultStore : IVaultStore
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            foreach (var suffix in new[] { "-wal", "-shm" })
-            {
-                var sidecar = DatabasePath + suffix;
-                if (File.Exists(sidecar)) File.Delete(sidecar);
-            }
+            DeleteSidecars();
             var backupPath = DatabasePath + ".previous";
             if (File.Exists(backupPath)) File.Delete(backupPath);
             if (File.Exists(DatabasePath)) File.Move(DatabasePath, backupPath);
-            try
-            {
-                File.Copy(sourceDatabasePath, DatabasePath, overwrite: true);
-            }
-            catch
-            {
-                if (File.Exists(backupPath)) File.Move(backupPath, DatabasePath, overwrite: true);
-                throw;
-            }
+            try { File.Copy(sourceDatabasePath, DatabasePath, overwrite: true); }
+            catch { if (File.Exists(backupPath)) File.Move(backupPath, DatabasePath, overwrite: true); throw; }
             if (File.Exists(backupPath)) File.Delete(backupPath);
         }
-        finally
+        finally { _gate.Release(); }
+    }
+
+    public async Task DeleteDatabaseAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            _gate.Release();
+            DeleteSidecars();
+            if (File.Exists(DatabasePath)) File.Delete(DatabasePath);
+            var previous = DatabasePath + ".previous";
+            if (File.Exists(previous)) File.Delete(previous);
+        }
+        finally { _gate.Release(); }
+    }
+
+    private void DeleteSidecars()
+    {
+        foreach (var suffix in new[] { "-wal", "-shm" })
+        {
+            var sidecar = DatabasePath + suffix;
+            if (File.Exists(sidecar)) File.Delete(sidecar);
         }
     }
 
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
     {
-        var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-        {
-            DataSource = DatabasePath,
-            Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Private
-        }.ToString());
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = DatabasePath, Mode = SqliteOpenMode.ReadWriteCreate, Cache = SqliteCacheMode.Private }.ToString());
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         return connection;
     }
 
     private static async Task ExecuteAsync(SqliteConnection connection, string sql, CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
-        command.CommandText = sql;
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand(); command.CommandText = sql; await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 }
