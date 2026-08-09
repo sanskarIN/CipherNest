@@ -138,12 +138,14 @@ public sealed class RepositoryUiStructureTests
     }
 
     [Fact]
-    public void ProjectSupportLink_IsCentralizedVisibleAndRegisteredWithGitHubFunding()
+    public void ProjectSupportLink_IsCentralizedVisibleRegisteredAndBuildToggleable()
     {
         const string supportUrl = "https://buymeacoffee.com/sanskarIN";
         var constants = File.ReadAllText(PathAt("src", "CipherNest.Shared", "AppConstants.cs"));
         var about = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "AboutPage.xaml"));
         var aboutCode = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "AboutPage.xaml.cs"));
+        var featureFlags = File.ReadAllText(PathAt("src", "CipherNest.App", "Services", "BuildFeatureFlags.cs"));
+        var project = File.ReadAllText(PathAt("src", "CipherNest.App", "CipherNest.App.csproj"));
         var readme = File.ReadAllText(PathAt("README.md"));
         var support = File.ReadAllText(PathAt("SUPPORT.md"));
         var funding = File.ReadAllText(PathAt(".github", "FUNDING.yml"));
@@ -154,8 +156,13 @@ public sealed class RepositoryUiStructureTests
         Assert.Contains("shared:AppConstants.CreatorUrl", about, StringComparison.Ordinal);
         Assert.Contains("shared:AppConstants.BusinessEmail", about, StringComparison.Ordinal);
         Assert.Contains("shared:AppConstants.SupportEmail", about, StringComparison.Ordinal);
+        Assert.Contains("SupportDevelopmentFrame", about, StringComparison.Ordinal);
+        Assert.Contains("SupportDevelopmentMetadataLabel", about, StringComparison.Ordinal);
         Assert.Contains("OnBuyMeACoffeeClicked", about, StringComparison.Ordinal);
+        Assert.Contains("BuildFeatureFlags.IsFundingLinkEnabled", aboutCode, StringComparison.Ordinal);
         Assert.Contains("AppConstants.BuyMeACoffeeUrl", aboutCode, StringComparison.Ordinal);
+        Assert.Contains("CIPHERNEST_DISABLE_FUNDING_LINK", featureFlags, StringComparison.Ordinal);
+        Assert.Contains("CipherNestEnableFundingLink", project, StringComparison.Ordinal);
         Assert.Contains(supportUrl, readme, StringComparison.Ordinal);
         Assert.Contains(supportUrl, support, StringComparison.Ordinal);
         Assert.Contains(supportUrl, funding, StringComparison.Ordinal);
