@@ -4,6 +4,7 @@ public enum SecurityFindingKind
 {
     WeakSecret,
     ReusedSecret,
+    DuplicateEntry,
     ExpiredReview,
     MissingTitle
 }
