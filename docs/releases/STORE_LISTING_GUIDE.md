@@ -20,6 +20,12 @@ Store copy and screenshots should accurately state:
 - plaintext export leaves the protected vault boundary;
 - independent professional security audit is still outstanding.
 
+## Project support link
+
+The open-source project support URL is `https://buymeacoffee.com/sanskarIN`. Repository surfaces may present it as optional voluntary support for continued development.
+
+Before a store-distributed build exposes an external funding/payment call to action, verify the current policy for that exact store, distribution method, country/region, and app category. Store policies change independently of the source tree and are not treated as verified by this repository. If the current policy does not permit the in-app link or wording, omit/disable that call to action in the affected store build while retaining the repository/GitHub funding metadata. Never imply that financial support changes feature access, privacy/security handling, support priority, GPL rights, or recovery capability.
+
 ## Visual assets
 
 Use the original CipherNest nest/shield geometry from the repository. The icon must remain legible without text at small sizes.
