@@ -31,6 +31,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
         builder.Services.AddSingleton<ISecurityAuditService, SecurityAuditService>();
         builder.Services.AddSingleton<ISafeNoteMarkupService, SafeNoteMarkupService>();
+        builder.Services.AddSingleton<SessionLockPolicy>();
         builder.Services.AddSingleton<ISettingsStore>(_ => new JsonSettingsStore(settingsPath));
         builder.Services.AddSingleton<IBackupService, EncryptedBackupService>();
         builder.Services.AddSingleton<IPlaintextTransferService, CsvTransferService>();
