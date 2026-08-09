@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CipherNest.App.Views.UnlockPage">
+  <Grid Padding="24">
+    <VerticalStackLayout Spacing="16" VerticalOptions="Center" MaximumWidthRequest="520" HorizontalOptions="Center">
+      <Image Source="appicon.svg" HeightRequest="96" />
+      <Label Text="Unlock CipherNest" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center" />
+      <Label Text="Your encrypted vault remains on this device." Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center" />
+      <Entry Text="{Binding MasterPassphrase}" IsPassword="True" Placeholder="Master passphrase" ReturnType="Done" SemanticProperties.Description="Master passphrase" />
+      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" />
+      <Button Text="Unlock" Command="{Binding UnlockCommand}" />
+      <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+      <Label Text="Forgotten passphrases cannot be recovered by CipherNest in this release." Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center" />
+    </VerticalStackLayout>
+  </Grid>
+</ContentPage>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CipherNest.App.Views.AuditPage">
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="22" RowSpacing="12">
+    <Grid ColumnDefinitions="*,Auto"><Label Text="Security audit" Style="{StaticResource TitleLabel}"/><Button Grid.Column="1" Text="Back" Command="{Binding BackCommand}" Style="{StaticResource SecondaryButton}"/></Grid>
+    <Label Grid.Row="1" Text="{Binding Summary}" Style="{StaticResource SubtitleLabel}"/>
+    <CollectionView Grid.Row="2" ItemsSource="{Binding Findings}" EmptyView="No findings from the local checks.">
+      <CollectionView.ItemTemplate><DataTemplate><Frame Margin="0,5"><VerticalStackLayout><Label Text="{Binding Kind}" FontAttributes="Bold"/><Label Text="{Binding Message}"/><Label Text="{Binding Severity, StringFormat='Severity: {0}/4'}" Style="{StaticResource SubtitleLabel}"/></VerticalStackLayout></Frame></DataTemplate></CollectionView.ItemTemplate>
+    </CollectionView>
+    <Button Grid.Row="3" Text="Run audit again" Command="{Binding RunCommand}"/>
+  </Grid>
+</ContentPage>

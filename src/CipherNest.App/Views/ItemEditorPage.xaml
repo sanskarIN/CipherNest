@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CipherNest.App.Views.ItemEditorPage">
+  <ScrollView>
+    <VerticalStackLayout Padding="22" Spacing="12" MaximumWidthRequest="760" HorizontalOptions="Center">
+      <Grid ColumnDefinitions="*,Auto">
+        <Label Text="Vault item" Style="{StaticResource TitleLabel}" />
+        <Button Grid.Column="1" Text="Back" Clicked="OnBackClicked" Style="{StaticResource SecondaryButton}" />
+      </Grid>
+      <Label Text="Type" FontAttributes="Bold" />
+      <Picker ItemsSource="{Binding Types}" SelectedItem="{Binding SelectedType}" />
+      <Label Text="Title" FontAttributes="Bold" />
+      <Entry Text="{Binding Title}" Placeholder="Required" />
+      <Label Text="Username / identifier" FontAttributes="Bold" />
+      <Entry Text="{Binding Username}" />
+      <Label Text="Secret" FontAttributes="Bold" />
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+        <Entry Text="{Binding Secret}" IsPassword="{Binding IsSecretVisible, Converter={StaticResource InverseBoolConverter}}" SemanticProperties.Description="Secret value" />
+        <Button Grid.Column="1" Text="Reveal" Command="{Binding ToggleSecretCommand}" Style="{StaticResource SecondaryButton}" />
+        <Button Grid.Column="2" Text="Copy" Command="{Binding CopySecretCommand}" Style="{StaticResource SecondaryButton}" />
+      </Grid>
+      <Label Text="URL" FontAttributes="Bold" />
+      <Entry Text="{Binding Url}" Keyboard="Url" />
+      <Label Text="Tags" FontAttributes="Bold" />
+      <Entry Text="{Binding Tags}" Placeholder="comma, separated, tags" />
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <CheckBox IsChecked="{Binding IsFavorite}" />
+        <Label Grid.Column="1" Text="Favorite" VerticalTextAlignment="Center" />
+      </Grid>
+      <Label Text="Notes" FontAttributes="Bold" />
+      <Editor Text="{Binding Notes}" AutoSize="TextChanges" MinimumHeightRequest="150" />
+      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" />
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+        <Button Text="Save" Command="{Binding SaveCommand}" />
+        <Button Grid.Column="1" Text="Move to trash" Command="{Binding MoveToTrashCommand}" IsVisible="{Binding IsExisting}" BackgroundColor="{StaticResource Danger}" />
+      </Grid>
+      <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+    </VerticalStackLayout>
+  </ScrollView>
+</ContentPage>

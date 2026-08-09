@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CipherNest.App.Views.OnboardingPage">
+  <ScrollView>
+    <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="640" HorizontalOptions="Center">
+      <Image Source="appicon.svg" HeightRequest="88" />
+      <Label Text="Create your local vault" Style="{StaticResource TitleLabel}" />
+      <Label Text="CipherNest stores the current release entirely on this device. No account or cloud service is required." Style="{StaticResource SubtitleLabel}" />
+      <Frame>
+        <VerticalStackLayout Spacing="10">
+          <Label Text="Recovery limitation" FontAttributes="Bold" />
+          <Label Text="If you forget the master passphrase, CipherNest cannot recover it in this local-only release. Keep a separate secure backup and recovery plan." />
+        </VerticalStackLayout>
+      </Frame>
+      <Label Text="Master passphrase" FontAttributes="Bold" />
+      <Entry Text="{Binding MasterPassphrase}" IsPassword="True" Placeholder="Use a long, unique passphrase" ReturnType="Next" SemanticProperties.Description="Master passphrase" />
+      <Label Text="{Binding StrengthLabel}" Style="{StaticResource SubtitleLabel}" />
+      <Label Text="Confirm master passphrase" FontAttributes="Bold" />
+      <Entry Text="{Binding Confirmation}" IsPassword="True" Placeholder="Re-enter the passphrase" ReturnType="Done" SemanticProperties.Description="Confirm master passphrase" />
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+        <CheckBox IsChecked="{Binding RecoveryLimitAcknowledged}" SemanticProperties.Description="Acknowledge recovery limitation" />
+        <Label Grid.Column="1" Text="I understand that losing my master passphrase can make this local vault unrecoverable." VerticalTextAlignment="Center" />
+      </Grid>
+      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}, FallbackValue=True}" />
+      <Button Text="Create vault" Command="{Binding CreateVaultCommand}" />
+      <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+      <Label Text="Made by the Sanskar" Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center" Margin="0,24,0,0" />
+    </VerticalStackLayout>
+  </ScrollView>
+</ContentPage>
