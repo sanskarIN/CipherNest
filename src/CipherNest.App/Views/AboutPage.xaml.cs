@@ -1,3 +1,4 @@
+using CipherNest.App.Services;
 using CipherNest.Shared;
 
 namespace CipherNest.App.Views;
@@ -11,13 +12,19 @@ public partial class AboutPage : ContentPage
     {
         InitializeComponent();
         VersionButton.Text = $"Version {AppInfo.Current.VersionString} · build {AppInfo.Current.BuildString} · crypto format {AppConstants.CryptoFormatVersion} · database schema {AppConstants.DatabaseSchemaVersion}";
+        SupportDevelopmentFrame.IsVisible = BuildFeatureFlags.IsFundingLinkEnabled;
+        SupportDevelopmentMetadataLabel.IsVisible = BuildFeatureFlags.IsFundingLinkEnabled;
     }
 
     private async void OnBackClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//vault");
     private async void OnSecurityInfoClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//security-info");
     private async void OnRepositoryClicked(object? sender, EventArgs e) => await OpenExternalAsync(AppConstants.RepositoryUrl, "repository");
     private async void OnCreatorClicked(object? sender, EventArgs e) => await OpenExternalAsync(AppConstants.CreatorUrl, "creator profile");
-    private async void OnBuyMeACoffeeClicked(object? sender, EventArgs e) => await OpenExternalAsync(AppConstants.BuyMeACoffeeUrl, "Buy Me a Coffee page");
+    private async void OnBuyMeACoffeeClicked(object? sender, EventArgs e)
+    {
+        if (!BuildFeatureFlags.IsFundingLinkEnabled) return;
+        await OpenExternalAsync(AppConstants.BuyMeACoffeeUrl, "Buy Me a Coffee page");
+    }
 
     private async Task OpenExternalAsync(string url, string description)
     {
