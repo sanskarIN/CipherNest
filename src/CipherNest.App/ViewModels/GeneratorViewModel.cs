@@ -29,6 +29,21 @@ public partial class GeneratorViewModel : ObservableObject
         _generator = generator;
         _clipboard = clipboard;
         _settings = settings;
+    }
+
+    [RelayCommand]
+    public async Task LoadDefaultsAsync()
+    {
+        var preferences = await _settings.LoadAsync();
+        PassphraseMode = preferences.GeneratorPassphraseMode;
+        Length = Math.Clamp(preferences.GeneratorPasswordLength, 8, 256);
+        WordCount = Math.Clamp(preferences.GeneratorPassphraseWordCount, 6, 16);
+        Uppercase = preferences.GeneratorUppercase;
+        Lowercase = preferences.GeneratorLowercase;
+        Digits = preferences.GeneratorDigits;
+        Symbols = preferences.GeneratorSymbols;
+        ExcludeAmbiguous = preferences.GeneratorExcludeAmbiguous;
+        if (!PassphraseMode && !Uppercase && !Lowercase && !Digits && !Symbols) Lowercase = true;
         Generate();
     }
 
