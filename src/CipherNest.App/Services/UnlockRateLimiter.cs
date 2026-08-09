@@ -1,3 +1,5 @@
+using CipherNest.Application.Services;
+
 namespace CipherNest.App.Services;
 
 public sealed class UnlockRateLimiter
@@ -19,10 +21,8 @@ public sealed class UnlockRateLimiter
         lock (_sync)
         {
             _failures++;
-            if (_failures < 5) return;
-            var exponent = Math.Min(_failures - 5, 5);
-            var seconds = Math.Min(300, 5 * (1 << exponent));
-            _blockedUntil = now.AddSeconds(seconds);
+            var delay = UnlockBackoffPolicy.DelayAfterFailureCount(_failures);
+            if (delay > TimeSpan.Zero) _blockedUntil = now.Add(delay);
         }
     }
 
