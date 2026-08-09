@@ -17,22 +17,28 @@ All notable changes are documented here following Semantic Versioning principles
 - Explicit passphrase random-selection entropy guidance and unit tests for word-list invariants/bounds.
 - Local storage usage inspection and temporary-cache cleanup controls.
 - Transactional ordered database migration runner with future-schema rejection and migration tests.
-- Argon2id known-answer test vector and multi-megabyte attachment streaming integration coverage.
+- Argon2id known-answer test vector and explicit hostile KDF resource-bound tests.
+- Multi-megabyte attachment streaming, encrypted attachment tamper/truncation, backup corruption, and wrong-backup-passphrase integration coverage.
 - Malformed CSV parser robustness corpus and UI-structure test execution in the main CI job.
 - Dynamic larger-interface typography resources and startup restoration of accessibility preferences.
 - English-first localization resource catalog, persisted System/English preference, and resource-backed localization service ready for additional culture catalogs.
 - Dedicated in-app security/privacy/threat-limit information surface.
 - Privacy-safe centralized exception reporting that omits exception messages/stacks and decrypted vault context.
-- Third-party dependency notices, secure-note security documentation, passphrase-generator design notes, privacy-safe diagnostics policy, localization architecture guidance, and store-listing/branding guidance.
+- Runtime About version/build metadata plus license, privacy, terms, third-party notices, acknowledgements, repository/support details, and audit status.
+- Third-party dependency notices, implemented cryptographic design specification, secure-note security documentation, passphrase-generator design notes, privacy-safe diagnostics policy, localization architecture guidance, packaging/reproducibility guidance, branding asset documentation, and store-listing guidance.
 
 ### Changed
 - Restoring a backup clears the local biometric secure-storage secret and disables biometric unlock until it is deliberately configured again.
+- KDF metadata read from vault/backup containers is bounded before Argon2 work: salt 16–64 bytes, memory 16–512 MiB, iterations 1–10, and parallelism 1–16.
 - Settings now distinguish biometric capability/configuration from master-passphrase recovery and sensitive-setting authentication.
-- Settings now include generator defaults, local review reminders, storage/cache controls, security-audit navigation, privacy/threat information, and language readiness.
+- Settings now include generator defaults, local review reminders, storage/cache controls, security-audit navigation, privacy/threat information, language readiness, and About/legal navigation.
 - Attachment imports normalize declared media types for supported in-app text preview policy.
-- Database initialization now routes through the explicit migration history instead of treating schema creation as an implicit one-time side effect.
+- Database initialization now routes through explicit transactional migration history instead of treating schema creation as an implicit one-time side effect.
+- Vault recent-access time is recorded once when an item actually loads, avoiding duplicate encrypted writes during navigation.
+- Vault filter controls now stack cleanly and primary actions use a wrapping layout for narrow phones and resizable desktop windows.
+- Redacted diagnostics now delete their temporary app-cache file after the share request returns where permitted.
 - CI now restores/builds/runs unit, integration, and UI-structure test projects before the Windows MAUI build gate.
-- Release/test/database/architecture documentation was expanded to match implemented behavior and remaining external-validation limits.
+- Release/test/database/architecture/security/privacy/legal documentation was expanded to match implemented behavior and remaining external-validation limits.
 
 ## [0.1.0] - 2026-08-09
 
