@@ -64,7 +64,7 @@ The repository's optional support URL is `https://buymeacoffee.com/sanskarIN`. N
 dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestEnableFundingLink=false
 ```
 
-`CipherNestEnableFundingLink` defaults to `true`. A non-`true` value defines `CIPHERNEST_DISABLE_FUNDING_LINK` for the MAUI app and `BuildFeatureFlags.IsFundingLinkEnabled` hides the in-app funding frame and metadata label. This switch does not alter repository README/Support/Funding metadata. Verify the current policy for the exact store, region, distribution method, and app category before choosing the release value.
+`CipherNestEnableFundingLink` defaults to `true`. Setting it explicitly to `false` defines `CIPHERNEST_DISABLE_FUNDING_LINK` for the MAUI app and `BuildFeatureFlags.IsFundingLinkEnabled` hides the in-app funding frame and metadata label. Other values leave the default UI behavior unchanged. This switch does not alter repository README/Support/Funding metadata. Verify the current policy for the exact store, region, distribution method, and app category before choosing the release value.
 
 ## Full solution
 
