@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>CipherNest.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CipherNest.Application/CipherNest.Application.csproj" />
+    <ProjectReference Include="../CipherNest.Domain/CipherNest.Domain.csproj" />
+    <ProjectReference Include="../CipherNest.Shared/CipherNest.Shared.csproj" />
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+</Project>
