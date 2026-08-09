@@ -22,5 +22,13 @@ public sealed record AppPreferences
     public int BackupReminderDays { get; init; } = 7;
     public bool ReviewRemindersEnabled { get; init; } = true;
     public int ReviewReminderLeadDays { get; init; } = 7;
+    public bool GeneratorPassphraseMode { get; init; }
+    public int GeneratorPasswordLength { get; init; } = 20;
+    public int GeneratorPassphraseWordCount { get; init; } = 8;
+    public bool GeneratorUppercase { get; init; } = true;
+    public bool GeneratorLowercase { get; init; } = true;
+    public bool GeneratorDigits { get; init; } = true;
+    public bool GeneratorSymbols { get; init; } = true;
+    public bool GeneratorExcludeAmbiguous { get; init; } = true;
     public DateTimeOffset? LastSuccessfulBackupUtc { get; init; }
 }
