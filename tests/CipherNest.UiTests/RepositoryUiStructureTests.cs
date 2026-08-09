@@ -137,6 +137,27 @@ public sealed class RepositoryUiStructureTests
         Assert.Contains("THIRD_PARTY_NOTICES.md", about, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ProjectSupportLink_IsCentralizedVisibleAndRegisteredWithGitHubFunding()
+    {
+        const string supportUrl = "https://buymeacoffee.com/sanskarIN";
+        var constants = File.ReadAllText(PathAt("src", "CipherNest.Shared", "AppConstants.cs"));
+        var about = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "AboutPage.xaml"));
+        var aboutCode = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "AboutPage.xaml.cs"));
+        var readme = File.ReadAllText(PathAt("README.md"));
+        var support = File.ReadAllText(PathAt("SUPPORT.md"));
+        var funding = File.ReadAllText(PathAt(".github", "FUNDING.yml"));
+
+        Assert.Contains($"BuyMeACoffeeUrl = \"{supportUrl}\"", constants, StringComparison.Ordinal);
+        Assert.Contains(supportUrl, about, StringComparison.Ordinal);
+        Assert.Contains("OnBuyMeACoffeeClicked", about, StringComparison.Ordinal);
+        Assert.Contains("AppConstants.BuyMeACoffeeUrl", aboutCode, StringComparison.Ordinal);
+        Assert.Contains(supportUrl, readme, StringComparison.Ordinal);
+        Assert.Contains(supportUrl, support, StringComparison.Ordinal);
+        Assert.Contains(supportUrl, funding, StringComparison.Ordinal);
+        Assert.Contains("voluntary", about, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string PathAt(params string[] segments)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
