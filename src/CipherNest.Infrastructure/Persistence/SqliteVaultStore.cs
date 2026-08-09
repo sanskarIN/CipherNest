@@ -1,5 +1,4 @@
 using CipherNest.Application.Abstractions;
-using CipherNest.Shared;
 using Microsoft.Data.Sqlite;
 
 namespace CipherNest.Infrastructure.Persistence;
@@ -21,15 +20,7 @@ public sealed class SqliteVaultStore : IVaultStore
             await ExecuteAsync(connection, "PRAGMA journal_mode=WAL;", cancellationToken).ConfigureAwait(false);
             await ExecuteAsync(connection, "PRAGMA synchronous=FULL;", cancellationToken).ConfigureAwait(false);
             await ExecuteAsync(connection, "PRAGMA foreign_keys=ON;", cancellationToken).ConfigureAwait(false);
-            await ExecuteAsync(connection, "CREATE TABLE IF NOT EXISTS VaultHeader (Id INTEGER PRIMARY KEY CHECK(Id = 1), HeaderJson TEXT NOT NULL);", cancellationToken).ConfigureAwait(false);
-            await ExecuteAsync(connection, "CREATE TABLE IF NOT EXISTS VaultItems (Id TEXT PRIMARY KEY, Envelope BLOB NOT NULL);", cancellationToken).ConfigureAwait(false);
-            await ExecuteAsync(connection, "CREATE TABLE IF NOT EXISTS AppSettings (Key TEXT PRIMARY KEY, Value TEXT NOT NULL);", cancellationToken).ConfigureAwait(false);
-            await ExecuteAsync(connection, "CREATE TABLE IF NOT EXISTS MigrationHistory (Version INTEGER PRIMARY KEY, AppliedUtc TEXT NOT NULL);", cancellationToken).ConfigureAwait(false);
-            await using var command = connection.CreateCommand();
-            command.CommandText = "INSERT OR IGNORE INTO MigrationHistory(Version, AppliedUtc) VALUES ($version, $utc);";
-            command.Parameters.AddWithValue("$version", AppConstants.DatabaseSchemaVersion);
-            command.Parameters.AddWithValue("$utc", DateTimeOffset.UtcNow.ToString("O"));
-            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            await DatabaseMigrator.ApplyAsync(connection, cancellationToken).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
