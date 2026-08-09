@@ -141,7 +141,8 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         try
         {
             await using var stream = await result.OpenReadAsync();
-            var attachment = await _vault.AddAttachmentAsync(_existing.Id, stream, result.FileName, "application/octet-stream");
+            var mediaType = AttachmentTypePolicy.ResolveMediaType(result.ContentType, result.FileName);
+            var attachment = await _vault.AddAttachmentAsync(_existing.Id, stream, result.FileName, mediaType);
             Attachments.Add(attachment); _existing = await _vault.GetItemAsync(_existing.Id); ErrorMessage = string.Empty;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException) { ErrorMessage = $"Attachment was not added: {ex.Message}"; }
