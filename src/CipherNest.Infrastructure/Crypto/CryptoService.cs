@@ -10,8 +10,13 @@ namespace CipherNest.Infrastructure.Crypto;
 public sealed class CryptoService : ICryptoService
 {
     public static readonly KdfParameters DefaultKdf = new(64 * 1024, 3, 1);
+    public const int MinimumKdfMemoryKiB = 16 * 1024;
+    public const int MaximumKdfMemoryKiB = 512 * 1024;
+    public const int MaximumKdfIterations = 10;
+    public const int MaximumKdfParallelism = 16;
     private const int KeySize = 32;
     private const int SaltSize = 16;
+    private const int MaximumSaltSize = 64;
     private const int NonceSize = 12;
     private const int TagSize = 16;
 
@@ -110,10 +115,7 @@ public sealed class CryptoService : ICryptoService
     public byte[] DeriveKey(ReadOnlySpan<char> passphrase, ReadOnlySpan<byte> salt, KdfParameters parameters)
     {
         ValidatePassphrase(passphrase);
-        if (salt.Length < 16 || parameters.MemoryKiB < 16 * 1024 || parameters.Iterations < 1 || parameters.Parallelism < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(parameters), "KDF parameters are outside the supported security bounds.");
-        }
+        ValidateKdfParameters(salt, parameters);
 
         var utf8 = new byte[Encoding.UTF8.GetByteCount(passphrase)];
         try
@@ -147,11 +149,24 @@ public sealed class CryptoService : ICryptoService
         if (passphrase.Length < 12) throw new ArgumentException("A passphrase or recovery key must contain at least 12 characters.", nameof(passphrase));
     }
 
+    private static void ValidateKdfParameters(ReadOnlySpan<byte> salt, KdfParameters parameters)
+    {
+        if (salt.Length is < SaltSize or > MaximumSaltSize ||
+            parameters.MemoryKiB is < MinimumKdfMemoryKiB or > MaximumKdfMemoryKiB ||
+            parameters.Iterations is < 1 or > MaximumKdfIterations ||
+            parameters.Parallelism is < 1 or > MaximumKdfParallelism)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters), "KDF parameters are outside the supported security/resource bounds.");
+        }
+    }
+
     private static void ValidateWrappedKey(WrappedKeyEnvelope envelope)
     {
-        if (envelope.Version != AppConstants.CryptoFormatVersion || envelope.Salt.Length < SaltSize || envelope.Nonce.Length != NonceSize || envelope.Tag.Length != TagSize)
+        if (envelope.Version != AppConstants.CryptoFormatVersion || envelope.Salt.Length is < SaltSize or > MaximumSaltSize || envelope.Nonce.Length != NonceSize || envelope.Tag.Length != TagSize)
         {
             throw new VaultAuthenticationException();
         }
+        try { ValidateKdfParameters(envelope.Salt, envelope.Kdf); }
+        catch (ArgumentOutOfRangeException ex) { throw new VaultAuthenticationException(ex); }
     }
 }
