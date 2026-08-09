@@ -20,5 +20,7 @@ public sealed record AppPreferences
     public int TrashRetentionDays { get; init; } = 30;
     public int RequireMasterPassphraseAfterHours { get; init; } = 24;
     public int BackupReminderDays { get; init; } = 7;
+    public bool ReviewRemindersEnabled { get; init; } = true;
+    public int ReviewReminderLeadDays { get; init; } = 7;
     public DateTimeOffset? LastSuccessfulBackupUtc { get; init; }
 }
