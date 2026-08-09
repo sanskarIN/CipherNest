@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Services;
 using CipherNest.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -28,16 +29,14 @@ public partial class TrashViewModel : ObservableObject
         try
         {
             var preferences = await _settings.LoadAsync();
-            var cutoff = DateTimeOffset.UtcNow.AddDays(-Math.Clamp(preferences.TrashRetentionDays, 1, 365));
             var all = await _vault.GetItemsAsync(includeTrash: true);
-            foreach (var expired in all.Where(item => item.DeletedUtc is { } deleted && deleted <= cutoff))
-            {
-                await _vault.DeletePermanentlyAsync(expired.Id);
-            }
+            var expiredIds = TrashRetentionPolicy.FindExpiredItemIds(all, DateTimeOffset.UtcNow, preferences.TrashRetentionDays);
+            foreach (var id in expiredIds) await _vault.DeletePermanentlyAsync(id);
+
             var trash = (await _vault.GetItemsAsync(includeTrash: true)).Where(static item => item.DeletedUtc is not null).OrderByDescending(static item => item.DeletedUtc).ToArray();
             Items.Clear();
             foreach (var item in trash) Items.Add(item);
-            StatusMessage = trash.Length == 0 ? "Trash is empty." : $"{trash.Length} item(s) in trash. Items older than {preferences.TrashRetentionDays} days are removed when trash opens.";
+            StatusMessage = trash.Length == 0 ? "Trash is empty." : $"{trash.Length} item(s) in trash. Items older than {preferences.TrashRetentionDays} days are removed automatically when vault maintenance runs.";
         }
         finally { IsBusy = false; }
     }
