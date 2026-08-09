@@ -123,6 +123,38 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     }
 
     [RelayCommand]
+    private async Task ExportAttachmentAsync(AttachmentReference attachment)
+    {
+        if (IsReauthenticationRequired || _existing is null || attachment is null) return;
+        var confirm = await Shell.Current.DisplayAlert("Export decrypted attachment?", "CipherNest must create a temporary plaintext copy so the operating-system share sheet can export this file. Other apps, cloud providers, backups, or the receiving destination may retain it. Continue only if you trust the destination.", "Export plaintext", "Cancel");
+        if (!confirm) return;
+
+        var exportRoot = Path.Combine(FileSystem.Current.CacheDirectory, "attachment-exports");
+        Directory.CreateDirectory(exportRoot);
+        var safeName = Path.GetFileName(attachment.DisplayName);
+        if (string.IsNullOrWhiteSpace(safeName)) safeName = $"attachment-{attachment.Id:N}";
+        var path = Path.Combine(exportRoot, $"{attachment.Id:N}-{safeName}");
+        IsBusy = true;
+        try
+        {
+            await using (var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                await _vault.ExportAttachmentAsync(_existing.Id, attachment.Id, stream);
+            await Share.Default.RequestAsync(new ShareFileRequest("Export decrypted CipherNest attachment", new ShareFile(path, attachment.MediaType)));
+            ErrorMessage = "The temporary plaintext export was deleted after the share request returned. CipherNest cannot delete copies retained by the operating system or destination app.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException)
+        {
+            ErrorMessage = $"Attachment export failed: {ex.Message}";
+        }
+        finally
+        {
+            try { if (File.Exists(path)) File.Delete(path); }
+            catch (IOException) { ErrorMessage = "Export finished, but CipherNest could not confirm deletion of the temporary plaintext file. Clear the app cache before continuing with sensitive work."; }
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task RemoveAttachmentAsync(AttachmentReference attachment)
     {
         if (IsReauthenticationRequired || _existing is null || attachment is null) return;
