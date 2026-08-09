@@ -11,8 +11,11 @@ CipherNest is a local-first, open-source password, secure-note, identity, creden
 - The master passphrase is never stored.
 - A random vault data-encryption key is wrapped by a key derived with Argon2id.
 - AES-256-GCM is used for authenticated encryption with unique nonces.
-- Search and password audits run only over decrypted in-memory data while unlocked.
-- Encrypted backup/restore is supported; plaintext export is deliberately excluded from the first hardened release.
+- Search, recent-use organization, and password audits run locally over decrypted in-memory data only while unlocked.
+- Encrypted backup/restore includes encrypted attachments and is the recommended transfer path.
+- Generic CSV import and explicitly warned plaintext CSV/attachment export are available for interoperability; users are warned that operating systems and destination apps can retain plaintext copies.
+- Optional biometric convenience unlock is implemented for supported Android, iOS, and Mac Catalyst devices through a separately generated secondary wrapped-key path. The master passphrase remains required for recovery, sensitive settings, fresh processes, and periodic checks. Windows currently uses master-passphrase unlock.
+- Clipboard use is explicit and time-limited where reliable platform clearing is available.
 - No analytics or telemetry are enabled.
 
 ## Build
@@ -26,7 +29,7 @@ dotnet build CipherNest.slnx -c Release
 dotnet test CipherNest.slnx -c Release
 ```
 
-See `docs/setup/BUILD.md` and `docs/TROUBLESHOOTING.md` for platform details.
+See `docs/setup/BUILD.md`, `docs/TROUBLESHOOTING.md`, `docs/security/THREAT_MODEL.md`, and `docs/security/BIOMETRIC_UNLOCK.md` for platform and security details.
 
 ## Repository
 
