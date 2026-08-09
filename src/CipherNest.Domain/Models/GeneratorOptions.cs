@@ -15,6 +15,6 @@ public sealed record GeneratorOptions
     public bool Digits { get; init; } = true;
     public bool Symbols { get; init; } = true;
     public bool ExcludeAmbiguous { get; init; } = true;
-    public int WordCount { get; init; } = 5;
+    public int WordCount { get; init; } = 8;
     public string Separator { get; init; } = "-";
 }
