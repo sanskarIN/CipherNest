@@ -1,4 +1,5 @@
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Services;
 using CipherNest.App.Services;
 using CipherNest.App.ViewModels;
 using CipherNest.App.Views;
@@ -29,6 +30,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IVaultService, VaultService>();
         builder.Services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
         builder.Services.AddSingleton<ISecurityAuditService, SecurityAuditService>();
+        builder.Services.AddSingleton<ISafeNoteMarkupService, SafeNoteMarkupService>();
         builder.Services.AddSingleton<ISettingsStore>(_ => new JsonSettingsStore(settingsPath));
         builder.Services.AddSingleton<IBackupService, EncryptedBackupService>();
         builder.Services.AddSingleton<IPlaintextTransferService, CsvTransferService>();
