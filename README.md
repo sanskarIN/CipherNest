@@ -12,17 +12,21 @@ CipherNest is a local-first, open-source password, secure-note, identity, creden
 - AES-256-GCM authenticates encrypted records, wrapped keys, backups, and attachment chunks using unique nonces and contextual associated data.
 - Optional one-time recovery material provides an independent wrapped-key path and must be retained separately by the user.
 - Optional Android/iOS/Mac Catalyst biometric convenience unlock uses a separately generated random secondary secret protected by platform secure storage; Windows currently falls back to the master passphrase.
-- Master-passphrase re-authentication is required periodically after biometric use and for security-sensitive actions such as plaintext export, passphrase changes, biometric configuration, and vault deletion.
-- Local search, favorites, collections, item-type filters, review reminders, recent-use sorting, and weak/reused/duplicate-secret audit operate only over decrypted data while unlocked.
+- Master-passphrase re-authentication is required periodically after biometric use and for security-sensitive actions such as plaintext export, biometric configuration, manual permanent deletion, and vault deletion. Changing the master passphrase ends the current security session and requires the new passphrase before biometric convenience unlock can resume.
+- Repeated interactive unlock failures use a bounded exponential delay. This is a client-side control and is not claimed to stop offline guessing against a copied database.
+- Local search, favorites, collections, item-type filters, review reminders, recent-use sorting, and weak/reused/duplicate-secret audit operate only over decrypted data while unlocked. Large matching result sets render incrementally in 50-item pages.
+- Trash has configurable retention; routine vault maintenance removes expired encrypted trash records. Manual permanent deletion and empty-trash actions require current-master re-authentication plus explicit confirmation.
 - Password generation uses `RandomNumberGenerator`; memorable passphrases use a validated 256-word local list with explicit random-selection entropy guidance and configurable defaults.
 - Secure notes support a deliberately small Markdown-like subset plus checklists; raw HTML is not rendered.
 - Attachments are encrypted in bounded streaming chunks. Small UTF-8 text-family attachments can be previewed in memory; other formats require explicit plaintext export.
 - Encrypted backup/restore includes encrypted attachments and is the recommended transfer path.
 - Generic CSV import and deliberately guarded plaintext CSV/attachment export are available for interoperability; warnings explain that operating systems and destination apps can retain plaintext copies.
-- Clipboard use is explicit and time-limited where reliable clearing is available; platform clipboard history remains outside CipherNest's control.
+- Username, primary-secret, and secret custom-field clipboard writes require explicit copy actions. Timed clearing preserves unrelated newer clipboard content, and manual/background/timeout vault locks also attempt immediate clipboard cleanup where the platform permits it.
+- Sensitive credential/decrypted ViewModel fields are cleared when sensitive pages disappear, while .NET managed-memory limitations are documented rather than hidden.
 - Settings include theme, larger-interface/reduced-motion preferences, local reminder controls, biometric configuration, generator defaults, storage/cache inspection, security information, backup/restore, import/export, and destructive local-vault deletion.
 - English resources ship first with a persisted System/English language preference and resource-backed architecture ready for additional culture catalogs.
 - Central exception reporting intentionally omits exception messages/stacks and vault content. No third-party analytics or crash-reporting service is enabled.
+- Original vector branding includes launcher/adaptive sources, a splash wordmark with `Made by the Sanskar`, a monochrome source, and a dark-surface logo variant.
 
 ## Build
 
