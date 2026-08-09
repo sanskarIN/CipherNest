@@ -12,27 +12,34 @@ public partial class UnlockViewModel : ObservableObject
     private readonly UnlockRateLimiter _limiter;
     private readonly IBiometricUnlockService _biometrics;
     private readonly ISettingsStore _settings;
+    private readonly SessionSecurityState _sessionSecurity;
 
     [ObservableProperty] private string masterPassphrase = string.Empty;
     [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private bool biometricUnlockAvailable;
 
-    public UnlockViewModel(IVaultService vault, UnlockRateLimiter limiter, IBiometricUnlockService biometrics, ISettingsStore settings)
+    public UnlockViewModel(IVaultService vault, UnlockRateLimiter limiter, IBiometricUnlockService biometrics, ISettingsStore settings, SessionSecurityState sessionSecurity)
     {
         _vault = vault;
         _limiter = limiter;
         _biometrics = biometrics;
         _settings = settings;
+        _sessionSecurity = sessionSecurity;
     }
 
     public async Task LoadAsync()
     {
         var preferences = await _settings.LoadAsync();
-        BiometricUnlockAvailable = preferences.BiometricUnlockEnabled
+        var maximumAge = TimeSpan.FromHours(Math.Clamp(preferences.RequireMasterPassphraseAfterHours, 1, 168));
+        var masterRequired = _sessionSecurity.RequiresMasterAuthentication(DateTimeOffset.UtcNow, maximumAge);
+        BiometricUnlockAvailable = !masterRequired
+            && preferences.BiometricUnlockEnabled
             && _biometrics.IsSupported
             && await _biometrics.IsAvailableAsync()
             && await _vault.IsSecondaryUnlockConfiguredAsync();
+        if (masterRequired && preferences.BiometricUnlockEnabled)
+            ErrorMessage = "Enter the master passphrase to begin this security session. Biometric unlock becomes available for later locks during the configured period.";
     }
 
     partial void OnMasterPassphraseChanged(string value) => UnlockCommand.NotifyCanExecuteChanged();
@@ -62,6 +69,8 @@ public partial class UnlockViewModel : ObservableObject
             try
             {
                 await _vault.UnlockAsync(MasterPassphrase);
+                var isMaster = await _vault.ReauthenticateAsync(MasterPassphrase);
+                if (isMaster) _sessionSecurity.RecordMasterAuthentication(DateTimeOffset.UtcNow);
                 _limiter.RegisterSuccess();
                 MasterPassphrase = string.Empty;
                 await Shell.Current.GoToAsync("//vault");
@@ -82,6 +91,14 @@ public partial class UnlockViewModel : ObservableObject
         ErrorMessage = string.Empty;
         try
         {
+            var preferences = await _settings.LoadAsync();
+            var maximumAge = TimeSpan.FromHours(Math.Clamp(preferences.RequireMasterPassphraseAfterHours, 1, 168));
+            if (_sessionSecurity.RequiresMasterAuthentication(DateTimeOffset.UtcNow, maximumAge))
+            {
+                BiometricUnlockAvailable = false;
+                ErrorMessage = "The periodic master-passphrase check is due. Unlock with the master passphrase first.";
+                return;
+            }
             if (!await _biometrics.AuthenticateAsync("Authenticate to unlock your local CipherNest vault."))
             {
                 ErrorMessage = "Biometric authentication was cancelled or failed. Use the master passphrase instead.";
