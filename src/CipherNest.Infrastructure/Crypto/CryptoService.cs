@@ -17,9 +17,22 @@ public sealed class CryptoService : ICryptoService
 
     public WrappedKeyEnvelope CreateWrappedKey(ReadOnlySpan<char> passphrase)
     {
-        ValidatePassphrase(passphrase);
-        var salt = RandomNumberGenerator.GetBytes(SaltSize);
         var dataKey = RandomNumberGenerator.GetBytes(KeySize);
+        try
+        {
+            return WrapKey(dataKey, passphrase);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(dataKey);
+        }
+    }
+
+    public WrappedKeyEnvelope WrapKey(ReadOnlySpan<byte> dataKey, ReadOnlySpan<char> passphrase)
+    {
+        ValidatePassphrase(passphrase);
+        ValidateKey(dataKey);
+        var salt = RandomNumberGenerator.GetBytes(SaltSize);
         byte[]? kek = null;
         try
         {
@@ -36,11 +49,7 @@ public sealed class CryptoService : ICryptoService
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(dataKey);
-            if (kek is not null)
-            {
-                CryptographicOperations.ZeroMemory(kek);
-            }
+            if (kek is not null) CryptographicOperations.ZeroMemory(kek);
         }
     }
 
@@ -53,10 +62,7 @@ public sealed class CryptoService : ICryptoService
         {
             kek = DeriveKey(passphrase, envelope.Salt, envelope.Kdf);
             var aad = BuildKeyWrapAssociatedData(envelope.Version, envelope.Kdf);
-            return Decrypt(
-                new EncryptedEnvelope(envelope.Version, envelope.Nonce, envelope.Ciphertext, envelope.Tag),
-                kek,
-                aad);
+            return Decrypt(new EncryptedEnvelope(envelope.Version, envelope.Nonce, envelope.Ciphertext, envelope.Tag), kek, aad);
         }
         catch (CryptographicException ex)
         {
@@ -64,10 +70,7 @@ public sealed class CryptoService : ICryptoService
         }
         finally
         {
-            if (kek is not null)
-            {
-                CryptographicOperations.ZeroMemory(kek);
-            }
+            if (kek is not null) CryptographicOperations.ZeroMemory(kek);
         }
     }
 
@@ -136,18 +139,12 @@ public sealed class CryptoService : ICryptoService
 
     private static void ValidateKey(ReadOnlySpan<byte> key)
     {
-        if (key.Length != KeySize)
-        {
-            throw new ArgumentException("A 256-bit key is required.", nameof(key));
-        }
+        if (key.Length != KeySize) throw new ArgumentException("A 256-bit key is required.", nameof(key));
     }
 
     private static void ValidatePassphrase(ReadOnlySpan<char> passphrase)
     {
-        if (passphrase.Length < 12)
-        {
-            throw new ArgumentException("A master passphrase must contain at least 12 characters.", nameof(passphrase));
-        }
+        if (passphrase.Length < 12) throw new ArgumentException("A passphrase or recovery key must contain at least 12 characters.", nameof(passphrase));
     }
 
     private static void ValidateWrappedKey(WrappedKeyEnvelope envelope)

@@ -15,6 +15,7 @@ public sealed record EncryptedEnvelope(int Version, byte[] Nonce, byte[] Ciphert
 public interface ICryptoService
 {
     WrappedKeyEnvelope CreateWrappedKey(ReadOnlySpan<char> passphrase);
+    WrappedKeyEnvelope WrapKey(ReadOnlySpan<byte> dataKey, ReadOnlySpan<char> passphrase);
     byte[] UnwrapKey(ReadOnlySpan<char> passphrase, WrappedKeyEnvelope envelope);
     EncryptedEnvelope Encrypt(ReadOnlySpan<byte> plaintext, ReadOnlySpan<byte> key, ReadOnlySpan<byte> associatedData);
     byte[] Decrypt(EncryptedEnvelope envelope, ReadOnlySpan<byte> key, ReadOnlySpan<byte> associatedData);

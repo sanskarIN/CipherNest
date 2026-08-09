@@ -4,7 +4,6 @@ using CipherNest.Application.Abstractions;
 using CipherNest.Application.Exceptions;
 using CipherNest.Application.Validation;
 using CipherNest.Domain.Models;
-using CipherNest.Shared;
 
 namespace CipherNest.Infrastructure.Services;
 
@@ -33,41 +32,62 @@ public sealed class VaultService : IVaultService, IDisposable
         return await _store.HasVaultAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task CreateAsync(string masterPassphrase, CancellationToken cancellationToken = default)
+    public async Task<string?> CreateAsync(string masterPassphrase, bool createRecoveryKey = true, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(masterPassphrase);
+        string? recoveryKey = null;
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             await _store.InitializeAsync(cancellationToken).ConfigureAwait(false);
-            if (await _store.HasVaultAsync(cancellationToken).ConfigureAwait(false))
-            {
-                throw new InvalidOperationException("A vault already exists on this device.");
-            }
+            if (await _store.HasVaultAsync(cancellationToken).ConfigureAwait(false)) throw new InvalidOperationException("A vault already exists on this device.");
 
-            var wrapped = _crypto.CreateWrappedKey(masterPassphrase.AsSpan());
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(wrapped, JsonOptions), cancellationToken).ConfigureAwait(false);
-            ReplaceDataKey(_crypto.UnwrapKey(masterPassphrase.AsSpan(), wrapped));
+            var masterWrapped = _crypto.CreateWrappedKey(masterPassphrase.AsSpan());
+            var dataKey = _crypto.UnwrapKey(masterPassphrase.AsSpan(), masterWrapped);
+            try
+            {
+                WrappedKeyEnvelope? recoveryWrapped = null;
+                if (createRecoveryKey)
+                {
+                    recoveryKey = GenerateRecoveryKey();
+                    recoveryWrapped = _crypto.WrapKey(dataKey, recoveryKey.AsSpan());
+                }
+                var header = new VaultHeaderDocument(1, masterWrapped, recoveryWrapped);
+                await _store.WriteHeaderAsync(JsonSerializer.Serialize(header, JsonOptions), cancellationToken).ConfigureAwait(false);
+                ReplaceDataKey(dataKey.ToArray());
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(dataKey);
+            }
         }
         finally
         {
             _gate.Release();
         }
         LockStateChanged?.Invoke(this, true);
+        return recoveryKey;
     }
 
-    public async Task UnlockAsync(string masterPassphrase, CancellationToken cancellationToken = default)
+    public async Task UnlockAsync(string masterPassphraseOrRecoveryKey, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(masterPassphrase);
+        ArgumentException.ThrowIfNullOrWhiteSpace(masterPassphraseOrRecoveryKey);
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             await _store.InitializeAsync(cancellationToken).ConfigureAwait(false);
-            var headerJson = await _store.ReadHeaderAsync(cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException("No local vault exists yet.");
-            var wrapped = JsonSerializer.Deserialize<WrappedKeyEnvelope>(headerJson, JsonOptions)
-                ?? throw new VaultAuthenticationException();
-            ReplaceDataKey(_crypto.UnwrapKey(masterPassphrase.AsSpan(), wrapped));
+            var headerJson = await _store.ReadHeaderAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("No local vault exists yet.");
+            var header = JsonSerializer.Deserialize<VaultHeaderDocument>(headerJson, JsonOptions) ?? throw new VaultAuthenticationException();
+            byte[]? key = null;
+            try
+            {
+                key = _crypto.UnwrapKey(masterPassphraseOrRecoveryKey.AsSpan(), header.Master);
+            }
+            catch (VaultAuthenticationException) when (header.Recovery is not null)
+            {
+                key = _crypto.UnwrapKey(masterPassphraseOrRecoveryKey.AsSpan(), header.Recovery);
+            }
+            ReplaceDataKey(key);
         }
         finally
         {
@@ -97,10 +117,7 @@ public sealed class VaultService : IVaultService, IDisposable
         {
             cancellationToken.ThrowIfCancellationRequested();
             var item = DecryptItem(row, key);
-            if (includeTrash || item.DeletedUtc is null)
-            {
-                result.Add(item);
-            }
+            if (includeTrash || item.DeletedUtc is null) result.Add(item);
         }
         return result.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
@@ -115,18 +132,13 @@ public sealed class VaultService : IVaultService, IDisposable
     {
         ArgumentNullException.ThrowIfNull(item);
         var errors = VaultItemValidator.Validate(item);
-        if (errors.Count > 0)
-        {
-            throw new ArgumentException(string.Join(" ", errors), nameof(item));
-        }
-
+        if (errors.Count > 0) throw new ArgumentException(string.Join(" ", errors), nameof(item));
         var key = RequireKey();
         var normalized = item.Normalize(_clock.UtcNow);
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(normalized, JsonOptions);
         try
         {
-            var aad = normalized.Id.ToByteArray();
-            var envelope = _crypto.Encrypt(plaintext, key, aad);
+            var envelope = _crypto.Encrypt(plaintext, key, normalized.Id.ToByteArray());
             var envelopeBytes = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions);
             await _store.UpsertItemAsync(new StoredVaultItem(normalized.Id, envelopeBytes), cancellationToken).ConfigureAwait(false);
         }
@@ -157,29 +169,15 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task<IReadOnlyList<VaultItem>> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
         var items = await GetItemsAsync(false, cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return items;
-        }
-
+        if (string.IsNullOrWhiteSpace(query)) return items;
         var q = query.Trim();
-        return items.Where(item =>
-            item.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase) ||
-            item.Username.Contains(q, StringComparison.CurrentCultureIgnoreCase) ||
-            item.Url.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-            item.Notes.Contains(q, StringComparison.CurrentCultureIgnoreCase) ||
-            item.Tags.Any(tag => tag.Contains(q, StringComparison.CurrentCultureIgnoreCase)) ||
-            item.CustomFields.Any(field => field.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase) || field.Value.Contains(q, StringComparison.CurrentCultureIgnoreCase)))
-            .ToArray();
+        return items.Where(item => item.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Username.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Url.Contains(q, StringComparison.OrdinalIgnoreCase) || item.Notes.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Tags.Any(tag => tag.Contains(q, StringComparison.CurrentCultureIgnoreCase)) || item.CustomFields.Any(field => field.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase) || field.Value.Contains(q, StringComparison.CurrentCultureIgnoreCase))).ToArray();
     }
 
     public void Dispose()
     {
-        if (_dataKey is not null)
-        {
-            CryptographicOperations.ZeroMemory(_dataKey);
-            _dataKey = null;
-        }
+        if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
+        _dataKey = null;
         _gate.Dispose();
     }
 
@@ -187,13 +185,11 @@ public sealed class VaultService : IVaultService, IDisposable
 
     private VaultItem DecryptItem(StoredVaultItem row, byte[] key)
     {
-        var envelope = JsonSerializer.Deserialize<EncryptedEnvelope>(row.Envelope, JsonOptions)
-            ?? throw new CryptographicException("Stored record envelope is invalid.");
+        var envelope = JsonSerializer.Deserialize<EncryptedEnvelope>(row.Envelope, JsonOptions) ?? throw new CryptographicException("Stored record envelope is invalid.");
         var plaintext = _crypto.Decrypt(envelope, key, row.Id.ToByteArray());
         try
         {
-            return JsonSerializer.Deserialize<VaultItem>(plaintext, JsonOptions)
-                ?? throw new CryptographicException("Stored record payload is invalid.");
+            return JsonSerializer.Deserialize<VaultItem>(plaintext, JsonOptions) ?? throw new CryptographicException("Stored record payload is invalid.");
         }
         finally
         {
@@ -201,11 +197,8 @@ public sealed class VaultService : IVaultService, IDisposable
         }
     }
 
-    private async Task<VaultItem> GetItemRequiredAsync(Guid id, CancellationToken cancellationToken)
-    {
-        return await GetItemAsync(id, cancellationToken).ConfigureAwait(false)
-            ?? throw new KeyNotFoundException("The requested vault item does not exist.");
-    }
+    private async Task<VaultItem> GetItemRequiredAsync(Guid id, CancellationToken cancellationToken) =>
+        await GetItemAsync(id, cancellationToken).ConfigureAwait(false) ?? throw new KeyNotFoundException("The requested vault item does not exist.");
 
     private void ReplaceDataKey(byte[] next)
     {
@@ -214,10 +207,22 @@ public sealed class VaultService : IVaultService, IDisposable
             CryptographicOperations.ZeroMemory(next);
             throw new CryptographicException("Invalid vault data key length.");
         }
-        if (_dataKey is not null)
-        {
-            CryptographicOperations.ZeroMemory(_dataKey);
-        }
+        if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
         _dataKey = next;
     }
+
+    private static string GenerateRecoveryKey()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(32);
+        try
+        {
+            return "CN1-" + Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(bytes);
+        }
+    }
+
+    private sealed record VaultHeaderDocument(int Version, WrappedKeyEnvelope Master, WrappedKeyEnvelope? Recovery);
 }
