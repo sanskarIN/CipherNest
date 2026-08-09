@@ -20,6 +20,7 @@ public interface IVaultService
     Task<IReadOnlyList<VaultItem>> GetItemsAsync(bool includeTrash = false, CancellationToken cancellationToken = default);
     Task<VaultItem?> GetItemAsync(Guid id, CancellationToken cancellationToken = default);
     Task SaveItemAsync(VaultItem item, CancellationToken cancellationToken = default);
+    Task MarkAccessedAsync(Guid id, CancellationToken cancellationToken = default);
     Task MoveToTrashAsync(Guid id, CancellationToken cancellationToken = default);
     Task RestoreFromTrashAsync(Guid id, CancellationToken cancellationToken = default);
     Task DeletePermanentlyAsync(Guid id, CancellationToken cancellationToken = default);
