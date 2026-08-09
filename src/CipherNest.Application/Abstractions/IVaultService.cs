@@ -9,7 +9,11 @@ public interface IVaultService
     Task<bool> HasVaultAsync(CancellationToken cancellationToken = default);
     Task<string?> CreateAsync(string masterPassphrase, bool createRecoveryKey = true, CancellationToken cancellationToken = default);
     Task UnlockAsync(string masterPassphraseOrRecoveryKey, CancellationToken cancellationToken = default);
+    Task UnlockWithSecondarySecretAsync(string secondarySecret, CancellationToken cancellationToken = default);
     Task<bool> ReauthenticateAsync(string masterPassphrase, CancellationToken cancellationToken = default);
+    Task EnableSecondaryUnlockAsync(string masterPassphrase, string secondarySecret, CancellationToken cancellationToken = default);
+    Task DisableSecondaryUnlockAsync(string masterPassphrase, CancellationToken cancellationToken = default);
+    Task<bool> IsSecondaryUnlockConfiguredAsync(CancellationToken cancellationToken = default);
     Task ChangeMasterPassphraseAsync(string currentMasterPassphrase, string newMasterPassphrase, CancellationToken cancellationToken = default);
     Task DeleteVaultAsync(string masterPassphrase, CancellationToken cancellationToken = default);
     Task LockAsync(CancellationToken cancellationToken = default);
