@@ -166,9 +166,13 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task SaveItemAsync(VaultItem item, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(item); var errors = VaultItemValidator.Validate(item); if (errors.Count > 0) throw new ArgumentException(string.Join(" ", errors), nameof(item));
-        var key = RequireKey(); var normalized = item.Normalize(_clock.UtcNow); var plaintext = JsonSerializer.SerializeToUtf8Bytes(normalized, JsonOptions);
-        try { var envelope = _crypto.Encrypt(plaintext, key, normalized.Id.ToByteArray()); await _store.UpsertItemAsync(new StoredVaultItem(normalized.Id, JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions)), cancellationToken).ConfigureAwait(false); }
-        finally { CryptographicOperations.ZeroMemory(plaintext); }
+        await PersistItemAsync(item.Normalize(_clock.UtcNow), cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task MarkAccessedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var item = await GetItemRequiredAsync(id, cancellationToken).ConfigureAwait(false);
+        await PersistItemAsync(item with { LastAccessedUtc = _clock.UtcNow }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task MoveToTrashAsync(Guid id, CancellationToken cancellationToken = default) { var item = await GetItemRequiredAsync(id, cancellationToken).ConfigureAwait(false); await SaveItemAsync(item with { DeletedUtc = _clock.UtcNow }, cancellationToken).ConfigureAwait(false); }
@@ -205,6 +209,18 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public void Dispose() { if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey); _dataKey = null; _gate.Dispose(); }
     private byte[] RequireKey() => _dataKey ?? throw new VaultLockedException();
+
+    private async Task PersistItemAsync(VaultItem item, CancellationToken cancellationToken)
+    {
+        var key = RequireKey();
+        var plaintext = JsonSerializer.SerializeToUtf8Bytes(item, JsonOptions);
+        try
+        {
+            var envelope = _crypto.Encrypt(plaintext, key, item.Id.ToByteArray());
+            await _store.UpsertItemAsync(new StoredVaultItem(item.Id, JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions)), cancellationToken).ConfigureAwait(false);
+        }
+        finally { CryptographicOperations.ZeroMemory(plaintext); }
+    }
 
     private VaultItem DecryptItem(StoredVaultItem row, byte[] key)
     {
