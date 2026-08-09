@@ -10,6 +10,7 @@ public enum AppThemePreference
 public sealed record AppPreferences
 {
     public AppThemePreference Theme { get; init; } = AppThemePreference.System;
+    public AppLanguagePreference Language { get; init; } = AppLanguagePreference.System;
     public int LockTimeoutSeconds { get; init; } = 60;
     public bool LockOnBackground { get; init; } = true;
     public int ClipboardClearSeconds { get; init; } = 30;
