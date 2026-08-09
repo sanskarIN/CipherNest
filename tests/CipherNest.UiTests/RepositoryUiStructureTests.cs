@@ -149,7 +149,11 @@ public sealed class RepositoryUiStructureTests
         var funding = File.ReadAllText(PathAt(".github", "FUNDING.yml"));
 
         Assert.Contains($"BuyMeACoffeeUrl = \"{supportUrl}\"", constants, StringComparison.Ordinal);
-        Assert.Contains(supportUrl, about, StringComparison.Ordinal);
+        Assert.Contains("shared:AppConstants.BuyMeACoffeeUrl", about, StringComparison.Ordinal);
+        Assert.Contains("shared:AppConstants.RepositoryUrl", about, StringComparison.Ordinal);
+        Assert.Contains("shared:AppConstants.CreatorUrl", about, StringComparison.Ordinal);
+        Assert.Contains("shared:AppConstants.BusinessEmail", about, StringComparison.Ordinal);
+        Assert.Contains("shared:AppConstants.SupportEmail", about, StringComparison.Ordinal);
         Assert.Contains("OnBuyMeACoffeeClicked", about, StringComparison.Ordinal);
         Assert.Contains("AppConstants.BuyMeACoffeeUrl", aboutCode, StringComparison.Ordinal);
         Assert.Contains(supportUrl, readme, StringComparison.Ordinal);
