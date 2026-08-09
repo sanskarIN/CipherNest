@@ -13,6 +13,7 @@
   <ShellContent Route="audit" ContentTemplate="{DataTemplate views:AuditPage}" />
   <ShellContent Route="trash" ContentTemplate="{DataTemplate views:TrashPage}" />
   <ShellContent Route="settings" ContentTemplate="{DataTemplate views:SettingsPage}" />
+  <ShellContent Route="security-info" ContentTemplate="{DataTemplate views:SecurityInfoPage}" />
   <ShellContent Route="transfer" ContentTemplate="{DataTemplate views:TransferPage}" />
   <ShellContent Route="about" ContentTemplate="{DataTemplate views:AboutPage}" />
   <ShellContent Route="developer" ContentTemplate="{DataTemplate views:DeveloperPage}" />
