@@ -31,6 +31,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISecurityAuditService, SecurityAuditService>();
         builder.Services.AddSingleton<ISettingsStore>(_ => new JsonSettingsStore(settingsPath));
         builder.Services.AddSingleton<IBackupService, EncryptedBackupService>();
+        builder.Services.AddSingleton<IPlaintextTransferService, CsvTransferService>();
         builder.Services.AddSingleton<IClipboardSecurityService, ClipboardSecurityService>();
         builder.Services.AddSingleton<IScreenshotProtectionService, ScreenshotProtectionService>();
         builder.Services.AddSingleton<UnlockRateLimiter>();
@@ -43,6 +44,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AuditViewModel>();
         builder.Services.AddTransient<TrashViewModel>();
         builder.Services.AddTransient<SettingsViewModel>();
+        builder.Services.AddTransient<TransferViewModel>();
 
         builder.Services.AddTransient<StartupPage>();
         builder.Services.AddTransient<OnboardingPage>();
@@ -53,6 +55,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AuditPage>();
         builder.Services.AddTransient<TrashPage>();
         builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<TransferPage>();
         builder.Services.AddTransient<AboutPage>();
 
         return builder.Build();

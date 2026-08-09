@@ -13,5 +13,6 @@
   <ShellContent Route="audit" ContentTemplate="{DataTemplate views:AuditPage}" />
   <ShellContent Route="trash" ContentTemplate="{DataTemplate views:TrashPage}" />
   <ShellContent Route="settings" ContentTemplate="{DataTemplate views:SettingsPage}" />
+  <ShellContent Route="transfer" ContentTemplate="{DataTemplate views:TransferPage}" />
   <ShellContent Route="about" ContentTemplate="{DataTemplate views:AboutPage}" />
 </Shell>
