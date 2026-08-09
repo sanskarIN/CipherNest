@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="ProductName" xml:space="preserve"><value>CipherNest</value></data>
+  <data name="VaultTitle" xml:space="preserve"><value>Your vault</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Settings</value></data>
+  <data name="GeneratorTitle" xml:space="preserve"><value>Generator</value></data>
+  <data name="SecurityAuditTitle" xml:space="preserve"><value>Security audit</value></data>
+  <data name="BackButton" xml:space="preserve"><value>Back</value></data>
+  <data name="LockButton" xml:space="preserve"><value>Lock</value></data>
+  <data name="SaveButton" xml:space="preserve"><value>Save</value></data>
+  <data name="CancelButton" xml:space="preserve"><value>Cancel</value></data>
+  <data name="LocalOnlySummary" xml:space="preserve"><value>Your encrypted vault remains on this device.</value></data>
+  <data name="AuditStatus" xml:space="preserve"><value>This release has not completed an independent professional security audit.</value></data>
+  <data name="RecoveryLimitation" xml:space="preserve"><value>Forgotten master passphrases cannot be recovered unless you retained configured recovery material.</value></data>
+</root>
