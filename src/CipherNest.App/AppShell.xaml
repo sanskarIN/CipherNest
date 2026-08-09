@@ -11,6 +11,7 @@
   <ShellContent Route="vault" ContentTemplate="{DataTemplate views:VaultPage}" />
   <ShellContent Route="generator" ContentTemplate="{DataTemplate views:GeneratorPage}" />
   <ShellContent Route="audit" ContentTemplate="{DataTemplate views:AuditPage}" />
+  <ShellContent Route="trash" ContentTemplate="{DataTemplate views:TrashPage}" />
   <ShellContent Route="settings" ContentTemplate="{DataTemplate views:SettingsPage}" />
   <ShellContent Route="about" ContentTemplate="{DataTemplate views:AboutPage}" />
 </Shell>
