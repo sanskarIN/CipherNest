@@ -30,13 +30,21 @@ public partial class ItemEditorViewModel
 
     public void ClearSensitiveState()
     {
+        Title = string.Empty;
+        Username = string.Empty;
         Secret = string.Empty;
+        Url = string.Empty;
+        Notes = string.Empty;
+        Collection = string.Empty;
+        Tags = string.Empty;
+        CustomFieldsText = string.Empty;
         ReauthenticationPassphrase = string.Empty;
         ChecklistDraft = string.Empty;
         NotePreview = string.Empty;
         ShowNotePreview = false;
-        CustomFieldsText = string.Empty;
+        Attachments.Clear();
         SecretCustomFields.Clear();
+        _existing = null;
     }
 
     private void RefreshSecretCustomFields(string value)
