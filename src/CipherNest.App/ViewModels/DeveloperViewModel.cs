@@ -61,9 +61,24 @@ public partial class DeveloperViewModel : ObservableObject
         sb.AppendLine(StorageInfo);
         sb.AppendLine("Vault records, titles, usernames, secrets, URLs, notes, tags, custom fields, keys, salts, nonces, recovery keys, database paths, attachment names, and backup passphrases are intentionally omitted.");
         var path = Path.Combine(FileSystem.Current.CacheDirectory, $"CipherNest-redacted-diagnostics-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.txt");
-        await File.WriteAllTextAsync(path, sb.ToString());
-        StatusMessage = "Redacted diagnostic file created. Review it before sharing; platform metadata is still included.";
-        await Share.Default.RequestAsync(new ShareFileRequest("CipherNest redacted diagnostics", new ShareFile(path)));
+        try
+        {
+            await File.WriteAllTextAsync(path, sb.ToString());
+            StatusMessage = "Redacted diagnostic file created. Review it before sharing; platform metadata is still included.";
+            await Share.Default.RequestAsync(new ShareFileRequest("CipherNest redacted diagnostics", new ShareFile(path)));
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+                StatusMessage = "Redacted diagnostic share request completed and the temporary app-cache copy was deleted where permitted.";
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                StatusMessage = "The diagnostic share request completed, but CipherNest could not confirm deletion of its temporary cache copy. Use Settings → Storage & cache → Clear temporary cache.";
+            }
+        }
     }
 
     [RelayCommand]
