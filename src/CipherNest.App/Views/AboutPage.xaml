@@ -1,21 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="CipherNest.App.Views.AboutPage">
-  <ScrollView>
-    <VerticalStackLayout Padding="24" Spacing="14" MaximumWidthRequest="720" HorizontalOptions="Center">
-      <Image Source="appicon.svg" HeightRequest="96"/>
-      <Label Text="CipherNest" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center"/>
-      <Label Text="Version 0.1.0 · cryptographic format 1 · database schema 1" Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center"/>
-      <Label Text="Made by the Sanskar" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
-      <Frame><VerticalStackLayout Spacing="8"><Label Text="Security status" FontAttributes="Bold"/><Label Text="CipherNest uses established cryptographic primitives and local-only storage, but this release has not completed an independent professional security audit. Open source does not itself guarantee security."/></VerticalStackLayout></Frame>
-      <Label Text="Business: sanskarin@outlook.in"/>
-      <Label Text="Support: supportramsandesh@gmail.com"/>
-      <Label Text="Repository: https://github.com/sanskarIN/CipherNest"/>
-      <Label Text="Creator: https://www.github.com/sanskarIN"/>
-      <Label Text="License: GPL-3.0-or-later"/>
-      <Label Text="Technology: .NET MAUI, C#, SQLite, Argon2id, AES-256-GCM"/>
-      <Button Text="Back to vault" Clicked="OnBackClicked"/>
-    </VerticalStackLayout>
-  </ScrollView>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="CipherNest.App.Views.AboutPage">
+  <ScrollView><VerticalStackLayout Padding="24" Spacing="14" MaximumWidthRequest="720" HorizontalOptions="Center"><Image Source="ciphernest_logo.svg" HeightRequest="96"/><Label Text="CipherNest" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center"/><Label Text="Version 0.1.0 · cryptographic format 1 · database schema 1" Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center"/><Label Text="Made by the Sanskar" FontAttributes="Bold" HorizontalTextAlignment="Center"/><Frame><VerticalStackLayout Spacing="8"><Label Text="Security status" FontAttributes="Bold"/><Label Text="CipherNest uses established cryptographic primitives and local-only storage, but this release has not completed an independent professional security audit. Open source does not itself guarantee security."/></VerticalStackLayout></Frame><Label Text="Business: sanskarin@outlook.in"/><Label Text="Support: supportramsandesh@gmail.com"/><Label Text="Repository: https://github.com/sanskarIN/CipherNest"/><Label Text="Creator: https://www.github.com/sanskarIN"/><Label Text="License: GPL-3.0-or-later"/><Label Text="Technology: .NET MAUI, C#, SQLite, Argon2id, AES-256-GCM"/><Button Text="Back to vault" Clicked="OnBackClicked"/></VerticalStackLayout></ScrollView>
 </ContentPage>
