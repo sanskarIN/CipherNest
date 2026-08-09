@@ -30,6 +30,9 @@ All notable changes are documented here following Semantic Versioning principles
 - Dedicated in-app security/privacy/threat-limit information surface.
 - Privacy-safe centralized exception reporting that omits exception messages/stacks and decrypted vault context.
 - Runtime About version/build metadata plus license, privacy, terms, third-party notices, acknowledgements, repository/support details, and audit status.
+- Optional project-support metadata at `https://buymeacoffee.com/sanskarIN`, with a user-initiated About action, repository/Support references, and GitHub `.github/FUNDING.yml` metadata.
+- Centralized About project/contact metadata bindings to prevent duplicated public URLs/emails from drifting away from `AppConstants`.
+- `docs/NEXT_STEPS.md` with ordered build, device-security, recovery, backup/transfer, accessibility/localization, performance, release-engineering, security-review, launch, and later-version work.
 - Splash wordmark/creator credit, monochrome icon source, and dark-surface logo source in addition to the existing original vector branding.
 - Third-party dependency notices, implemented cryptographic design specification, secure-note security documentation, passphrase-generator design notes, privacy-safe diagnostics policy, localization architecture guidance, packaging/reproducibility guidance, branding asset documentation, and store-listing guidance.
 
@@ -49,6 +52,7 @@ All notable changes are documented here following Semantic Versioning principles
 - Vault filter controls now stack cleanly and primary actions use a wrapping layout for narrow phones and resizable desktop windows.
 - Unlock biometric-capability errors now use the privacy-safe exception reporter instead of writing exception messages through raw debug output.
 - Redacted diagnostics now delete their temporary app-cache file after the share request returns where permitted.
+- Store-listing guidance now requires current policy verification before shipping an external funding/payment CTA; affected store builds must omit/disable the in-app CTA if the applicable policy does not permit it.
 - CI now restores/builds/runs unit, integration, and UI-structure test projects before the Windows MAUI build gate.
 - Release/test/database/architecture/security/privacy/legal documentation was expanded to match implemented behavior and remaining external-validation limits.
 
