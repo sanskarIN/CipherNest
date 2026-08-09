@@ -78,10 +78,7 @@ public partial class VaultViewModel : ObservableObject
     [RelayCommand]
     private async Task EditAsync(VaultItem item)
     {
-        if (item is null) return;
-        try { await _vault.MarkAccessedAsync(item.Id); }
-        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException) { ErrorMessage = $"Could not update recent-use information: {ex.Message}"; }
-        await Shell.Current.GoToAsync($"{nameof(ItemEditorPage)}?id={item.Id:D}");
+        if (item is not null) await Shell.Current.GoToAsync($"{nameof(ItemEditorPage)}?id={item.Id:D}");
     }
 
     [RelayCommand] private async Task LockAsync() { await _vault.LockAsync(); Items.Clear(); _lastResults = Array.Empty<VaultItem>(); await Shell.Current.GoToAsync("//unlock"); }
