@@ -11,5 +11,11 @@ public partial class ItemEditorPage : ContentPage
         BindingContext = ServiceProviderHelper.GetRequiredService<ItemEditorViewModel>();
     }
 
+    protected override void OnDisappearing()
+    {
+        if (BindingContext is ItemEditorViewModel viewModel) viewModel.ClearSensitiveState();
+        base.OnDisappearing();
+    }
+
     private async void OnBackClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("..");
 }
