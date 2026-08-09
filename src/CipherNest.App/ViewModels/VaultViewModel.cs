@@ -24,6 +24,7 @@ public partial class VaultViewModel : ObservableObject
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty] private string backupReminderMessage = string.Empty;
+    [ObservableProperty] private string reviewReminderMessage = string.Empty;
     [ObservableProperty] private bool isEmpty;
 
     public VaultViewModel(IVaultService vault, ISettingsStore settings)
@@ -51,10 +52,22 @@ public partial class VaultViewModel : ObservableObject
         IsBusy = true; ErrorMessage = string.Empty;
         try
         {
-            ReplaceItems(await _vault.SearchAsync(SearchText));
+            var allItems = await _vault.GetItemsAsync();
+            ReplaceItems(string.IsNullOrWhiteSpace(SearchText) ? allItems : await _vault.SearchAsync(SearchText));
             var preferences = await _settings.LoadAsync();
-            var due = preferences.LastSuccessfulBackupUtc is null || DateTimeOffset.UtcNow - preferences.LastSuccessfulBackupUtc.Value >= TimeSpan.FromDays(Math.Clamp(preferences.BackupReminderDays, 1, 365));
-            BackupReminderMessage = due ? "Encrypted backup reminder: create and test a backup from Settings." : string.Empty;
+            var backupDue = preferences.LastSuccessfulBackupUtc is null || DateTimeOffset.UtcNow - preferences.LastSuccessfulBackupUtc.Value >= TimeSpan.FromDays(Math.Clamp(preferences.BackupReminderDays, 1, 365));
+            BackupReminderMessage = backupDue ? "Encrypted backup reminder: create and test a backup from Settings." : string.Empty;
+
+            if (preferences.ReviewRemindersEnabled)
+            {
+                var cutoff = DateTimeOffset.UtcNow.AddDays(Math.Clamp(preferences.ReviewReminderLeadDays, 0, 365));
+                var dueCount = allItems.Count(item => item.ReviewAfterUtc is { } due && due <= cutoff);
+                ReviewReminderMessage = dueCount == 0 ? string.Empty : $"Review reminder: {dueCount} item(s) are due within {preferences.ReviewReminderLeadDays} day(s). Use the Review due filter to inspect overdue items.";
+            }
+            else
+            {
+                ReviewReminderMessage = string.Empty;
+            }
         }
         catch (Exception ex) { ErrorMessage = $"Could not load the vault: {ex.Message}"; }
         finally { IsBusy = false; }
