@@ -98,7 +98,6 @@ public sealed class SqliteVaultStore : IVaultStore
         {
             _gate.Release();
         }
-
         return items;
     }
 
@@ -137,45 +136,55 @@ public sealed class SqliteVaultStore : IVaultStore
         }
     }
 
-    public async Task ReplaceDatabaseAsync(string sourceDatabasePath, CancellationToken cancellationToken = default)
+    public async Task CreateConsistentSnapshotAsync(string destinationDatabasePath, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sourceDatabasePath);
-        if (!File.Exists(sourceDatabasePath))
-        {
-            throw new FileNotFoundException("Restore database was not found.", sourceDatabasePath);
-        }
-
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationDatabasePath);
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (File.Exists(destinationDatabasePath)) File.Delete(destinationDatabasePath);
+            await using var source = await OpenAsync(cancellationToken).ConfigureAwait(false);
+            await ExecuteAsync(source, "PRAGMA wal_checkpoint(FULL);", cancellationToken).ConfigureAwait(false);
+            await using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = destinationDatabasePath,
+                Mode = SqliteOpenMode.ReadWriteCreate,
+                Cache = SqliteCacheMode.Private
+            }.ToString());
+            await destination.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await Task.Run(() => source.BackupDatabase(destination), cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task ReplaceDatabaseAsync(string sourceDatabasePath, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceDatabasePath);
+        if (!File.Exists(sourceDatabasePath)) throw new FileNotFoundException("Restore database was not found.", sourceDatabasePath);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            foreach (var suffix in new[] { "-wal", "-shm" })
+            {
+                var sidecar = DatabasePath + suffix;
+                if (File.Exists(sidecar)) File.Delete(sidecar);
+            }
             var backupPath = DatabasePath + ".previous";
-            if (File.Exists(backupPath))
-            {
-                File.Delete(backupPath);
-            }
-
-            if (File.Exists(DatabasePath))
-            {
-                File.Move(DatabasePath, backupPath);
-            }
-
+            if (File.Exists(backupPath)) File.Delete(backupPath);
+            if (File.Exists(DatabasePath)) File.Move(DatabasePath, backupPath);
             try
             {
                 File.Copy(sourceDatabasePath, DatabasePath, overwrite: true);
             }
             catch
             {
-                if (File.Exists(backupPath))
-                {
-                    File.Move(backupPath, DatabasePath, overwrite: true);
-                }
+                if (File.Exists(backupPath)) File.Move(backupPath, DatabasePath, overwrite: true);
                 throw;
             }
-
-            if (File.Exists(backupPath))
-            {
-                File.Delete(backupPath);
-            }
+            if (File.Exists(backupPath)) File.Delete(backupPath);
         }
         finally
         {

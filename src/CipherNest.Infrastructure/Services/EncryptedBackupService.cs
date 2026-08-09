@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CipherNest.Application.Abstractions;
+using CipherNest.Infrastructure.Crypto;
 using CipherNest.Shared;
 
 namespace CipherNest.Infrastructure.Services;
@@ -24,31 +25,29 @@ public sealed class EncryptedBackupService : IBackupService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupPassphrase);
-        if (!File.Exists(_store.DatabasePath))
-        {
-            throw new InvalidOperationException("No local vault database exists to back up.");
-        }
-
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var kdf = Crypto.CryptoService.DefaultKdf;
-        var key = _crypto.DeriveKey(backupPassphrase.AsSpan(), salt, kdf);
-        var header = new BackupHeader(AppConstants.CryptoFormatVersion, salt, kdf, ChunkSize);
-        var headerJson = JsonSerializer.SerializeToUtf8Bytes(header);
+        var snapshot = Path.Combine(Path.GetTempPath(), $"ciphernest-snapshot-{Guid.NewGuid():N}.db");
         var temp = destinationPath + ".tmp";
+        var salt = RandomNumberGenerator.GetBytes(16);
+        var kdf = CryptoService.DefaultKdf;
+        byte[]? key = null;
         try
         {
+            await _store.CreateConsistentSnapshotAsync(snapshot, cancellationToken).ConfigureAwait(false);
+            key = _crypto.DeriveKey(backupPassphrase.AsSpan(), salt, kdf);
+            var header = new BackupHeader(AppConstants.CryptoFormatVersion, salt, kdf, ChunkSize);
+            var headerJson = JsonSerializer.SerializeToUtf8Bytes(header);
             await using var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
             await output.WriteAsync(Magic, cancellationToken).ConfigureAwait(false);
             await WriteInt32Async(output, headerJson.Length, cancellationToken).ConfigureAwait(false);
             await output.WriteAsync(headerJson, cancellationToken).ConfigureAwait(false);
-
-            await using var input = new FileStream(_store.DatabasePath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
+            await using var input = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
             var buffer = new byte[ChunkSize];
             var chunkIndex = 0;
             int read;
             while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
             {
-                var aad = BuildChunkAad(headerJson, chunkIndex, isFinal: input.Position == input.Length);
+                var isFinal = input.Position == input.Length;
+                var aad = BuildChunkAad(headerJson, chunkIndex, isFinal);
                 var envelope = _crypto.Encrypt(buffer.AsSpan(0, read), key, aad);
                 await WriteInt32Async(output, read, cancellationToken).ConfigureAwait(false);
                 await output.WriteAsync(envelope.Nonce, cancellationToken).ConfigureAwait(false);
@@ -62,7 +61,8 @@ public sealed class EncryptedBackupService : IBackupService
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(key);
+            if (key is not null) CryptographicOperations.ZeroMemory(key);
+            if (File.Exists(snapshot)) File.Delete(snapshot);
             if (File.Exists(temp)) File.Delete(temp);
         }
     }
@@ -86,7 +86,6 @@ public sealed class EncryptedBackupService : IBackupService
             var header = JsonSerializer.Deserialize<BackupHeader>(headerJson) ?? throw new InvalidDataException("Invalid backup header.");
             if (header.Version != AppConstants.CryptoFormatVersion || header.ChunkSize is < 64 * 1024 or > 4 * 1024 * 1024) throw new InvalidDataException("Unsupported backup format.");
             key = _crypto.DeriveKey(backupPassphrase.AsSpan(), header.Salt, header.Kdf);
-
             await using (var output = new FileStream(restoreDb, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true))
             {
                 var index = 0;
@@ -102,21 +101,13 @@ public sealed class EncryptedBackupService : IBackupService
                     await ReadExactlyAsync(input, tag, cancellationToken).ConfigureAwait(false);
                     await ReadExactlyAsync(input, cipher, cancellationToken).ConfigureAwait(false);
                     var isFinal = input.Position >= input.Length - sizeof(int);
-                    var aad = BuildChunkAad(headerJson, index, isFinal);
-                    var plaintext = _crypto.Decrypt(new EncryptedEnvelope(header.Version, nonce, cipher, tag), key, aad);
-                    try
-                    {
-                        await output.WriteAsync(plaintext, cancellationToken).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        CryptographicOperations.ZeroMemory(plaintext);
-                    }
+                    var plaintext = _crypto.Decrypt(new EncryptedEnvelope(header.Version, nonce, cipher, tag), key, BuildChunkAad(headerJson, index, isFinal));
+                    try { await output.WriteAsync(plaintext, cancellationToken).ConfigureAwait(false); }
+                    finally { CryptographicOperations.ZeroMemory(plaintext); }
                     index++;
                 }
                 await output.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
-
             await ValidateSqliteAsync(restoreDb, cancellationToken).ConfigureAwait(false);
             await _store.ReplaceDatabaseAsync(restoreDb, cancellationToken).ConfigureAwait(false);
         }
@@ -136,10 +127,7 @@ public sealed class EncryptedBackupService : IBackupService
         await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 64, useAsync: true);
         var header = new byte[16];
         await ReadExactlyAsync(stream, header, cancellationToken).ConfigureAwait(false);
-        if (!Encoding.ASCII.GetString(header).Equals("SQLite format 3\0", StringComparison.Ordinal))
-        {
-            throw new InvalidDataException("Restored payload is not a valid SQLite database.");
-        }
+        if (!Encoding.ASCII.GetString(header).Equals("SQLite format 3\0", StringComparison.Ordinal)) throw new InvalidDataException("Restored payload is not a valid SQLite database.");
     }
 
     private static byte[] BuildChunkAad(byte[] header, int index, bool isFinal)

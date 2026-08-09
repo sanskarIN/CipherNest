@@ -11,6 +11,7 @@ public interface IVaultStore
     Task<IReadOnlyList<StoredVaultItem>> ReadAllItemsAsync(CancellationToken cancellationToken = default);
     Task UpsertItemAsync(StoredVaultItem item, CancellationToken cancellationToken = default);
     Task DeleteItemAsync(Guid id, CancellationToken cancellationToken = default);
+    Task CreateConsistentSnapshotAsync(string destinationDatabasePath, CancellationToken cancellationToken = default);
     Task ReplaceDatabaseAsync(string sourceDatabasePath, CancellationToken cancellationToken = default);
     string DatabasePath { get; }
 }
