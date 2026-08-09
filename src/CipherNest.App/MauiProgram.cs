@@ -46,6 +46,7 @@ public static class MauiProgram
         builder.Services.AddTransient<VaultViewModel>();
         builder.Services.AddTransient<ItemEditorViewModel>();
         builder.Services.AddTransient<GeneratorViewModel>();
+        builder.Services.AddTransient<GeneratorDefaultsViewModel>();
         builder.Services.AddTransient<AuditViewModel>();
         builder.Services.AddTransient<TrashViewModel>();
         builder.Services.AddTransient<SettingsViewModel>();
@@ -58,6 +59,7 @@ public static class MauiProgram
         builder.Services.AddTransient<VaultPage>();
         builder.Services.AddTransient<ItemEditorPage>();
         builder.Services.AddTransient<GeneratorPage>();
+        builder.Services.AddTransient<GeneratorDefaultsPage>();
         builder.Services.AddTransient<AuditPage>();
         builder.Services.AddTransient<TrashPage>();
         builder.Services.AddTransient<SettingsPage>();
