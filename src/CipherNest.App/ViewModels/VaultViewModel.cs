@@ -16,8 +16,11 @@ public partial class VaultViewModel : ObservableObject
 
     public ObservableCollection<VaultItem> Items { get; } = [];
     public IReadOnlyList<string> SortModes { get; } = ["Favorites & title", "Recently used", "Recently modified", "Title"];
+    public IReadOnlyList<string> FilterModes { get; } = ["All", "Favorites", "Review due", .. Enum.GetNames<VaultItemType>()];
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private string selectedSortMode = "Favorites & title";
+    [ObservableProperty] private string selectedFilterMode = "All";
+    [ObservableProperty] private string collectionFilter = string.Empty;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty] private string backupReminderMessage = string.Empty;
@@ -38,6 +41,8 @@ public partial class VaultViewModel : ObservableObject
     }
 
     partial void OnSelectedSortModeChanged(string value) => ReplaceItems(_lastResults);
+    partial void OnSelectedFilterModeChanged(string value) => ReplaceItems(_lastResults);
+    partial void OnCollectionFilterChanged(string value) => ReplaceItems(_lastResults);
 
     [RelayCommand]
     public async Task LoadAsync()
@@ -88,12 +93,26 @@ public partial class VaultViewModel : ObservableObject
     private void ReplaceItems(IReadOnlyList<VaultItem> items)
     {
         _lastResults = items;
-        IEnumerable<VaultItem> sorted = SelectedSortMode switch
+        IEnumerable<VaultItem> filtered = items;
+
+        if (!string.IsNullOrWhiteSpace(CollectionFilter))
+            filtered = filtered.Where(item => item.Collection.Contains(CollectionFilter.Trim(), StringComparison.CurrentCultureIgnoreCase));
+
+        filtered = SelectedFilterMode switch
         {
-            "Recently used" => items.OrderByDescending(static x => x.LastAccessedUtc ?? DateTimeOffset.MinValue).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
-            "Recently modified" => items.OrderByDescending(static x => x.ModifiedUtc).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
-            "Title" => items.OrderBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
-            _ => items.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase)
+            "Favorites" => filtered.Where(static item => item.IsFavorite),
+            "Review due" => filtered.Where(static item => item.ReviewAfterUtc is { } due && due <= DateTimeOffset.UtcNow),
+            "All" => filtered,
+            _ when Enum.TryParse<VaultItemType>(SelectedFilterMode, true, out var type) => filtered.Where(item => item.Type == type),
+            _ => filtered
+        };
+
+        var sorted = SelectedSortMode switch
+        {
+            "Recently used" => filtered.OrderByDescending(static x => x.LastAccessedUtc ?? DateTimeOffset.MinValue).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
+            "Recently modified" => filtered.OrderByDescending(static x => x.ModifiedUtc).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
+            "Title" => filtered.OrderBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
+            _ => filtered.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase)
         };
         Items.Clear();
         foreach (var item in sorted) Items.Add(item);
