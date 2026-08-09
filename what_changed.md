@@ -669,3 +669,11 @@ The following remain deliberately deferred rather than represented by fake or in
 - pronounceable-password mode until a reviewed design is selected;
 - destructive automatic wipe after failed unlock attempts;
 - complete Hindi/additional translation catalogs beyond the English-first resource/preference architecture.
+
+### Final follow-up after the continuation ledger
+
+- Added `fix(memory): clear trash passphrase immediately after destructive authentication` after the main continuation ledger commit.
+- Manual permanent-delete and Empty Trash flows now clear the destructive passphrase immediately after the re-authentication decision and before returning from a cancelled confirmation; failed master re-authentication also clears the entered passphrase.
+- Re-ran indexed source searches after that fix. No `Console.WriteLine` matches were returned, and no logger search result matching `LogInformation`, `LogWarning`, or `LogError` together with secret/passphrase/password terms was returned.
+- The exact `docs(progress)` head check showed the progress file commit in history; GitHub returned no combined commit-status entries for that checked progress commit, so hosted CI remains an external release gate rather than being represented as passed.
+- This final progress-file update intentionally leaves the repository documentation as the last change in this work pass.
