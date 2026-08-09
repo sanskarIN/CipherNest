@@ -27,7 +27,11 @@ public sealed class VaultService : IVaultService, IDisposable
     public bool IsUnlocked => _dataKey is { Length: 32 };
     public event EventHandler<bool>? LockStateChanged;
 
-    public async Task<bool> HasVaultAsync(CancellationToken cancellationToken = default) { await _store.InitializeAsync(cancellationToken).ConfigureAwait(false); return await _store.HasVaultAsync(cancellationToken).ConfigureAwait(false); }
+    public async Task<bool> HasVaultAsync(CancellationToken cancellationToken = default)
+    {
+        await _store.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        return await _store.HasVaultAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task<string?> CreateAsync(string masterPassphrase, bool createRecoveryKey = true, CancellationToken cancellationToken = default)
     {
@@ -43,7 +47,7 @@ public sealed class VaultService : IVaultService, IDisposable
             {
                 WrappedKeyEnvelope? recoveryWrapped = null;
                 if (createRecoveryKey) { recoveryKey = GenerateRecoveryKey(); recoveryWrapped = _crypto.WrapKey(dataKey, recoveryKey.AsSpan()); }
-                await _store.WriteHeaderAsync(JsonSerializer.Serialize(new VaultHeaderDocument(1, masterWrapped, recoveryWrapped), JsonOptions), cancellationToken).ConfigureAwait(false);
+                await _store.WriteHeaderAsync(JsonSerializer.Serialize(new VaultHeaderDocument(2, masterWrapped, recoveryWrapped, null), JsonOptions), cancellationToken).ConfigureAwait(false);
                 ReplaceDataKey(dataKey.ToArray());
             }
             finally { CryptographicOperations.ZeroMemory(dataKey); }
@@ -62,6 +66,16 @@ public sealed class VaultService : IVaultService, IDisposable
         ReplaceDataKey(key); LockStateChanged?.Invoke(this, true);
     }
 
+    public async Task UnlockWithSecondarySecretAsync(string secondarySecret, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(secondarySecret);
+        var header = await ReadHeaderAsync(cancellationToken).ConfigureAwait(false);
+        if (header.Secondary is null) throw new VaultAuthenticationException();
+        var key = _crypto.UnwrapKey(secondarySecret.AsSpan(), header.Secondary);
+        ReplaceDataKey(key);
+        LockStateChanged?.Invoke(this, true);
+    }
+
     public async Task<bool> ReauthenticateAsync(string masterPassphrase, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(masterPassphrase)) return false;
@@ -74,6 +88,41 @@ public sealed class VaultService : IVaultService, IDisposable
         }
         catch (VaultAuthenticationException) { return false; }
         finally { if (candidate is not null) CryptographicOperations.ZeroMemory(candidate); }
+    }
+
+    public async Task EnableSecondaryUnlockAsync(string masterPassphrase, string secondarySecret, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(secondarySecret);
+        if (secondarySecret.Length < 32) throw new ArgumentException("Secondary unlock secret is too short.", nameof(secondarySecret));
+        if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
+        var key = RequireKey();
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var header = await ReadHeaderUnlockedAsync(cancellationToken).ConfigureAwait(false);
+            var wrapped = _crypto.WrapKey(key, secondarySecret.AsSpan());
+            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = 2, Secondary = wrapped }, JsonOptions), cancellationToken).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task DisableSecondaryUnlockAsync(string masterPassphrase, CancellationToken cancellationToken = default)
+    {
+        if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var header = await ReadHeaderUnlockedAsync(cancellationToken).ConfigureAwait(false);
+            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = 2, Secondary = null }, JsonOptions), cancellationToken).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<bool> IsSecondaryUnlockConfiguredAsync(CancellationToken cancellationToken = default)
+    {
+        if (!await HasVaultAsync(cancellationToken).ConfigureAwait(false)) return false;
+        var header = await ReadHeaderAsync(cancellationToken).ConfigureAwait(false);
+        return header.Secondary is not null;
     }
 
     public async Task ChangeMasterPassphraseAsync(string currentMasterPassphrase, string newMasterPassphrase, CancellationToken cancellationToken = default)
@@ -177,5 +226,5 @@ public sealed class VaultService : IVaultService, IDisposable
 
     private void ReplaceDataKey(byte[] next) { if (next.Length != 32) { CryptographicOperations.ZeroMemory(next); throw new CryptographicException("Invalid vault data key length."); } if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey); _dataKey = next; }
     private static string GenerateRecoveryKey() { var bytes = RandomNumberGenerator.GetBytes(32); try { return "CN1-" + Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_'); } finally { CryptographicOperations.ZeroMemory(bytes); } }
-    private sealed record VaultHeaderDocument(int Version, WrappedKeyEnvelope Master, WrappedKeyEnvelope? Recovery);
+    private sealed record VaultHeaderDocument(int Version, WrappedKeyEnvelope Master, WrappedKeyEnvelope? Recovery, WrappedKeyEnvelope? Secondary = null);
 }
