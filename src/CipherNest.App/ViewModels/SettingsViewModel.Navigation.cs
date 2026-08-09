@@ -12,5 +12,5 @@ public partial class SettingsViewModel
     private static async Task SecurityAuditAsync() => await Shell.Current.GoToAsync("//audit");
 
     [RelayCommand]
-    private static async Task SecurityInfoAsync() => await Shell.Current.GoToAsync("//about");
+    private static async Task SecurityInfoAsync() => await Shell.Current.GoToAsync("//security-info");
 }
