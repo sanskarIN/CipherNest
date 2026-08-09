@@ -39,14 +39,15 @@ dotnet build CipherNest.slnx -c Release
 dotnet test CipherNest.slnx -c Release
 ```
 
-Platform packaging and signing require target SDKs/identities that are deliberately kept outside this repository. See `docs/setup/BUILD.md`, `docs/TROUBLESHOOTING.md`, `docs/TEST_PLAN.md`, `docs/RELEASE_CHECKLIST.md`, `docs/security/THREAT_MODEL.md`, `docs/security/BIOMETRIC_UNLOCK.md`, `docs/security/SECURE_NOTES.md`, and `docs/security/PASSPHRASE_GENERATOR.md`.
+Platform packaging and signing require target SDKs/identities that are deliberately kept outside this repository. See `docs/setup/BUILD.md`, `docs/TROUBLESHOOTING.md`, `docs/TEST_PLAN.md`, `docs/RELEASE_CHECKLIST.md`, `docs/NEXT_STEPS.md`, `docs/security/THREAT_MODEL.md`, `docs/security/BIOMETRIC_UNLOCK.md`, `docs/security/SECURE_NOTES.md`, and `docs/security/PASSPHRASE_GENERATOR.md`.
 
 ## Repository
 
 Source: https://github.com/sanskarIN/CipherNest  
 Creator: https://www.github.com/sanskarIN  
 Business: sanskarin@outlook.in  
-Support: supportramsandesh@gmail.com
+Support: supportramsandesh@gmail.com  
+Support development: https://buymeacoffee.com/sanskarIN
 
 Made by the Sanskar
 
