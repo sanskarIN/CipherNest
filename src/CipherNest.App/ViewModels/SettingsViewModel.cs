@@ -18,6 +18,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IPasswordGenerator _passwordGenerator;
     private readonly IBiometricUnlockService _biometrics;
     private readonly SessionSecurityState _sessionSecurity;
+    private readonly IStorageMaintenanceService _storage;
     private AppPreferences _loadedPreferences = new();
 
     public IReadOnlyList<AppThemePreference> Themes { get; } = Enum.GetValues<AppThemePreference>();
@@ -32,6 +33,8 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool largerInterface;
     [ObservableProperty] private int trashRetentionDays = 30;
     [ObservableProperty] private int backupReminderDays = 7;
+    [ObservableProperty] private bool reviewRemindersEnabled = true;
+    [ObservableProperty] private int reviewReminderLeadDays = 7;
     [ObservableProperty] private int requireMasterPassphraseAfterHours = 24;
     [ObservableProperty] private string backupPassphrase = string.Empty;
     [ObservableProperty] private string currentMasterPassphrase = string.Empty;
@@ -42,11 +45,27 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string statusMessage = string.Empty;
     [ObservableProperty] private string screenshotSupportMessage = string.Empty;
     [ObservableProperty] private string biometricSupportMessage = string.Empty;
+    [ObservableProperty] private string storageUsageMessage = "Calculating local storage…";
     [ObservableProperty] private bool isBusy;
 
-    public SettingsViewModel(ISettingsStore settings, IBackupService backup, IVaultService vault, IScreenshotProtectionService screenshots, IPasswordGenerator passwordGenerator, IBiometricUnlockService biometrics, SessionSecurityState sessionSecurity)
+    public SettingsViewModel(
+        ISettingsStore settings,
+        IBackupService backup,
+        IVaultService vault,
+        IScreenshotProtectionService screenshots,
+        IPasswordGenerator passwordGenerator,
+        IBiometricUnlockService biometrics,
+        SessionSecurityState sessionSecurity,
+        IStorageMaintenanceService storage)
     {
-        _settings = settings; _backup = backup; _vault = vault; _screenshots = screenshots; _passwordGenerator = passwordGenerator; _biometrics = biometrics; _sessionSecurity = sessionSecurity;
+        _settings = settings;
+        _backup = backup;
+        _vault = vault;
+        _screenshots = screenshots;
+        _passwordGenerator = passwordGenerator;
+        _biometrics = biometrics;
+        _sessionSecurity = sessionSecurity;
+        _storage = storage;
         ScreenshotSupportMessage = screenshots.IsSupported ? "Screenshot blocking is supported by the current platform implementation." : "Reliable app-level screenshot blocking is not available through the current platform implementation; secret masking still applies.";
     }
 
@@ -54,7 +73,19 @@ public partial class SettingsViewModel : ObservableObject
     public async Task LoadAsync()
     {
         _loadedPreferences = await _settings.LoadAsync();
-        SelectedTheme = _loadedPreferences.Theme; LockTimeoutSeconds = _loadedPreferences.LockTimeoutSeconds; LockOnBackground = _loadedPreferences.LockOnBackground; ClipboardClearSeconds = _loadedPreferences.ClipboardClearSeconds; ScreenshotProtection = _loadedPreferences.ScreenshotProtection; BiometricUnlockEnabled = _loadedPreferences.BiometricUnlockEnabled; ReducedMotion = _loadedPreferences.ReducedMotion; LargerInterface = _loadedPreferences.LargerInterface; TrashRetentionDays = _loadedPreferences.TrashRetentionDays; BackupReminderDays = _loadedPreferences.BackupReminderDays; RequireMasterPassphraseAfterHours = _loadedPreferences.RequireMasterPassphraseAfterHours;
+        SelectedTheme = _loadedPreferences.Theme;
+        LockTimeoutSeconds = _loadedPreferences.LockTimeoutSeconds;
+        LockOnBackground = _loadedPreferences.LockOnBackground;
+        ClipboardClearSeconds = _loadedPreferences.ClipboardClearSeconds;
+        ScreenshotProtection = _loadedPreferences.ScreenshotProtection;
+        BiometricUnlockEnabled = _loadedPreferences.BiometricUnlockEnabled;
+        ReducedMotion = _loadedPreferences.ReducedMotion;
+        LargerInterface = _loadedPreferences.LargerInterface;
+        TrashRetentionDays = _loadedPreferences.TrashRetentionDays;
+        BackupReminderDays = _loadedPreferences.BackupReminderDays;
+        ReviewRemindersEnabled = _loadedPreferences.ReviewRemindersEnabled;
+        ReviewReminderLeadDays = _loadedPreferences.ReviewReminderLeadDays;
+        RequireMasterPassphraseAfterHours = _loadedPreferences.RequireMasterPassphraseAfterHours;
         BiometricAvailable = _biometrics.IsSupported && await _biometrics.IsAvailableAsync();
         var configured = await _vault.IsSecondaryUnlockConfiguredAsync();
         if (!configured && BiometricUnlockEnabled)
@@ -66,15 +97,69 @@ public partial class SettingsViewModel : ObservableObject
         BiometricSupportMessage = BiometricAvailable
             ? (configured ? "Biometric unlock is configured. The master passphrase is still required for sensitive settings and periodically according to this security setting." : "Biometric authentication is available on this device but is not configured for CipherNest.")
             : "Biometric unlock is not available through the current platform/device implementation. Use the master passphrase.";
-        ApplyTheme(_loadedPreferences.Theme); await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection);
+        ApplyTheme(_loadedPreferences.Theme);
+        await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection);
+        await RefreshStorageAsync();
     }
 
     [RelayCommand]
     private async Task SaveAsync()
     {
-        LockTimeoutSeconds = Math.Clamp(LockTimeoutSeconds, 5, 3600); ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300); TrashRetentionDays = Math.Clamp(TrashRetentionDays, 1, 365); BackupReminderDays = Math.Clamp(BackupReminderDays, 1, 365); RequireMasterPassphraseAfterHours = Math.Clamp(RequireMasterPassphraseAfterHours, 1, 168);
-        _loadedPreferences = _loadedPreferences with { Theme = SelectedTheme, LockTimeoutSeconds = LockTimeoutSeconds, LockOnBackground = LockOnBackground, ClipboardClearSeconds = ClipboardClearSeconds, ScreenshotProtection = ScreenshotProtection, BiometricUnlockEnabled = BiometricUnlockEnabled, ReducedMotion = ReducedMotion, LargerInterface = LargerInterface, TrashRetentionDays = TrashRetentionDays, BackupReminderDays = BackupReminderDays, RequireMasterPassphraseAfterHours = RequireMasterPassphraseAfterHours };
-        await _settings.SaveAsync(_loadedPreferences); ApplyTheme(_loadedPreferences.Theme); await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection); StatusMessage = "Settings saved.";
+        LockTimeoutSeconds = Math.Clamp(LockTimeoutSeconds, 5, 3600);
+        ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300);
+        TrashRetentionDays = Math.Clamp(TrashRetentionDays, 1, 365);
+        BackupReminderDays = Math.Clamp(BackupReminderDays, 1, 365);
+        ReviewReminderLeadDays = Math.Clamp(ReviewReminderLeadDays, 0, 365);
+        RequireMasterPassphraseAfterHours = Math.Clamp(RequireMasterPassphraseAfterHours, 1, 168);
+        _loadedPreferences = _loadedPreferences with
+        {
+            Theme = SelectedTheme,
+            LockTimeoutSeconds = LockTimeoutSeconds,
+            LockOnBackground = LockOnBackground,
+            ClipboardClearSeconds = ClipboardClearSeconds,
+            ScreenshotProtection = ScreenshotProtection,
+            BiometricUnlockEnabled = BiometricUnlockEnabled,
+            ReducedMotion = ReducedMotion,
+            LargerInterface = LargerInterface,
+            TrashRetentionDays = TrashRetentionDays,
+            BackupReminderDays = BackupReminderDays,
+            ReviewRemindersEnabled = ReviewRemindersEnabled,
+            ReviewReminderLeadDays = ReviewReminderLeadDays,
+            RequireMasterPassphraseAfterHours = RequireMasterPassphraseAfterHours
+        };
+        await _settings.SaveAsync(_loadedPreferences);
+        ApplyTheme(_loadedPreferences.Theme);
+        await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection);
+        StatusMessage = "Settings saved.";
+    }
+
+    [RelayCommand]
+    private async Task RefreshStorageAsync()
+    {
+        try
+        {
+            var usage = await _storage.GetUsageAsync();
+            StorageUsageMessage = $"Encrypted app data: {FormatBytes(usage.AppDataBytes)} · Temporary cache: {FormatBytes(usage.CacheBytes)} · Total local footprint: {FormatBytes(usage.TotalBytes)}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            StorageUsageMessage = $"Storage usage could not be measured: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearCacheAsync()
+    {
+        var confirm = await Shell.Current.DisplayAlert("Clear temporary cache?", "This removes CipherNest-managed temporary cache files such as completed plaintext export/share staging files when the operating system still allows access. It does not delete the encrypted vault, encrypted attachments, or backups stored in app data.", "Clear cache", "Cancel");
+        if (!confirm) return;
+        IsBusy = true;
+        try
+        {
+            var deleted = await _storage.ClearCacheAsync();
+            StatusMessage = $"Temporary cache cleanup completed. Approximately {FormatBytes(deleted)} was removed where permitted.";
+            await RefreshStorageAsync();
+        }
+        finally { IsBusy = false; }
     }
 
     [RelayCommand]
@@ -212,6 +297,15 @@ public partial class SettingsViewModel : ObservableObject
 
     [RelayCommand] private async Task TransferAsync() => await Shell.Current.GoToAsync("//transfer");
     [RelayCommand] private async Task BackAsync() => await Shell.Current.GoToAsync("//vault");
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var value = (double)Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1) { value /= 1024; unit++; }
+        return $"{value:0.##} {units[unit]}";
+    }
 
     private static void ApplyTheme(AppThemePreference theme)
     {
