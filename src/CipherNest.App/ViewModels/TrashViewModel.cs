@@ -14,6 +14,7 @@ public partial class TrashViewModel : ObservableObject
     public ObservableCollection<VaultItem> Items { get; } = [];
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string statusMessage = string.Empty;
+    [ObservableProperty] private string deletionPassphrase = string.Empty;
 
     public TrashViewModel(IVaultService vault, ISettingsStore settings)
     {
@@ -53,11 +54,49 @@ public partial class TrashViewModel : ObservableObject
     private async Task DeleteAsync(VaultItem item)
     {
         if (item is null) return;
-        var confirm = await Shell.Current.DisplayAlert("Delete permanently?", "CipherNest will remove the encrypted record and attachment files. Filesystem or flash-storage remnants may still be recoverable by the operating system or forensic tools.", "Delete", "Cancel");
+        if (!await ConfirmMasterPassphraseAsync()) return;
+        var confirm = await Shell.Current.DisplayAlert("Delete permanently?", "CipherNest will remove the encrypted record and attachment files. Filesystem or flash-storage remnants may still be recoverable by the operating system or forensic tools.", "Delete permanently", "Cancel");
         if (!confirm) return;
         await _vault.DeletePermanentlyAsync(item.Id);
+        DeletionPassphrase = string.Empty;
         await LoadAsync();
     }
 
+    [RelayCommand]
+    private async Task EmptyTrashAsync()
+    {
+        if (Items.Count == 0) { StatusMessage = "Trash is already empty."; return; }
+        if (!await ConfirmMasterPassphraseAsync()) return;
+        var confirm = await Shell.Current.DisplayAlert("Empty trash permanently?", $"Permanently remove all {Items.Count} encrypted trash item(s) and their CipherNest-managed attachment files? Filesystem remnants may remain outside CipherNest's control.", "Empty trash", "Cancel");
+        if (!confirm) return;
+
+        IsBusy = true;
+        try
+        {
+            foreach (var id in Items.Select(static item => item.Id).ToArray()) await _vault.DeletePermanentlyAsync(id);
+            DeletionPassphrase = string.Empty;
+            StatusMessage = "Trash emptied. CipherNest removed its encrypted records and attachment containers; physical storage remnants may remain outside application control.";
+            await LoadAsync();
+        }
+        finally { IsBusy = false; }
+    }
+
+    public void ClearSensitiveState() => DeletionPassphrase = string.Empty;
+
     [RelayCommand] private async Task BackAsync() => await Shell.Current.GoToAsync("//vault");
+
+    private async Task<bool> ConfirmMasterPassphraseAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DeletionPassphrase))
+        {
+            StatusMessage = "Enter the current master passphrase before permanent deletion. Recovery keys are not accepted for this destructive confirmation.";
+            return false;
+        }
+        if (!await _vault.ReauthenticateAsync(DeletionPassphrase))
+        {
+            StatusMessage = "Master-passphrase confirmation failed. Nothing was permanently deleted.";
+            return false;
+        }
+        return true;
+    }
 }
