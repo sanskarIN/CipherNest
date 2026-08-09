@@ -12,6 +12,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     private readonly IVaultService _vault;
     private readonly IClipboardSecurityService _clipboard;
     private readonly ISettingsStore _settings;
+    private readonly ISafeNoteMarkupService _noteMarkup;
     private VaultItem? _existing;
 
     public IReadOnlyList<VaultItemType> Types { get; } = Enum.GetValues<VaultItemType>();
@@ -22,6 +23,9 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string secret = string.Empty;
     [ObservableProperty] private string url = string.Empty;
     [ObservableProperty] private string notes = string.Empty;
+    [ObservableProperty] private string notePreview = string.Empty;
+    [ObservableProperty] private string checklistDraft = string.Empty;
+    [ObservableProperty] private bool showNotePreview;
     [ObservableProperty] private string collection = string.Empty;
     [ObservableProperty] private string tags = string.Empty;
     [ObservableProperty] private string customFieldsText = string.Empty;
@@ -36,10 +40,15 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty] private bool isExisting;
 
-    public ItemEditorViewModel(IVaultService vault, IClipboardSecurityService clipboard, ISettingsStore settings)
+    public ItemEditorViewModel(IVaultService vault, IClipboardSecurityService clipboard, ISettingsStore settings, ISafeNoteMarkupService noteMarkup)
     {
-        _vault = vault; _clipboard = clipboard; _settings = settings;
+        _vault = vault;
+        _clipboard = clipboard;
+        _settings = settings;
+        _noteMarkup = noteMarkup;
     }
+
+    partial void OnNotesChanged(string value) => RefreshNotePreview(value);
 
     public async void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -73,6 +82,22 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [RelayCommand] private void ToggleSecret() => IsSecretVisible = !IsSecretVisible;
 
     [RelayCommand]
+    private void ToggleNotePreview() => ShowNotePreview = !ShowNotePreview;
+
+    [RelayCommand]
+    private void AddChecklistItem()
+    {
+        if (string.IsNullOrWhiteSpace(ChecklistDraft)) return;
+        try
+        {
+            Notes = _noteMarkup.AppendChecklistItem(Notes, ChecklistDraft);
+            ChecklistDraft = string.Empty;
+            ErrorMessage = string.Empty;
+        }
+        catch (ArgumentException ex) { ErrorMessage = ex.Message; }
+    }
+
+    [RelayCommand]
     private async Task CopySecretAsync()
     {
         if (IsReauthenticationRequired || string.IsNullOrEmpty(Secret)) return;
@@ -88,6 +113,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         IsBusy = true; ErrorMessage = string.Empty;
         try
         {
+            _ = _noteMarkup.Parse(Notes);
             var customFields = ParseCustomFields(CustomFieldsText);
             var now = DateTimeOffset.UtcNow;
             DateTimeOffset? reviewUtc = HasReviewDate ? new DateTimeOffset(ReviewDate.Date, TimeZoneInfo.Local.GetUtcOffset(ReviewDate.Date)).ToUniversalTime() : null;
@@ -96,7 +122,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
                 Id = _existing?.Id ?? Guid.NewGuid(), Type = SelectedType, Title = Title, Username = Username, Secret = Secret, Url = Url, Notes = Notes,
                 Collection = Collection, Tags = Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), IsFavorite = IsFavorite,
                 CustomFields = customFields, Attachments = Attachments.ToArray(), CreatedUtc = _existing?.CreatedUtc ?? now, ModifiedUtc = now, ReviewAfterUtc = reviewUtc,
-                DeletedUtc = _existing?.DeletedUtc, RequiresReauthentication = RequiresReauthentication
+                DeletedUtc = _existing?.DeletedUtc, RequiresReauthentication = RequiresReauthentication, LastAccessedUtc = _existing?.LastAccessedUtc
             };
             await _vault.SaveItemAsync(item);
             await Shell.Current.GoToAsync("..");
@@ -176,6 +202,8 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         {
             _existing = await _vault.GetItemAsync(id);
             if (_existing is null) { ErrorMessage = "This item no longer exists."; return; }
+            await _vault.MarkAccessedAsync(id);
+            _existing = _existing with { LastAccessedUtc = DateTimeOffset.UtcNow };
             IsExisting = true;
             RequiresReauthentication = _existing.RequiresReauthentication;
             if (_existing.RequiresReauthentication)
@@ -196,6 +224,20 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         CustomFieldsText = string.Join(Environment.NewLine, item.CustomFields.Select(static field => $"{(field.IsSecret ? "[secret]" : string.Empty)}{field.Name}={field.Value}"));
         HasReviewDate = item.ReviewAfterUtc is not null; ReviewDate = item.ReviewAfterUtc?.ToLocalTime().Date ?? DateTime.Today.AddMonths(6);
         Attachments.Clear(); foreach (var attachment in item.Attachments) Attachments.Add(attachment);
+    }
+
+    private void RefreshNotePreview(string value)
+    {
+        try
+        {
+            NotePreview = _noteMarkup.Parse(value).ToAccessibleText();
+            if (ErrorMessage.StartsWith("Secure note exceeds", StringComparison.Ordinal)) ErrorMessage = string.Empty;
+        }
+        catch (ArgumentException ex)
+        {
+            NotePreview = string.Empty;
+            ErrorMessage = ex.Message;
+        }
     }
 
     private static IReadOnlyList<CustomField> ParseCustomFields(string input)
