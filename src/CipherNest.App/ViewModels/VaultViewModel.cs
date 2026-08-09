@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Services;
 using CipherNest.App.Services;
 using CipherNest.Domain.Models;
 using CipherNest.App.Views;
@@ -59,9 +60,16 @@ public partial class VaultViewModel : ObservableObject
         IsBusy = true; ErrorMessage = string.Empty;
         try
         {
-            var allItems = await _vault.GetItemsAsync();
-            ReplaceItems(string.IsNullOrWhiteSpace(SearchText) ? allItems : await _vault.SearchAsync(SearchText));
             var preferences = await _settings.LoadAsync();
+            var allWithTrash = await _vault.GetItemsAsync(includeTrash: true);
+            var expiredIds = TrashRetentionPolicy.FindExpiredItemIds(allWithTrash, DateTimeOffset.UtcNow, preferences.TrashRetentionDays);
+            foreach (var id in expiredIds) await _vault.DeletePermanentlyAsync(id);
+
+            var allItems = expiredIds.Count == 0
+                ? allWithTrash.Where(static item => item.DeletedUtc is null).ToArray()
+                : await _vault.GetItemsAsync();
+
+            ReplaceItems(string.IsNullOrWhiteSpace(SearchText) ? allItems : await _vault.SearchAsync(SearchText));
             var backupDue = preferences.LastSuccessfulBackupUtc is null || DateTimeOffset.UtcNow - preferences.LastSuccessfulBackupUtc.Value >= TimeSpan.FromDays(Math.Clamp(preferences.BackupReminderDays, 1, 365));
             BackupReminderMessage = backupDue ? "Encrypted backup reminder: create and test a backup from Settings." : string.Empty;
 
