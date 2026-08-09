@@ -26,6 +26,14 @@ The open-source project support URL is `https://buymeacoffee.com/sanskarIN`. Rep
 
 Before a store-distributed build exposes an external funding/payment call to action, verify the current policy for that exact store, distribution method, country/region, and app category. Store policies change independently of the source tree and are not treated as verified by this repository. If the current policy does not permit the in-app link or wording, omit/disable that call to action in the affected store build while retaining the repository/GitHub funding metadata. Never imply that financial support changes feature access, privacy/security handling, support priority, GPL rights, or recovery capability.
 
+The MAUI app supports a build-time switch so a store package can omit the in-app funding frame and funding metadata label without editing source:
+
+```bash
+dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestEnableFundingLink=false
+```
+
+`CipherNestEnableFundingLink` defaults to `true`. When the property is not exactly `true`, the app defines `CIPHERNEST_DISABLE_FUNDING_LINK`; `BuildFeatureFlags.IsFundingLinkEnabled` becomes `false`, and the About funding surfaces are hidden. The repository README, SUPPORT file, and `.github/FUNDING.yml` are source-repository metadata and remain unchanged by that app-build switch.
+
 ## Visual assets
 
 Use the original CipherNest nest/shield geometry from the repository. The icon must remain legible without text at small sizes.
