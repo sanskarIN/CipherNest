@@ -56,6 +56,16 @@ dotnet build src/CipherNest.App/CipherNest.App.csproj -c Debug -f net10.0-maccat
 
 Provisioning/signing identities, App Store credentials, and certificates must be supplied through protected local/CI mechanisms and never committed.
 
+## Optional project-support CTA build switch
+
+The repository's optional support URL is `https://buymeacoffee.com/sanskarIN`. Normal builds expose the voluntary support surface in About. If a target store/distribution policy does not permit that in-app external funding CTA, compile the app with it disabled rather than editing source:
+
+```bash
+dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestEnableFundingLink=false
+```
+
+`CipherNestEnableFundingLink` defaults to `true`. A non-`true` value defines `CIPHERNEST_DISABLE_FUNDING_LINK` for the MAUI app and `BuildFeatureFlags.IsFundingLinkEnabled` hides the in-app funding frame and metadata label. This switch does not alter repository README/Support/Funding metadata. Verify the current policy for the exact store, region, distribution method, and app category before choosing the release value.
+
 ## Full solution
 
 `dotnet build CipherNest.slnx` evaluates all included projects and may require every target workload/toolchain represented by the MAUI app. Prefer the target-specific app commands above on a host that cannot build every platform.
@@ -68,4 +78,4 @@ Before a release candidate:
 dotnet format CipherNest.slnx --verify-no-changes
 ```
 
-Repository build properties enable nullable analysis, current analyzers, deterministic builds, and warnings-as-errors. See `docs/TEST_PLAN.md` and `docs/RELEASE_CHECKLIST.md` for the complete release gate.
+Repository build properties enable nullable analysis, current analyzers, deterministic builds, and warnings-as-errors. See `docs/TEST_PLAN.md`, `docs/RELEASE_CHECKLIST.md`, and `docs/NEXT_STEPS.md` for the complete release gate and ordered follow-up plan.
