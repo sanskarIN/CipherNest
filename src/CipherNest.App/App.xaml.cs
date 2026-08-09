@@ -10,15 +10,22 @@ public partial class App : Microsoft.Maui.Controls.Application
     private readonly ISettingsStore _settings;
     private readonly IScreenshotProtectionService _screenshots;
     private readonly IPrivacySafeExceptionReporter _exceptions;
+    private readonly ILocalizationService _localization;
     private DateTimeOffset? _inactiveUtc;
 
-    public App(IVaultService vault, ISettingsStore settings, IScreenshotProtectionService screenshots, IPrivacySafeExceptionReporter exceptions)
+    public App(
+        IVaultService vault,
+        ISettingsStore settings,
+        IScreenshotProtectionService screenshots,
+        IPrivacySafeExceptionReporter exceptions,
+        ILocalizationService localization)
     {
         InitializeComponent();
         _vault = vault;
         _settings = settings;
         _screenshots = screenshots;
         _exceptions = exceptions;
+        _localization = localization;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
     }
@@ -71,6 +78,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         {
             var preferences = await _settings.LoadAsync();
             ApplyTheme(preferences.Theme);
+            _localization.Apply(preferences.Language);
             AccessibilityPreferenceApplicator.Apply(preferences.LargerInterface, preferences.ReducedMotion);
             await _screenshots.ApplyAsync(preferences.ScreenshotProtection);
             if (_vault.IsUnlocked && _inactiveUtc is { } inactive && (DateTimeOffset.UtcNow - inactive).TotalSeconds >= preferences.LockTimeoutSeconds)
@@ -99,6 +107,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         {
             var preferences = await _settings.LoadAsync();
             ApplyTheme(preferences.Theme);
+            _localization.Apply(preferences.Language);
             AccessibilityPreferenceApplicator.Apply(preferences.LargerInterface, preferences.ReducedMotion);
             await _screenshots.ApplyAsync(preferences.ScreenshotProtection);
         }
@@ -106,6 +115,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         {
             _exceptions.Report("Startup.Preferences", exception);
             ApplyTheme(AppThemePreference.System);
+            _localization.Apply(AppLanguagePreference.System);
             AccessibilityPreferenceApplicator.Apply(largerInterface: false, reducedMotion: true);
         }
     }
