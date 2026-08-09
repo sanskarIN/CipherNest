@@ -6,6 +6,7 @@
 - Repository and multi-project solution scaffolding with Domain/Application/Infrastructure/Shared/MAUI/test separation.
 - Versioned cryptographic envelope with Argon2id key derivation and AES-256-GCM authenticated encryption.
 - Random vault data-encryption key wrapped independently by master passphrase, optional recovery key, and optional biometric secondary secret.
+- Untrusted KDF metadata is resource-bounded before Argon2 work: salt 16–64 bytes, memory 16–512 MiB, iterations 1–10, and parallelism 1–16; new wrappers use the current 64 MiB / 3 iteration / parallelism 1 default.
 - Encrypted SQLite record persistence with minimized plaintext metadata and a transactional ordered schema-migration runner that rejects unsupported future schema versions.
 - Local vault creation, master/recovery unlock, lock lifecycle, failed-attempt rate limiting, master-passphrase rotation, and guarded full local-vault deletion.
 - Optional biometric unlock source implementation for supported Android, iOS, and Mac Catalyst devices; Windows explicitly falls back to master-passphrase unlock.
@@ -18,18 +19,19 @@
 - Local weak/reused/exact-duplicate/overdue secret audit primitives.
 - Secure-note editor with a bounded safe Markdown-like subset, checklist support, fenced code, HTML neutralization, and local safe preview.
 - Encrypted streaming attachments with bounded size/count, authenticated storage, MIME normalization, removal, guarded plaintext export, and bounded in-memory UTF-8 preview for supported text-family formats.
-- Authenticated encrypted backup/restore including encrypted attachments, consistent pre-backup locking, temporary restore staging, corruption/tamper rejection, and post-restore biometric reset.
+- Authenticated encrypted backup/restore including encrypted attachments, consistent pre-backup locking, temporary restore staging, corruption/tamper rejection, rollback-preservation tests, and post-restore biometric reset.
 - Generic CSV import with explicit column mapping, strict bounded parsing, malformed-input corpus coverage, and guarded plaintext CSV export.
 - Clipboard copy lifecycle with configurable timed clearing and documented platform limitations.
 - Screenshot protection on supported implementation paths with honest fallback messaging.
-- Settings for theme, language readiness, lock/privacy, reminder intervals, biometrics, generator defaults, storage/cache, backup/restore, import/export, security audit, privacy/threat information, master-passphrase change, and destructive deletion.
-- Dynamic larger-interface typography resources, reduced-motion preference state, light/dark/system theme behavior, semantic labels/live regions, and responsive scrollable layouts.
+- Settings for theme, language readiness, lock/privacy, reminder intervals, biometrics, generator defaults, storage/cache, backup/restore, import/export, security audit, privacy/threat information, About/legal/acknowledgements, master-passphrase change, and destructive deletion.
+- Dynamic larger-interface typography resources, reduced-motion preference state, light/dark/system theme behavior, semantic labels/live regions, and responsive layouts including wrapping vault actions for narrow windows.
 - English-first `.resx` resource catalog, persisted System/English preference, and localization service architecture ready for Hindi/additional catalogs without coupling language to vault formats.
 - Central privacy-safe unhandled-exception reporting that records sanitized operation/type/HResult metadata while intentionally excluding exception messages/stacks and vault content.
-- In-app security/privacy/audit-status surface, About/open-source information, third-party dependency notices, and hidden developer diagnostics.
-- Original SVG branding, splash/icon integration, and store-listing/feature-graphic guidance.
-- Unit/integration/UI-structure test source including cryptographic tamper/wrong-passphrase and Argon2id known-answer coverage, backup restore, vault workflows, secondary unlock, CSV parser safety, passphrase rotation/deletion, recent-access tracking, safe-note parsing, duplicate audit findings, schema migrations, generator word-list invariants, and multi-megabyte attachment streaming.
-- GitHub Actions CI, dependency review, CodeQL, repository templates, contribution/security/support/privacy/terms files, architecture records, release/setup/troubleshooting/test documentation, third-party notices, and release checklist.
+- Redacted developer diagnostics with best-effort temporary-file deletion after sharing and Settings cache-cleanup fallback.
+- In-app security/privacy/audit-status surface, runtime version/build About information, GPL/privacy/terms references, third-party dependency notices, acknowledgements, repository/support contacts, and hidden developer diagnostics.
+- Original SVG branding, splash/icon integration, editable asset guidance, packaging/reproducibility documentation, and store-listing/feature-graphic guidance.
+- Unit/integration/UI-structure test source including cryptographic tamper/wrong-passphrase, Argon2id known-answer and hostile KDF parameter coverage, backup corruption/wrong-passphrase preservation, vault workflows, secondary unlock, CSV parser safety, passphrase rotation/deletion, recent-access tracking, safe-note parsing, duplicate audit findings, schema migrations, generator word-list invariants, multi-megabyte attachment streaming, attachment tamper/truncation rejection, accessibility/navigation structure, legal surfaces, and diagnostics-source privacy checks.
+- GitHub Actions CI, dependency review, CodeQL, repository templates, contribution/security/support/privacy/terms files, architecture records, implemented cryptographic design, release/setup/packaging/reproducibility/troubleshooting/test documentation, third-party notices, and release checklist.
 
 ### Quality gate requiring external execution or hardware
 - The connected GitHub editing environment cannot execute the repository's .NET/MAUI builds, GitHub-hosted push workflow runs, emulator/simulator sessions, or physical-device smoke tests. Source completion is therefore not a claim that the current head has passed those external checks.
@@ -38,9 +40,10 @@
 - iOS and Mac Catalyst biometric behavior, Face ID/Touch ID enrollment changes, secure-storage behavior, and packaging require an appropriate Apple build/test environment.
 - Windows packaging needs its normal signing identity for store distribution; Windows biometric unlock is intentionally not enabled in this release.
 - Android/iOS/MacCatalyst/Windows store signing keys and credentials are intentionally absent from the repository and must be supplied through protected CI/store configuration.
-- Screenshot blocking, clipboard clearing, background/sleep locking, share-sheet plaintext cleanup, accessibility behavior, language fallback, and large-file attachment behavior require final platform-by-platform validation.
+- Screenshot blocking, clipboard clearing, background/sleep locking, share-sheet plaintext cleanup, in-memory preview behavior, accessibility behavior, language fallback, responsive layouts, and large-file attachment behavior require final platform-by-platform validation.
 - Dependency vulnerability/dependency-review/CodeQL results must be reviewed when GitHub services execute against the current head.
 - Third-party license notice families must be checked against the exact restored package metadata before distribution.
+- Exact platform asset/store requirements must be verified against the current Android/Apple/Windows distribution documentation during release packaging.
 - Independent professional cryptographic/security audit remains outstanding; CipherNest must not be marketed as audited, unhackable, military-grade, 100% secure, or suitable for high-risk use until evidence supports those statements.
 
 ### Deliberately deferred pending dedicated security/platform review
