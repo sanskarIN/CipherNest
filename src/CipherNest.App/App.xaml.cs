@@ -13,6 +13,7 @@ public partial class App : Microsoft.Maui.Controls.Application
     private readonly IPrivacySafeExceptionReporter _exceptions;
     private readonly ILocalizationService _localization;
     private readonly SessionLockPolicy _lockPolicy;
+    private readonly IClipboardSecurityService _clipboard;
     private DateTimeOffset? _inactiveUtc;
 
     public App(
@@ -21,7 +22,8 @@ public partial class App : Microsoft.Maui.Controls.Application
         IScreenshotProtectionService screenshots,
         IPrivacySafeExceptionReporter exceptions,
         ILocalizationService localization,
-        SessionLockPolicy lockPolicy)
+        SessionLockPolicy lockPolicy,
+        IClipboardSecurityService clipboard)
     {
         InitializeComponent();
         _vault = vault;
@@ -30,6 +32,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         _exceptions = exceptions;
         _localization = localization;
         _lockPolicy = lockPolicy;
+        _clipboard = clipboard;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
     }
@@ -67,12 +70,17 @@ public partial class App : Microsoft.Maui.Controls.Application
         try
         {
             var preferences = await _settings.LoadAsync();
-            if (_lockPolicy.ShouldLockWhenBackgrounded(preferences, _vault.IsUnlocked)) await _vault.LockAsync();
+            if (_lockPolicy.ShouldLockWhenBackgrounded(preferences, _vault.IsUnlocked))
+            {
+                await _vault.LockAsync();
+                await _clipboard.ClearAsync();
+            }
         }
         catch (Exception exception)
         {
             _exceptions.Report("Lifecycle.Inactive", exception);
             if (_vault.IsUnlocked) await _vault.LockAsync();
+            try { await _clipboard.ClearAsync(); } catch (Exception clipboardException) { _exceptions.Report("Lifecycle.Inactive.Clipboard", clipboardException); }
         }
     }
 
@@ -88,6 +96,7 @@ public partial class App : Microsoft.Maui.Controls.Application
             if (_lockPolicy.ShouldLockAfterInactivity(preferences, _vault.IsUnlocked, _inactiveUtc, DateTimeOffset.UtcNow))
             {
                 await _vault.LockAsync();
+                await _clipboard.ClearAsync();
             }
             if (!_vault.IsUnlocked && Shell.Current is not null && await _vault.HasVaultAsync())
             {
@@ -98,6 +107,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         {
             _exceptions.Report("Lifecycle.Active", exception);
             if (_vault.IsUnlocked) await _vault.LockAsync();
+            try { await _clipboard.ClearAsync(); } catch (Exception clipboardException) { _exceptions.Report("Lifecycle.Active.Clipboard", clipboardException); }
         }
         finally
         {
