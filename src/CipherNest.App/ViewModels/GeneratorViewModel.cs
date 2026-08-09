@@ -14,7 +14,7 @@ public partial class GeneratorViewModel : ObservableObject
 
     [ObservableProperty] private bool passphraseMode;
     [ObservableProperty] private int length = 20;
-    [ObservableProperty] private int wordCount = 5;
+    [ObservableProperty] private int wordCount = 8;
     [ObservableProperty] private bool uppercase = true;
     [ObservableProperty] private bool lowercase = true;
     [ObservableProperty] private bool digits = true;
@@ -49,7 +49,9 @@ public partial class GeneratorViewModel : ObservableObject
                 ExcludeAmbiguous = ExcludeAmbiguous
             };
             GeneratedValue = _generator.Generate(options);
-            StrengthLabel = _generator.Evaluate(GeneratedValue).Label;
+            StrengthLabel = PassphraseMode
+                ? $"Generated from 256 local words: approximately {checked(WordCount * 8)} bits of random-selection entropy if kept exactly as generated."
+                : _generator.Evaluate(GeneratedValue).Label;
             ErrorMessage = string.Empty;
         }
         catch (ArgumentException ex)
