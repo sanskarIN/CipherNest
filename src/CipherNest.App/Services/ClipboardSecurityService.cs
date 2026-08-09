@@ -1,3 +1,5 @@
+using CipherNest.Application.Services;
+
 namespace CipherNest.App.Services;
 
 public sealed class ClipboardSecurityService : IClipboardSecurityService, IDisposable
@@ -7,13 +9,15 @@ public sealed class ClipboardSecurityService : IClipboardSecurityService, IDispo
     public async Task CopySecretAsync(string value, TimeSpan clearAfter, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(value);
+        cancellationToken.ThrowIfCancellationRequested();
         _clearCts?.Cancel();
         _clearCts?.Dispose();
         _clearCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var token = _clearCts.Token;
         await Clipboard.Default.SetTextAsync(value);
-        if (clearAfter <= TimeSpan.Zero) return;
-        _ = ClearLaterAsync(value, clearAfter, token);
+        var normalizedDelay = ClipboardSafetyPolicy.NormalizeClearDelay(clearAfter);
+        if (normalizedDelay == TimeSpan.Zero) return;
+        _ = ClearLaterAsync(value, normalizedDelay, token);
     }
 
     public async Task ClearAsync(CancellationToken cancellationToken = default)
@@ -21,10 +25,7 @@ public sealed class ClipboardSecurityService : IClipboardSecurityService, IDispo
         cancellationToken.ThrowIfCancellationRequested();
         _clearCts?.Cancel();
         var current = await Clipboard.Default.GetTextAsync();
-        if (!string.IsNullOrEmpty(current))
-        {
-            await Clipboard.Default.SetTextAsync(string.Empty);
-        }
+        if (!string.IsNullOrEmpty(current)) await Clipboard.Default.SetTextAsync(string.Empty);
     }
 
     public void Dispose()
@@ -39,10 +40,7 @@ public sealed class ClipboardSecurityService : IClipboardSecurityService, IDispo
         {
             await Task.Delay(delay, cancellationToken);
             var current = await Clipboard.Default.GetTextAsync();
-            if (string.Equals(current, expected, StringComparison.Ordinal))
-            {
-                await Clipboard.Default.SetTextAsync(string.Empty);
-            }
+            if (ClipboardSafetyPolicy.ShouldClear(expected, current)) await Clipboard.Default.SetTextAsync(string.Empty);
         }
         catch (OperationCanceledException)
         {
