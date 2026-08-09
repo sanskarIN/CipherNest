@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="CipherNest.App.Views.VaultPage">
-  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" Padding="18" RowSpacing="12">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" Padding="18" RowSpacing="12">
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><VerticalStackLayout><Label Text="Your vault" Style="{StaticResource TitleLabel}"/><Label Text="Secrets stay hidden until you explicitly open or copy them." Style="{StaticResource SubtitleLabel}"/></VerticalStackLayout><Button Grid.Column="1" Text="Lock" Command="{Binding LockCommand}" Style="{StaticResource SecondaryButton}"/></Grid>
     <Label Grid.Row="1" Text="{Binding BackupReminderMessage}" TextColor="{StaticResource Primary}" FontAttributes="Bold" SemanticProperties.LiveSetting="Polite"/>
     <Label Grid.Row="2" Text="{Binding ReviewReminderMessage}" TextColor="{StaticResource Primary}" FontAttributes="Bold" SemanticProperties.LiveSetting="Polite"/>
@@ -13,7 +13,8 @@
     </Grid>
     <Grid Grid.Row="5" ColumnDefinitions="Auto,*" ColumnSpacing="10"><Label Text="Collection" VerticalTextAlignment="Center" FontAttributes="Bold"/><Entry Grid.Column="1" Text="{Binding CollectionFilter}" Placeholder="Optional collection / folder filter" SemanticProperties.Description="Filter by collection name"/></Grid>
     <Grid Grid.Row="6"><CollectionView ItemsSource="{Binding Items}" SelectionMode="None" EmptyView="No matching items. Change search or filters, or add a new item."><CollectionView.ItemTemplate><DataTemplate><Frame Margin="0,5"><Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10"><Label Text="{Binding Title}" FontAttributes="Bold" FontSize="17" LineBreakMode="TailTruncation"/><Label Grid.Row="1" Text="{Binding Type}" Style="{StaticResource SubtitleLabel}"/><Label Grid.Row="2" Text="{Binding Collection}" Style="{StaticResource SubtitleLabel}"/><Button Grid.Column="1" Grid.RowSpan="3" Text="Open" Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditCommand}" CommandParameter="{Binding .}" Style="{StaticResource SecondaryButton}"/></Grid></Frame></DataTemplate></CollectionView.ItemTemplate></CollectionView><ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" VerticalOptions="Center" HorizontalOptions="Center"/></Grid>
-    <FlexLayout Grid.Row="7" Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+    <Grid Grid.Row="7" ColumnDefinitions="*,Auto" ColumnSpacing="10"><Label Text="{Binding ResultCountMessage}" Style="{StaticResource SubtitleLabel}" VerticalTextAlignment="Center" SemanticProperties.LiveSetting="Polite"/><Button Grid.Column="1" Text="Load more" Command="{Binding LoadMoreCommand}" IsVisible="{Binding CanLoadMore}" Style="{StaticResource SecondaryButton}"/></Grid>
+    <FlexLayout Grid.Row="8" Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
       <Button Text="Add" Command="{Binding AddCommand}" Margin="0,0,8,8"/>
       <Button Text="Generate" Command="{Binding GeneratorCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,8"/>
       <Button Text="Audit" Command="{Binding AuditCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,8"/>
