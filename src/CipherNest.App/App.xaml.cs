@@ -55,6 +55,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         {
             var preferences = await _settings.LoadAsync();
             ApplyTheme(preferences.Theme);
+            AccessibilityPreferenceApplicator.Apply(preferences.LargerInterface, preferences.ReducedMotion);
             await _screenshots.ApplyAsync(preferences.ScreenshotProtection);
             if (_vault.IsUnlocked && _inactiveUtc is { } inactive && (DateTimeOffset.UtcNow - inactive).TotalSeconds >= preferences.LockTimeoutSeconds)
             {
@@ -81,11 +82,13 @@ public partial class App : Microsoft.Maui.Controls.Application
         {
             var preferences = await _settings.LoadAsync();
             ApplyTheme(preferences.Theme);
+            AccessibilityPreferenceApplicator.Apply(preferences.LargerInterface, preferences.ReducedMotion);
             await _screenshots.ApplyAsync(preferences.ScreenshotProtection);
         }
         catch
         {
             ApplyTheme(AppThemePreference.System);
+            AccessibilityPreferenceApplicator.Apply(largerInterface: false, reducedMotion: true);
         }
     }
 
