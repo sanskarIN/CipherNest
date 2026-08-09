@@ -10,4 +10,10 @@ public partial class TransferPage : ContentPage
         InitializeComponent();
         BindingContext = ServiceProviderHelper.GetRequiredService<TransferViewModel>();
     }
+
+    protected override void OnDisappearing()
+    {
+        if (BindingContext is TransferViewModel vm) vm.ClearSensitiveState();
+        base.OnDisappearing();
+    }
 }
