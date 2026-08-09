@@ -2,16 +2,31 @@
 
 CipherNest is a local-first, open-source password, secure-note, identity, credential, and encrypted-document vault built with .NET MAUI and C#.
 
-> Security notice: CipherNest is designed around established cryptographic primitives and local-only storage, but has not yet undergone an independent professional security audit. Do not treat open source as a substitute for review.
+> **Security status:** CipherNest has not yet undergone an independent professional security audit. It uses established primitives and a deliberately small security-sensitive core, but must not be described as “unhackable”, “military-grade”, or “100% secure”.
 
-## Product principles
+## Current release
 
-- No account, email, phone number, or cloud service is required.
-- Vault content stays on the device in the current release.
+- No account, email, phone number, server, or cloud service is required.
+- Vault records and attachments are encrypted locally.
 - The master passphrase is never stored.
-- Secrets are hidden by default and clipboard use is explicit and time-limited.
-- Encrypted backups use authenticated encryption and a memory-hard password KDF.
-- No analytics or telemetry are enabled by default.
+- A random vault data-encryption key is wrapped by a key derived with Argon2id.
+- AES-256-GCM is used for authenticated encryption with unique nonces.
+- Search and password audits run only over decrypted in-memory data while unlocked.
+- Encrypted backup/restore is supported; plaintext export is deliberately excluded from the first hardened release.
+- No analytics or telemetry are enabled.
+
+## Build
+
+Requirements: a current .NET 10 SDK with the .NET MAUI workload and platform SDKs for the desired target.
+
+```bash
+dotnet workload restore
+dotnet restore CipherNest.slnx
+dotnet build CipherNest.slnx -c Release
+dotnet test CipherNest.slnx -c Release
+```
+
+See `docs/setup/BUILD.md` and `docs/TROUBLESHOOTING.md` for platform details.
 
 ## Repository
 

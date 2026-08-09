@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CipherNest.Shared/CipherNest.Shared.csproj" />
+    <Project Path="src/CipherNest.Domain/CipherNest.Domain.csproj" />
+    <Project Path="src/CipherNest.Application/CipherNest.Application.csproj" />
+    <Project Path="src/CipherNest.Infrastructure/CipherNest.Infrastructure.csproj" />
+    <Project Path="src/CipherNest.App/CipherNest.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CipherNest.UnitTests/CipherNest.UnitTests.csproj" />
+    <Project Path="tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj" />
+  </Folder>
+</Solution>
