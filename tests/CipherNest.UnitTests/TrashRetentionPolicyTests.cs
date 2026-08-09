@@ -13,9 +13,9 @@ public sealed class TrashRetentionPolicyTests
         var recent = CreateItem(now.AddDays(-29));
         var active = CreateItem(null);
 
-        var ids = TrashRetentionPolicy.FindExpiredItemIds([expired, recent, active], now, 30);
+        var ids = TrashRetentionPolicy.FindExpiredItemIds(new[] { expired, recent, active }, now, 30);
 
-        Assert.Equal([expired.Id], ids);
+        Assert.Equal(new[] { expired.Id }, ids);
     }
 
     [Fact]
