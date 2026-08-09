@@ -7,14 +7,32 @@ All notable changes are documented here following Semantic Versioning principles
 ### Added
 - Optional biometric unlock on supported Android, iOS, and Mac Catalyst devices using an independently generated secondary vault-key wrapper; the master passphrase is never stored for biometric unlock.
 - Periodic master-passphrase requirement for biometric sessions, with a fresh app process requiring the master passphrase first.
-- Guarded plaintext attachment export through an explicit warning and temporary app-cache file cleanup.
+- Guarded plaintext attachment export through an explicit warning and temporary app-cache cleanup path.
+- Safe in-memory preview for bounded UTF-8 TXT, Markdown, CSV, JSON, and LOG attachments without creating a plaintext preview file.
 - Encrypted last-accessed timestamps and vault sorting by recently used, recently modified, title, or favorites/title.
-- Integration coverage for secondary wrapped-key unlock and recent-access persistence.
-- Dedicated biometric-unlock security design and limitations documentation.
+- Vault item-type, favorite, review-due, and collection filters plus local review-reminder summaries.
+- Safe secure-note Markdown subset with headings, bullets, fenced code, checklists, HTML neutralization, and bounded preview parsing.
+- Exact duplicate-entry detection in the local security audit alongside weak/reused/overdue findings.
+- Generator defaults persisted locally and an eight-word default memorable-passphrase mode based on a validated 256-entry local word list.
+- Explicit passphrase random-selection entropy guidance and unit tests for word-list invariants/bounds.
+- Local storage usage inspection and temporary-cache cleanup controls.
+- Transactional ordered database migration runner with future-schema rejection and migration tests.
+- Argon2id known-answer test vector and multi-megabyte attachment streaming integration coverage.
+- Malformed CSV parser robustness corpus and UI-structure test execution in the main CI job.
+- Dynamic larger-interface typography resources and startup restoration of accessibility preferences.
+- English-first localization resource catalog, persisted System/English preference, and resource-backed localization service ready for additional culture catalogs.
+- Dedicated in-app security/privacy/threat-limit information surface.
+- Privacy-safe centralized exception reporting that omits exception messages/stacks and decrypted vault context.
+- Third-party dependency notices, secure-note security documentation, passphrase-generator design notes, privacy-safe diagnostics policy, localization architecture guidance, and store-listing/branding guidance.
 
 ### Changed
 - Restoring a backup clears the local biometric secure-storage secret and disables biometric unlock until it is deliberately configured again.
 - Settings now distinguish biometric capability/configuration from master-passphrase recovery and sensitive-setting authentication.
+- Settings now include generator defaults, local review reminders, storage/cache controls, security-audit navigation, privacy/threat information, and language readiness.
+- Attachment imports normalize declared media types for supported in-app text preview policy.
+- Database initialization now routes through the explicit migration history instead of treating schema creation as an implicit one-time side effect.
+- CI now restores/builds/runs unit, integration, and UI-structure test projects before the Windows MAUI build gate.
+- Release/test/database/architecture documentation was expanded to match implemented behavior and remaining external-validation limits.
 
 ## [0.1.0] - 2026-08-09
 
