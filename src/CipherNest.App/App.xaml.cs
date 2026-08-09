@@ -1,4 +1,5 @@
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Services;
 using CipherNest.App.Services;
 using CipherNest.Domain.Models;
 
@@ -11,6 +12,7 @@ public partial class App : Microsoft.Maui.Controls.Application
     private readonly IScreenshotProtectionService _screenshots;
     private readonly IPrivacySafeExceptionReporter _exceptions;
     private readonly ILocalizationService _localization;
+    private readonly SessionLockPolicy _lockPolicy;
     private DateTimeOffset? _inactiveUtc;
 
     public App(
@@ -18,7 +20,8 @@ public partial class App : Microsoft.Maui.Controls.Application
         ISettingsStore settings,
         IScreenshotProtectionService screenshots,
         IPrivacySafeExceptionReporter exceptions,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        SessionLockPolicy lockPolicy)
     {
         InitializeComponent();
         _vault = vault;
@@ -26,6 +29,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         _screenshots = screenshots;
         _exceptions = exceptions;
         _localization = localization;
+        _lockPolicy = lockPolicy;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
     }
@@ -63,7 +67,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         try
         {
             var preferences = await _settings.LoadAsync();
-            if (preferences.LockOnBackground && _vault.IsUnlocked) await _vault.LockAsync();
+            if (_lockPolicy.ShouldLockWhenBackgrounded(preferences, _vault.IsUnlocked)) await _vault.LockAsync();
         }
         catch (Exception exception)
         {
@@ -81,7 +85,7 @@ public partial class App : Microsoft.Maui.Controls.Application
             _localization.Apply(preferences.Language);
             AccessibilityPreferenceApplicator.Apply(preferences.LargerInterface, preferences.ReducedMotion);
             await _screenshots.ApplyAsync(preferences.ScreenshotProtection);
-            if (_vault.IsUnlocked && _inactiveUtc is { } inactive && (DateTimeOffset.UtcNow - inactive).TotalSeconds >= preferences.LockTimeoutSeconds)
+            if (_lockPolicy.ShouldLockAfterInactivity(preferences, _vault.IsUnlocked, _inactiveUtc, DateTimeOffset.UtcNow))
             {
                 await _vault.LockAsync();
             }
