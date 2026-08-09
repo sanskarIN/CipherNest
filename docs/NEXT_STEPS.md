@@ -122,6 +122,8 @@ These are the first actions to take before calling the current build release-rea
 - Verify package identifiers, display name, version/build values, privacy declarations, permissions, icons, splash assets, and screenshots.
 - Validate the monochrome/adaptive icon source and dark-surface logo on target systems.
 - Verify store copy makes no unsupported security claims.
+- Verify the current policy for the optional `https://buymeacoffee.com/sanskarIN` in-app funding CTA on each exact store/region/distribution target.
+- If a target policy requires the funding CTA to be absent, build that app package with `-p:CipherNestEnableFundingLink=false` and record the chosen value in release provenance.
 - Use only synthetic/demo vault content in screenshots and marketing images.
 
 ## Priority 7 — security review before broader claims
@@ -170,6 +172,7 @@ Each one changes the attack surface materially and should receive its own archit
 7. Accessibility/localization/responsive-layout pass.
 8. Performance/large-vault measurements.
 9. Dependency/license/security review.
-10. Signed release-candidate packaging.
-11. Independent security review before stronger marketing claims.
-12. Tag/release only after every applicable release-checklist gate has evidence.
+10. Store-policy decision for the optional funding CTA and record the build setting.
+11. Signed release-candidate packaging.
+12. Independent security review before stronger marketing claims.
+13. Tag/release only after every applicable release-checklist gate has evidence.
