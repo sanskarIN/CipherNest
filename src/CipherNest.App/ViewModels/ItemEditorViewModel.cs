@@ -29,24 +29,45 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private bool isSecretVisible;
     [ObservableProperty] private bool hasReviewDate;
     [ObservableProperty] private DateTime reviewDate = DateTime.Today.AddMonths(6);
+    [ObservableProperty] private bool requiresReauthentication;
+    [ObservableProperty] private bool isReauthenticationRequired;
+    [ObservableProperty] private string reauthenticationPassphrase = string.Empty;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty] private bool isExisting;
 
     public ItemEditorViewModel(IVaultService vault, IClipboardSecurityService clipboard, ISettingsStore settings)
     {
-        _vault = vault;
-        _clipboard = clipboard;
-        _settings = settings;
+        _vault = vault; _clipboard = clipboard; _settings = settings;
     }
 
     public async void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (!query.TryGetValue("id", out var raw) || !Guid.TryParse(raw?.ToString(), out var id))
         {
-            _existing = null; IsExisting = false; return;
+            _existing = null; IsExisting = false; IsReauthenticationRequired = false; return;
         }
         await LoadAsync(id);
+    }
+
+    [RelayCommand]
+    private async Task ReauthenticateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ReauthenticationPassphrase)) { ErrorMessage = "Enter the current master passphrase."; return; }
+        IsBusy = true;
+        try
+        {
+            if (!await _vault.ReauthenticateAsync(ReauthenticationPassphrase))
+            {
+                ErrorMessage = "Master-passphrase confirmation failed. Recovery keys do not satisfy per-item re-authentication.";
+                return;
+            }
+            ReauthenticationPassphrase = string.Empty;
+            IsReauthenticationRequired = false;
+            if (_existing is not null) Populate(_existing);
+            ErrorMessage = string.Empty;
+        }
+        finally { IsBusy = false; }
     }
 
     [RelayCommand] private void ToggleSecret() => IsSecretVisible = !IsSecretVisible;
@@ -54,7 +75,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task CopySecretAsync()
     {
-        if (string.IsNullOrEmpty(Secret)) return;
+        if (IsReauthenticationRequired || string.IsNullOrEmpty(Secret)) return;
         var preferences = await _settings.LoadAsync();
         await _clipboard.CopySecretAsync(Secret, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
     }
@@ -62,76 +83,59 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsReauthenticationRequired) { ErrorMessage = "Re-authenticate before changing this protected item."; return; }
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
         IsBusy = true; ErrorMessage = string.Empty;
         try
         {
             var customFields = ParseCustomFields(CustomFieldsText);
             var now = DateTimeOffset.UtcNow;
-            var reviewUtc = HasReviewDate ? new DateTimeOffset(ReviewDate.Date, TimeZoneInfo.Local.GetUtcOffset(ReviewDate.Date)).ToUniversalTime() : null;
+            DateTimeOffset? reviewUtc = HasReviewDate ? new DateTimeOffset(ReviewDate.Date, TimeZoneInfo.Local.GetUtcOffset(ReviewDate.Date)).ToUniversalTime() : null;
             var item = new VaultItem
             {
                 Id = _existing?.Id ?? Guid.NewGuid(), Type = SelectedType, Title = Title, Username = Username, Secret = Secret, Url = Url, Notes = Notes,
-                Collection = Collection,
-                Tags = Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                IsFavorite = IsFavorite, CustomFields = customFields, Attachments = Attachments.ToArray(), CreatedUtc = _existing?.CreatedUtc ?? now, ModifiedUtc = now,
-                ReviewAfterUtc = reviewUtc, DeletedUtc = _existing?.DeletedUtc, RequiresReauthentication = _existing?.RequiresReauthentication ?? false
+                Collection = Collection, Tags = Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), IsFavorite = IsFavorite,
+                CustomFields = customFields, Attachments = Attachments.ToArray(), CreatedUtc = _existing?.CreatedUtc ?? now, ModifiedUtc = now, ReviewAfterUtc = reviewUtc,
+                DeletedUtc = _existing?.DeletedUtc, RequiresReauthentication = RequiresReauthentication
             };
             await _vault.SaveItemAsync(item);
             await Shell.Current.GoToAsync("..");
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
-        {
-            ErrorMessage = ex.Message;
-        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException) { ErrorMessage = ex.Message; }
         finally { IsBusy = false; }
     }
 
     [RelayCommand]
     private async Task AddAttachmentAsync()
     {
-        if (_existing is null)
-        {
-            ErrorMessage = "Save this item first, then reopen it to add encrypted attachments.";
-            return;
-        }
-        var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a file to encrypt into this vault item" });
-        if (result is null) return;
+        if (IsReauthenticationRequired) return;
+        if (_existing is null) { ErrorMessage = "Save this item first, then reopen it to add encrypted attachments."; return; }
+        var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a file to encrypt into this vault item" }); if (result is null) return;
         IsBusy = true;
         try
         {
             await using var stream = await result.OpenReadAsync();
             var attachment = await _vault.AddAttachmentAsync(_existing.Id, stream, result.FileName, "application/octet-stream");
-            Attachments.Add(attachment);
-            _existing = await _vault.GetItemAsync(_existing.Id);
-            ErrorMessage = string.Empty;
+            Attachments.Add(attachment); _existing = await _vault.GetItemAsync(_existing.Id); ErrorMessage = string.Empty;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException)
-        {
-            ErrorMessage = $"Attachment was not added: {ex.Message}";
-        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException) { ErrorMessage = $"Attachment was not added: {ex.Message}"; }
         finally { IsBusy = false; }
     }
 
     [RelayCommand]
     private async Task RemoveAttachmentAsync(AttachmentReference attachment)
     {
-        if (_existing is null || attachment is null) return;
-        var confirm = await Shell.Current.DisplayAlert("Remove attachment?", "The encrypted attachment file will be removed from this item. Filesystem remnants may be outside CipherNest's control.", "Remove", "Cancel");
-        if (!confirm) return;
-        await _vault.RemoveAttachmentAsync(_existing.Id, attachment.Id);
-        Attachments.Remove(attachment);
-        _existing = await _vault.GetItemAsync(_existing.Id);
+        if (IsReauthenticationRequired || _existing is null || attachment is null) return;
+        var confirm = await Shell.Current.DisplayAlert("Remove attachment?", "The encrypted attachment file will be removed from this item. Filesystem remnants may be outside CipherNest's control.", "Remove", "Cancel"); if (!confirm) return;
+        await _vault.RemoveAttachmentAsync(_existing.Id, attachment.Id); Attachments.Remove(attachment); _existing = await _vault.GetItemAsync(_existing.Id);
     }
 
     [RelayCommand]
     private async Task MoveToTrashAsync()
     {
-        if (_existing is null) return;
-        var confirm = await Shell.Current.DisplayAlert("Move to trash?", "The item can be restored until it is permanently deleted or expires from trash retention.", "Move", "Cancel");
-        if (!confirm) return;
-        await _vault.MoveToTrashAsync(_existing.Id);
-        await Shell.Current.GoToAsync("..");
+        if (IsReauthenticationRequired || _existing is null) return;
+        var confirm = await Shell.Current.DisplayAlert("Move to trash?", "The item can be restored until it is permanently deleted or expires from trash retention.", "Move", "Cancel"); if (!confirm) return;
+        await _vault.MoveToTrashAsync(_existing.Id); await Shell.Current.GoToAsync("..");
     }
 
     private async Task LoadAsync(Guid id)
@@ -140,15 +144,26 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         {
             _existing = await _vault.GetItemAsync(id);
             if (_existing is null) { ErrorMessage = "This item no longer exists."; return; }
-            SelectedType = _existing.Type; Title = _existing.Title; Username = _existing.Username; Secret = _existing.Secret; Url = _existing.Url; Notes = _existing.Notes;
-            Collection = _existing.Collection; Tags = string.Join(", ", _existing.Tags); IsFavorite = _existing.IsFavorite;
-            CustomFieldsText = string.Join(Environment.NewLine, _existing.CustomFields.Select(static field => $"{(field.IsSecret ? "[secret]" : string.Empty)}{field.Name}={field.Value}"));
-            HasReviewDate = _existing.ReviewAfterUtc is not null;
-            ReviewDate = _existing.ReviewAfterUtc?.ToLocalTime().Date ?? DateTime.Today.AddMonths(6);
-            Attachments.Clear(); foreach (var attachment in _existing.Attachments) Attachments.Add(attachment);
             IsExisting = true;
+            RequiresReauthentication = _existing.RequiresReauthentication;
+            if (_existing.RequiresReauthentication)
+            {
+                IsReauthenticationRequired = true;
+                Title = "Protected item";
+                return;
+            }
+            Populate(_existing);
         }
         catch (Exception ex) { ErrorMessage = $"Could not open this item: {ex.Message}"; }
+    }
+
+    private void Populate(VaultItem item)
+    {
+        SelectedType = item.Type; Title = item.Title; Username = item.Username; Secret = item.Secret; Url = item.Url; Notes = item.Notes; Collection = item.Collection;
+        Tags = string.Join(", ", item.Tags); IsFavorite = item.IsFavorite; RequiresReauthentication = item.RequiresReauthentication;
+        CustomFieldsText = string.Join(Environment.NewLine, item.CustomFields.Select(static field => $"{(field.IsSecret ? "[secret]" : string.Empty)}{field.Name}={field.Value}"));
+        HasReviewDate = item.ReviewAfterUtc is not null; ReviewDate = item.ReviewAfterUtc?.ToLocalTime().Date ?? DateTime.Today.AddMonths(6);
+        Attachments.Clear(); foreach (var attachment in item.Attachments) Attachments.Add(attachment);
     }
 
     private static IReadOnlyList<CustomField> ParseCustomFields(string input)
@@ -157,11 +172,8 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         var fields = new List<CustomField>();
         foreach (var raw in input.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
         {
-            var line = raw.Trim();
-            var isSecret = line.StartsWith("[secret]", StringComparison.OrdinalIgnoreCase);
-            if (isSecret) line = line[8..];
-            var separator = line.IndexOf('=');
-            if (separator <= 0) throw new FormatException("Each custom field must use name=value. Prefix a secret field with [secret].");
+            var line = raw.Trim(); var isSecret = line.StartsWith("[secret]", StringComparison.OrdinalIgnoreCase); if (isSecret) line = line[8..];
+            var separator = line.IndexOf('='); if (separator <= 0) throw new FormatException("Each custom field must use name=value. Prefix a secret field with [secret].");
             fields.Add(new CustomField(line[..separator].Trim(), line[(separator + 1)..], isSecret));
         }
         return fields;
