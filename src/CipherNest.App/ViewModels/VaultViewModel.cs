@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CipherNest.Application.Abstractions;
+using CipherNest.App.Services;
 using CipherNest.Domain.Models;
 using CipherNest.App.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,6 +13,7 @@ public partial class VaultViewModel : ObservableObject
     private const int PageSize = 50;
     private readonly IVaultService _vault;
     private readonly ISettingsStore _settings;
+    private readonly IClipboardSecurityService _clipboard;
     private CancellationTokenSource? _searchCts;
     private IReadOnlyList<VaultItem> _lastResults = Array.Empty<VaultItem>();
     private IReadOnlyList<VaultItem> _orderedFilteredResults = Array.Empty<VaultItem>();
@@ -31,10 +33,11 @@ public partial class VaultViewModel : ObservableObject
     [ObservableProperty] private bool canLoadMore;
     [ObservableProperty] private string resultCountMessage = string.Empty;
 
-    public VaultViewModel(IVaultService vault, ISettingsStore settings)
+    public VaultViewModel(IVaultService vault, ISettingsStore settings, IClipboardSecurityService clipboard)
     {
         _vault = vault;
         _settings = settings;
+        _clipboard = clipboard;
     }
 
     partial void OnSearchTextChanged(string value)
@@ -92,7 +95,19 @@ public partial class VaultViewModel : ObservableObject
         AppendNextPage();
     }
 
-    [RelayCommand] private async Task LockAsync() { await _vault.LockAsync(); Items.Clear(); _lastResults = Array.Empty<VaultItem>(); _orderedFilteredResults = Array.Empty<VaultItem>(); CanLoadMore = false; ResultCountMessage = string.Empty; await Shell.Current.GoToAsync("//unlock"); }
+    [RelayCommand]
+    private async Task LockAsync()
+    {
+        await _vault.LockAsync();
+        try { await _clipboard.ClearAsync(); } catch { }
+        Items.Clear();
+        _lastResults = Array.Empty<VaultItem>();
+        _orderedFilteredResults = Array.Empty<VaultItem>();
+        CanLoadMore = false;
+        ResultCountMessage = string.Empty;
+        await Shell.Current.GoToAsync("//unlock");
+    }
+
     [RelayCommand] private async Task GeneratorAsync() => await Shell.Current.GoToAsync("//generator");
     [RelayCommand] private async Task AuditAsync() => await Shell.Current.GoToAsync("//audit");
     [RelayCommand] private async Task TrashAsync() => await Shell.Current.GoToAsync("//trash");
