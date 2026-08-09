@@ -677,3 +677,115 @@ The following remain deliberately deferred rather than represented by fake or in
 - Re-ran indexed source searches after that fix. No `Console.WriteLine` matches were returned, and no logger search result matching `LogInformation`, `LogWarning`, or `LogError` together with secret/passphrase/password terms was returned.
 - The exact `docs(progress)` head check showed the progress file commit in history; GitHub returned no combined commit-status entries for that checked progress commit, so hosted CI remains an external release gate rather than being represented as passed.
 - This final progress-file update intentionally leaves the repository documentation as the last change in this work pass.
+
+## 2026-08-09 — Continuation: project support link, executable next-step roadmap, and store-build policy
+
+This pass continued directly from the hardened `main` branch and added the requested project-support URL `https://buymeacoffee.com/sanskarIN` across the relevant repository and application surfaces. It also converted the requested “next steps to consider” into a source-controlled execution roadmap and added a build-time policy mechanism so store packages can omit the in-app funding CTA without source edits when required by the applicable distribution rules.
+
+### Project-support URL and metadata
+
+- Added `AppConstants.BuyMeACoffeeUrl = "https://buymeacoffee.com/sanskarIN"` so application code has one canonical support URL.
+- Added `.github/FUNDING.yml` with the same custom support URL so GitHub repository funding metadata points to the intended page.
+- Added the support URL to `README.md` and `SUPPORT.md`.
+- Kept the support wording explicitly voluntary: financial support does not change feature access, security/privacy handling, support priority, GPL rights, or recovery capability.
+- Added a dedicated “Support development” surface to About with the URL and an explicit user-initiated “Buy me a coffee” action.
+- Added user-initiated repository and creator-profile actions to the same About surface.
+
+### Centralized About metadata
+
+- Refactored About so product name, watermark, business email, support email, repository URL, creator URL, and Buy Me a Coffee URL bind from `AppConstants` rather than duplicating public values in XAML.
+- The About code-behind opens only absolute HTTPS links from the configured constants.
+- External launcher failures use `DisplayAlertAsync` and are routed through `IPrivacySafeExceptionReporter` with the fixed operation identifier `About.ExternalLink`; raw exception messages are not shown or logged through that path.
+- Added source-level UI regression checks for the centralized bindings and privacy-safe external-link failure handling.
+
+### Store/distribution build-time funding switch
+
+- Added `BuildFeatureFlags.IsFundingLinkEnabled` in the MAUI app.
+- Added the `CipherNestEnableFundingLink` MSBuild property. It defaults to `true`.
+- Setting `-p:CipherNestEnableFundingLink=false` explicitly defines `CIPHERNEST_DISABLE_FUNDING_LINK` for the app build.
+- When disabled, the About funding frame and funding metadata label are hidden and the Buy Me a Coffee action cannot launch.
+- The disable condition was tightened to explicit `false`; unrelated or accidental property values do not silently disable the normal UI.
+- Repository metadata such as README, SUPPORT, and `.github/FUNDING.yml` remains unchanged by that compiled-app switch.
+- Added UI/source regression checks for the feature flag, project property, hidden About surfaces, centralized URL, and GitHub funding metadata.
+
+### Current store-policy handling
+
+- The repository does not claim that a Buy Me a Coffee CTA is permitted by every current app store, region, distribution method, or app category.
+- `docs/releases/STORE_LISTING_GUIDE.md`, `docs/releases/PACKAGING.md`, `docs/setup/BUILD.md`, `docs/RELEASE_CHECKLIST.md`, and `docs/NEXT_STEPS.md` now require release engineers to verify the current policy for each exact target.
+- If an applicable policy requires the in-app external funding CTA to be absent, the documented package command uses `-p:CipherNestEnableFundingLink=false` rather than source edits.
+- Release provenance should record the chosen funding-link property value so a packaged artifact can be reproduced consistently.
+
+### Executable next-step roadmap
+
+- Added `docs/NEXT_STEPS.md` as the ordered follow-up plan instead of leaving next steps only in chat.
+- Priority 0 covers clean build, restore, tests, formatting/analyzers, platform build proof, CI/security-service review, and release-blocking failure handling.
+- Priority 1 covers lifecycle locking, clipboard behavior, biometrics, screenshot/privacy controls, and real-device validation.
+- Priority 2 covers destructive/recovery flows, master/recovery authorization boundaries, passphrase rotation, trash, and vault deletion.
+- Priority 3 covers encrypted backup/restore, CSV interoperability, attachment streaming, safe preview, export warnings, and plaintext-cache cleanup.
+- Priority 4 covers TalkBack/VoiceOver/Narrator, keyboard navigation, focus, large text, reduced motion, responsive layouts, contrast, and future localization completion.
+- Priority 5 covers synthetic 1k/5k/10k-vault performance measurement, search/audit latency, memory, incremental rendering, attachment throughput, and backup performance.
+- Priority 6 covers release engineering, exact dependency/license review, signing isolation, package metadata, store security claims, funding-CTA policy verification, and `CipherNestEnableFundingLink` provenance.
+- Priority 7 covers independent review of crypto, KDF/nonce/AAD design, recovery/biometric wrappers, attachment/backup formats, memory lifetime, parser fuzzing, downgrade behavior, and supply-chain provenance.
+- Priority 8 covers release notes/checksums, synchronized legal/security/support files, safe bug-report triage, open-source operations, and voluntary support wording.
+- Priority 9 preserves cloud sync, collaboration, autofill, TOTP, Windows Hello, rich document scanning/preview, pronounceable passwords, translations, and destructive wipe as separately reviewed future-version work.
+- `PROJECT_STATUS.md` and README now link to the roadmap.
+
+### Documentation and release-gate synchronization
+
+Updated in this pass:
+
+- `README.md`
+- `SUPPORT.md`
+- `.github/FUNDING.yml`
+- `PROJECT_STATUS.md`
+- `CHANGELOG.md`
+- `docs/NEXT_STEPS.md`
+- `docs/RELEASE_CHECKLIST.md`
+- `docs/TEST_PLAN.md`
+- `docs/setup/BUILD.md`
+- `docs/releases/PACKAGING.md`
+- `docs/releases/STORE_LISTING_GUIDE.md`
+- this `what_changed.md` ledger.
+
+### Commits created during this continuation
+
+- `feat(metadata): add Buy Me a Coffee project support URL`
+- `feat(about): expose project support and external link actions`
+- `feat(about): open repository creator and support links safely`
+- `docs(readme): add Buy Me a Coffee and next-step roadmap links`
+- `docs(support): add optional project support link`
+- `chore(funding): add Buy Me a Coffee project support link`
+- `docs(roadmap): add actionable CipherNest next-step plan`
+- `test(ui): cover Buy Me a Coffee support surface and funding metadata`
+- `fix(about): use async alert API for external link failures`
+- `docs(store): add funding-link policy verification gate`
+- `docs(status): add project support metadata and executable next-step roadmap`
+- `refactor(about): bind public project metadata to shared constants`
+- `test(ui): require centralized About metadata bindings`
+- `docs(changelog): record project support and next-step roadmap additions`
+- `docs(release): add funding-link and roadmap release gates`
+- `feat(build): add compile-time funding-link feature flag`
+- `feat(build): allow store builds to disable funding CTA`
+- `feat(about): make funding surfaces build-toggleable`
+- `feat(about): honor funding-link build policy`
+- `test(ui): cover store-toggleable funding CTA`
+- `docs(store): document build-time funding CTA switch`
+- `docs(build): document funding CTA build override`
+- `docs(packaging): add store-specific funding CTA build rule`
+- `fix(about): route external link failures through privacy-safe diagnostics`
+- `test(ui): cover privacy-safe external link failure handling`
+- `docs(readme): document optional funding-link build switch`
+- `docs(roadmap): add funding CTA packaging decision`
+- `docs(testing): add funding metadata and external link regression gates`
+- `fix(build): require explicit false to disable funding CTA`
+- `docs(store): align funding switch with explicit false semantics`
+- `docs(build): align funding switch with explicit false semantics`
+- this `what_changed.md` update.
+
+### Verification limits and next execution point
+
+The connected GitHub environment still cannot execute the repository's .NET 10/MAUI workloads, physical-device behavior, store review, signing, or the hosted push workflows as a substitute for a real release environment. The new support/funding behavior has source-level UI-structure regression checks, but release validation must still compile both normal/default and `CipherNestEnableFundingLink=false` variants on the intended target SDKs.
+
+The immediate next execution point is Priority 0 in `docs/NEXT_STEPS.md`: clean restore/build/tests/format/analyzers, then Android/Windows smoke tests, Apple-host builds, real-device security behavior, backup/transfer compatibility, accessibility/localization, performance, dependency/license review, signed packaging, and independent security review before stronger security claims.
+
+No signing credential, store credential, API secret, private key, vault secret, recovery material, or production analytics/crash token was added to source control during this continuation.
