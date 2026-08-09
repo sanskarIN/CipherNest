@@ -15,6 +15,7 @@ public partial class VaultViewModel : ObservableObject
     private readonly IVaultService _vault;
     private readonly ISettingsStore _settings;
     private readonly IClipboardSecurityService _clipboard;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
     private CancellationTokenSource? _searchCts;
     private IReadOnlyList<VaultItem> _lastResults = Array.Empty<VaultItem>();
     private IReadOnlyList<VaultItem> _orderedFilteredResults = Array.Empty<VaultItem>();
@@ -34,11 +35,12 @@ public partial class VaultViewModel : ObservableObject
     [ObservableProperty] private bool canLoadMore;
     [ObservableProperty] private string resultCountMessage = string.Empty;
 
-    public VaultViewModel(IVaultService vault, ISettingsStore settings, IClipboardSecurityService clipboard)
+    public VaultViewModel(IVaultService vault, ISettingsStore settings, IClipboardSecurityService clipboard, IPrivacySafeExceptionReporter exceptions)
     {
         _vault = vault;
         _settings = settings;
         _clipboard = clipboard;
+        _exceptions = exceptions;
     }
 
     partial void OnSearchTextChanged(string value)
@@ -107,7 +109,8 @@ public partial class VaultViewModel : ObservableObject
     private async Task LockAsync()
     {
         await _vault.LockAsync();
-        try { await _clipboard.ClearAsync(); } catch { }
+        try { await _clipboard.ClearAsync(); }
+        catch (Exception exception) { _exceptions.Report("Vault.ManualLock.Clipboard", exception); }
         Items.Clear();
         _lastResults = Array.Empty<VaultItem>();
         _orderedFilteredResults = Array.Empty<VaultItem>();
