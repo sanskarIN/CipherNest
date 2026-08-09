@@ -5,12 +5,14 @@ namespace CipherNest.App.Views;
 
 public partial class AboutPage : ContentPage
 {
+    private readonly IPrivacySafeExceptionReporter _exceptions;
     private int _versionTaps;
     private DateTimeOffset _firstTap;
 
     public AboutPage()
     {
         InitializeComponent();
+        _exceptions = ServiceProviderHelper.GetRequiredService<IPrivacySafeExceptionReporter>();
         VersionButton.Text = $"Version {AppInfo.Current.VersionString} · build {AppInfo.Current.BuildString} · crypto format {AppConstants.CryptoFormatVersion} · database schema {AppConstants.DatabaseSchemaVersion}";
         SupportDevelopmentFrame.IsVisible = BuildFeatureFlags.IsFundingLinkEnabled;
         SupportDevelopmentMetadataLabel.IsVisible = BuildFeatureFlags.IsFundingLinkEnabled;
@@ -39,8 +41,9 @@ public partial class AboutPage : ContentPage
             if (!await Launcher.Default.OpenAsync(uri))
                 await DisplayAlertAsync("Could not open link", $"The system could not open the {description}.", "Close");
         }
-        catch (Exception ex) when (ex is FeatureNotSupportedException or InvalidOperationException)
+        catch (Exception ex)
         {
+            _exceptions.Report("About.ExternalLink", ex);
             await DisplayAlertAsync("Could not open link", $"The {description} is not available through the current system launcher.", "Close");
         }
     }
