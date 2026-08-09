@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a reproducible non-security defect
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not report security vulnerabilities here. Use SECURITY.md. Never attach a real vault, passphrase, recovery key, or decrypted secret."
+  - type: input
+    id: version
+    attributes: { label: Version/build }
+    validations: { required: true }
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [Android, Windows, iOS, macOS, Other]
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes: { label: Reproduction steps }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected behavior }
+    validations: { required: true }
+  - type: textarea
+    id: actual
+    attributes: { label: Actual behavior }
+    validations: { required: true }

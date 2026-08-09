@@ -9,5 +9,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/CipherNest.UnitTests/CipherNest.UnitTests.csproj" />
     <Project Path="tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj" />
+    <Project Path="tests/CipherNest.UiTests/CipherNest.UiTests.csproj" />
   </Folder>
 </Solution>
