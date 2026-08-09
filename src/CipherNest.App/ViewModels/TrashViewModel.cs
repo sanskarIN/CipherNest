@@ -56,9 +56,9 @@ public partial class TrashViewModel : ObservableObject
         if (item is null) return;
         if (!await ConfirmMasterPassphraseAsync()) return;
         var confirm = await Shell.Current.DisplayAlert("Delete permanently?", "CipherNest will remove the encrypted record and attachment files. Filesystem or flash-storage remnants may still be recoverable by the operating system or forensic tools.", "Delete permanently", "Cancel");
+        DeletionPassphrase = string.Empty;
         if (!confirm) return;
         await _vault.DeletePermanentlyAsync(item.Id);
-        DeletionPassphrase = string.Empty;
         await LoadAsync();
     }
 
@@ -68,13 +68,13 @@ public partial class TrashViewModel : ObservableObject
         if (Items.Count == 0) { StatusMessage = "Trash is already empty."; return; }
         if (!await ConfirmMasterPassphraseAsync()) return;
         var confirm = await Shell.Current.DisplayAlert("Empty trash permanently?", $"Permanently remove all {Items.Count} encrypted trash item(s) and their CipherNest-managed attachment files? Filesystem remnants may remain outside CipherNest's control.", "Empty trash", "Cancel");
+        DeletionPassphrase = string.Empty;
         if (!confirm) return;
 
         IsBusy = true;
         try
         {
             foreach (var id in Items.Select(static item => item.Id).ToArray()) await _vault.DeletePermanentlyAsync(id);
-            DeletionPassphrase = string.Empty;
             StatusMessage = "Trash emptied. CipherNest removed its encrypted records and attachment containers; physical storage remnants may remain outside application control.";
             await LoadAsync();
         }
@@ -94,6 +94,7 @@ public partial class TrashViewModel : ObservableObject
         }
         if (!await _vault.ReauthenticateAsync(DeletionPassphrase))
         {
+            DeletionPassphrase = string.Empty;
             StatusMessage = "Master-passphrase confirmation failed. Nothing was permanently deleted.";
             return false;
         }
