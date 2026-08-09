@@ -3,9 +3,10 @@
 Release candidates must cover:
 
 - Argon2id known-answer vectors using fixed passphrase/salt/parameters.
+- Hostile/untrusted KDF metadata bounds before Argon2 work: salts shorter than 16 or longer than 64 bytes, memory outside 16–512 MiB, iterations outside 1–10, and parallelism outside 1–16 must be rejected without honoring the excessive resource request.
 - AES-GCM round-trip, nonce-size validation, associated-data binding, record tamper rejection, and wrong-key rejection.
 - Wrong master passphrase, recovery-key behavior, secondary biometric-wrapper behavior, and per-item re-authentication rules.
-- Backup corruption, wrong backup passphrase, authenticated attachment restore, and restore atomicity.
+- Backup corruption, wrong backup passphrase, authenticated attachment restore, and restore atomicity/preservation of the active vault after failed restore.
 - Schema creation, migration idempotence, ordered migration history, and rejection of unsupported future schemas.
 - Multi-megabyte encrypted attachment streaming round trips across multiple 256 KiB chunks, truncation/tamper rejection, and 100 MB bounds.
 - Safe text-attachment preview type/size/UTF-8 limits and no-temp-file behavior where practical to automate.
@@ -19,16 +20,16 @@ Release candidates must cover:
 - Manual lock, lock on background, lock after inactivity/resume, and fail-closed lifecycle error handling.
 - Biometric availability/enrollment/change/cancel/failure flows on real Android and Apple targets; fallback to master passphrase on unsupported platforms.
 - Screenshot-protection behavior where supported, with explicit fallback verification elsewhere.
-- Theme/accessibility checks: large interface setting, OS large text, keyboard focus, screen-reader labels/live regions, contrast, touch target size, and reduced-motion behavior.
+- Theme/accessibility checks: larger-interface setting, OS large text, keyboard focus, screen-reader labels/live regions, contrast, touch target size, responsive narrow/desktop layouts, and reduced-motion behavior.
 - English resource fallback, saved System/English language preference, and layout resilience when future localized strings expand.
-- Privacy-safe diagnostics: operation identifiers may be logged, while exception message, stack, vault fields, passphrases, keys, and decrypted attachments are absent.
+- Privacy-safe diagnostics: operation identifiers may be logged, while exception message, stack, vault fields, passphrases, keys, and decrypted attachments are absent; temporary redacted diagnostic share files should be deleted where permitted.
 - Android/Windows smoke tests plus iOS/MacCatalyst builds and smoke tests on an appropriate Apple host/device or simulator.
 - Dependency vulnerability scanning, dependency review, CodeQL, and secret scanning.
 
 ## Current automated source coverage
 
-The repository includes unit/integration tests for cryptographic behavior, vault lifecycle, backup/restore, passphrase rotation, secondary unlock wrappers, generator behavior, safe-note parsing, local audit findings, schema migration, malformed CSV parsing, and multi-megabyte attachment streaming. UI structure tests are included in the core CI job.
+The repository includes unit/integration tests for cryptographic behavior, Argon2id known-answer and hostile-resource bounds, vault lifecycle, backup/restore corruption and wrong-passphrase preservation, passphrase rotation, secondary unlock wrappers, generator behavior, safe-note parsing, local audit findings, schema migration, malformed CSV parsing, multi-megabyte attachment streaming, and attachment tamper/truncation rejection. UI structure tests are included in the core CI job and check core routes, semantic metadata, localization structure, responsive action layout, legal surfaces, and privacy-safe diagnostics source constraints.
 
-Device-specific biometric, screenshot, clipboard, lifecycle, accessibility, and packaging behavior still requires target-platform execution; source presence is not treated as proof that a platform guarantee works.
+Device-specific biometric, screenshot, clipboard, lifecycle, share-sheet/cache deletion, in-memory preview presentation, accessibility, localization rendering, and packaging behavior still requires target-platform execution; source presence is not treated as proof that a platform guarantee works.
 
-A release is blocked by failing tests, unresolved high-severity dependency findings, known secret leakage, a broken migration/restore compatibility path, or an unreviewed cryptographic format change.
+A release is blocked by failing tests, unresolved high-severity dependency findings, known secret leakage, a broken migration/restore compatibility path, an unbounded untrusted resource parameter, or an unreviewed cryptographic format change.
