@@ -10,4 +10,10 @@ public partial class OnboardingPage : ContentPage
         InitializeComponent();
         BindingContext = ServiceProviderHelper.GetRequiredService<OnboardingViewModel>();
     }
+
+    protected override void OnDisappearing()
+    {
+        if (BindingContext is OnboardingViewModel vm) vm.ClearSensitiveState();
+        base.OnDisappearing();
+    }
 }
