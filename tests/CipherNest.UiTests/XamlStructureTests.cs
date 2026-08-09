@@ -16,7 +16,9 @@ public sealed class XamlStructureTests
     [InlineData("AuditPage.xaml")]
     [InlineData("TrashPage.xaml")]
     [InlineData("SettingsPage.xaml")]
+    [InlineData("TransferPage.xaml")]
     [InlineData("AboutPage.xaml")]
+    [InlineData("DeveloperPage.xaml")]
     public void RequiredPage_IsWellFormedXaml(string fileName)
     {
         var path = Path.Combine(RepoRoot, "src", "CipherNest.App", "Views", fileName);
@@ -32,9 +34,11 @@ public sealed class XamlStructureTests
         var onboarding = File.ReadAllText(Path.Combine(RepoRoot, "src", "CipherNest.App", "Views", "OnboardingPage.xaml"));
         var unlock = File.ReadAllText(Path.Combine(RepoRoot, "src", "CipherNest.App", "Views", "UnlockPage.xaml"));
         var settings = File.ReadAllText(Path.Combine(RepoRoot, "src", "CipherNest.App", "Views", "SettingsPage.xaml"));
+        var transfer = File.ReadAllText(Path.Combine(RepoRoot, "src", "CipherNest.App", "Views", "TransferPage.xaml"));
         Assert.Contains("recovery", onboarding, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("master passphrase", unlock, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("encrypted backup", settings, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("plaintext", transfer, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("100% secure", onboarding, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("unhackable", onboarding, StringComparison.OrdinalIgnoreCase);
     }
