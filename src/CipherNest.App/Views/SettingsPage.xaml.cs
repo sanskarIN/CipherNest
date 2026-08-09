@@ -18,4 +18,10 @@ public partial class SettingsPage : ContentPage
         await vm.LoadAsync();
         await vm.LoadLanguageAsync();
     }
+
+    protected override void OnDisappearing()
+    {
+        if (BindingContext is SettingsViewModel vm) vm.ClearSensitiveState();
+        base.OnDisappearing();
+    }
 }
