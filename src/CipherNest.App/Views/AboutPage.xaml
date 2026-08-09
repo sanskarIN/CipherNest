@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="CipherNest.App.Views.AboutPage">
   <ScrollView><VerticalStackLayout Padding="24" Spacing="14" MaximumWidthRequest="720" HorizontalOptions="Center">
-    <Image Source="ciphernest_logo.svg" HeightRequest="96"/>
+    <Image Source="ciphernest_logo.svg" HeightRequest="96" SemanticProperties.Description="CipherNest logo"/>
     <Label Text="CipherNest" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center"/>
-    <Button Text="Version 0.1.0 · cryptographic format 1 · database schema 1" Clicked="OnVersionClicked" Style="{StaticResource SecondaryButton}" SemanticProperties.Description="Version information. Repeated activation opens developer options."/>
+    <Button x:Name="VersionButton" Text="Version and build" Clicked="OnVersionClicked" Style="{StaticResource SecondaryButton}" SemanticProperties.Description="Version and build information. Repeated activation opens developer options."/>
     <Label Text="Made by the Sanskar" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
     <Frame><VerticalStackLayout Spacing="8"><Label Text="Security status" FontAttributes="Bold"/><Label Text="CipherNest uses established cryptographic primitives and local-only storage, but this release has not completed an independent professional security audit. Open source does not itself guarantee security."/><Button Text="Read security &amp; privacy information" Clicked="OnSecurityInfoClicked" Style="{StaticResource SecondaryButton}"/></VerticalStackLayout></Frame>
-    <Frame><VerticalStackLayout Spacing="8"><Label Text="Third-party notices" FontAttributes="Bold"/><Label Text="Runtime dependencies include CommunityToolkit.Mvvm, Konscious.Security.Cryptography.Argon2, Microsoft.Data.Sqlite, Microsoft.Extensions.Logging.Debug, and Microsoft.Maui.Controls. Their licenses remain their own. The repository's THIRD_PARTY_NOTICES.md records the dependency/license families and release-review requirement."/></VerticalStackLayout></Frame>
+    <Frame><VerticalStackLayout Spacing="8"><Label Text="Open source &amp; license" FontAttributes="Bold"/><Label Text="CipherNest client source is available under GPL-3.0-or-later at https://github.com/sanskarIN/CipherNest. Contributions remain subject to the repository contribution, conduct, security, and license terms."/></VerticalStackLayout></Frame>
+    <Frame><VerticalStackLayout Spacing="8"><Label Text="Third-party notices" FontAttributes="Bold"/><Label Text="Runtime dependencies include CommunityToolkit.Mvvm, Konscious.Security.Cryptography.Argon2, Microsoft.Data.Sqlite, Microsoft.Extensions.Logging.Debug, and Microsoft.Maui.Controls. Their licenses remain their own. THIRD_PARTY_NOTICES.md records the dependency/license families and release-review requirement."/></VerticalStackLayout></Frame>
+    <Frame><VerticalStackLayout Spacing="8"><Label Text="Privacy &amp; terms" FontAttributes="Bold"/><Label Text="The current release is local-only and does not intentionally send vault contents, analytics, or telemetry to a CipherNest service. User-initiated plaintext export leaves the protected vault boundary. Full repository notices are in PRIVACY.md and TERMS.md."/></VerticalStackLayout></Frame>
+    <Frame><VerticalStackLayout Spacing="8"><Label Text="Acknowledgements" FontAttributes="Bold"/><Label Text="CipherNest is built with .NET MAUI, C#, SQLite, maintained .NET cryptography, Argon2id support from a third-party library, CommunityToolkit.Mvvm, and the open-source ecosystem documented in THIRD_PARTY_NOTICES.md."/></VerticalStackLayout></Frame>
     <Label Text="Business: sanskarin@outlook.in"/>
     <Label Text="Support: supportramsandesh@gmail.com"/>
     <Label Text="Repository: https://github.com/sanskarIN/CipherNest"/>
     <Label Text="Creator: https://www.github.com/sanskarIN"/>
     <Label Text="License: GPL-3.0-or-later"/>
-    <Label Text="Technology: .NET MAUI, C#, SQLite, Argon2id, AES-256-GCM"/>
     <Button Text="Back to vault" Clicked="OnBackClicked"/>
   </VerticalStackLayout></ScrollView>
 </ContentPage>
