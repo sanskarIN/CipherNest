@@ -16,6 +16,7 @@ public sealed record VaultItem
     public IReadOnlyList<AttachmentReference> Attachments { get; init; } = Array.Empty<AttachmentReference>();
     public DateTimeOffset CreatedUtc { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset ModifiedUtc { get; init; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? LastAccessedUtc { get; init; }
     public DateTimeOffset? ReviewAfterUtc { get; init; }
     public DateTimeOffset? DeletedUtc { get; init; }
     public bool RequiresReauthentication { get; init; }
