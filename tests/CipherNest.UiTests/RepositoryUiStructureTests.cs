@@ -161,6 +161,9 @@ public sealed class RepositoryUiStructureTests
         Assert.Contains("OnBuyMeACoffeeClicked", about, StringComparison.Ordinal);
         Assert.Contains("BuildFeatureFlags.IsFundingLinkEnabled", aboutCode, StringComparison.Ordinal);
         Assert.Contains("AppConstants.BuyMeACoffeeUrl", aboutCode, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"About.ExternalLink\"", aboutCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("ex.Message", aboutCode, StringComparison.Ordinal);
+        Assert.Contains("DisplayAlertAsync", aboutCode, StringComparison.Ordinal);
         Assert.Contains("CIPHERNEST_DISABLE_FUNDING_LINK", featureFlags, StringComparison.Ordinal);
         Assert.Contains("CipherNestEnableFundingLink", project, StringComparison.Ordinal);
         Assert.Contains(supportUrl, readme, StringComparison.Ordinal);
