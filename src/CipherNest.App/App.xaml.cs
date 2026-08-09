@@ -9,14 +9,18 @@ public partial class App : Microsoft.Maui.Controls.Application
     private readonly IVaultService _vault;
     private readonly ISettingsStore _settings;
     private readonly IScreenshotProtectionService _screenshots;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
     private DateTimeOffset? _inactiveUtc;
 
-    public App(IVaultService vault, ISettingsStore settings, IScreenshotProtectionService screenshots)
+    public App(IVaultService vault, ISettingsStore settings, IScreenshotProtectionService screenshots, IPrivacySafeExceptionReporter exceptions)
     {
         InitializeComponent();
         _vault = vault;
         _settings = settings;
         _screenshots = screenshots;
+        _exceptions = exceptions;
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
@@ -28,6 +32,17 @@ public partial class App : Microsoft.Maui.Controls.Application
         window.Activated += OnWindowActivated;
         _ = ApplyInitialPreferencesAsync();
         return window;
+    }
+
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception exception) _exceptions.Report("AppDomain.UnhandledException", exception, fatal: e.IsTerminating);
+    }
+
+    private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        _exceptions.Report("TaskScheduler.UnobservedTaskException", e.Exception);
+        e.SetObserved();
     }
 
     private async void OnWindowDeactivated(object? sender, EventArgs e) => await HandleInactiveAsync();
@@ -43,8 +58,9 @@ public partial class App : Microsoft.Maui.Controls.Application
             var preferences = await _settings.LoadAsync();
             if (preferences.LockOnBackground && _vault.IsUnlocked) await _vault.LockAsync();
         }
-        catch
+        catch (Exception exception)
         {
+            _exceptions.Report("Lifecycle.Inactive", exception);
             if (_vault.IsUnlocked) await _vault.LockAsync();
         }
     }
@@ -66,8 +82,9 @@ public partial class App : Microsoft.Maui.Controls.Application
                 await Shell.Current.GoToAsync("//unlock");
             }
         }
-        catch
+        catch (Exception exception)
         {
+            _exceptions.Report("Lifecycle.Active", exception);
             if (_vault.IsUnlocked) await _vault.LockAsync();
         }
         finally
@@ -85,8 +102,9 @@ public partial class App : Microsoft.Maui.Controls.Application
             AccessibilityPreferenceApplicator.Apply(preferences.LargerInterface, preferences.ReducedMotion);
             await _screenshots.ApplyAsync(preferences.ScreenshotProtection);
         }
-        catch
+        catch (Exception exception)
         {
+            _exceptions.Report("Startup.Preferences", exception);
             ApplyTheme(AppThemePreference.System);
             AccessibilityPreferenceApplicator.Apply(largerInterface: false, reducedMotion: true);
         }
