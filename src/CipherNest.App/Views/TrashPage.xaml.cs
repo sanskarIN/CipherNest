@@ -16,4 +16,10 @@ public partial class TrashPage : ContentPage
         base.OnAppearing();
         if (BindingContext is TrashViewModel vm) await vm.LoadAsync();
     }
+
+    protected override void OnDisappearing()
+    {
+        if (BindingContext is TrashViewModel vm) vm.ClearSensitiveState();
+        base.OnDisappearing();
+    }
 }
