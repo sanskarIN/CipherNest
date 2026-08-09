@@ -39,6 +39,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IBiometricUnlockService, BiometricUnlockService>();
         builder.Services.AddSingleton<IStorageMaintenanceService, StorageMaintenanceService>();
         builder.Services.AddSingleton<IPrivacySafeExceptionReporter, PrivacySafeExceptionReporter>();
+        builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<UnlockRateLimiter>();
         builder.Services.AddSingleton<SessionSecurityState>();
 
