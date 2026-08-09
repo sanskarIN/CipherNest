@@ -19,6 +19,8 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IBiometricUnlockService _biometrics;
     private readonly SessionSecurityState _sessionSecurity;
     private readonly IStorageMaintenanceService _storage;
+    private readonly IClipboardSecurityService _clipboard;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
     private AppPreferences _loadedPreferences = new();
 
     public IReadOnlyList<AppThemePreference> Themes { get; } = Enum.GetValues<AppThemePreference>();
@@ -56,7 +58,9 @@ public partial class SettingsViewModel : ObservableObject
         IPasswordGenerator passwordGenerator,
         IBiometricUnlockService biometrics,
         SessionSecurityState sessionSecurity,
-        IStorageMaintenanceService storage)
+        IStorageMaintenanceService storage,
+        IClipboardSecurityService clipboard,
+        IPrivacySafeExceptionReporter exceptions)
     {
         _settings = settings;
         _backup = backup;
@@ -66,6 +70,8 @@ public partial class SettingsViewModel : ObservableObject
         _biometrics = biometrics;
         _sessionSecurity = sessionSecurity;
         _storage = storage;
+        _clipboard = clipboard;
+        _exceptions = exceptions;
         ScreenshotSupportMessage = screenshots.IsSupported ? "Screenshot blocking is supported by the current platform implementation." : "Reliable app-level screenshot blocking is not available through the current platform implementation; secret masking still applies.";
     }
 
@@ -277,7 +283,17 @@ public partial class SettingsViewModel : ObservableObject
         if (!string.Equals(NewMasterPassphrase, ConfirmNewMasterPassphrase, StringComparison.Ordinal)) { StatusMessage = "The new passphrase confirmation does not match."; return; }
         var strength = _passwordGenerator.Evaluate(NewMasterPassphrase); if (NewMasterPassphrase.Length < 12 || strength.Score < 3) { StatusMessage = $"Choose a stronger new master passphrase. Current estimate: {strength.Label}."; return; }
         IsBusy = true;
-        try { await _vault.ChangeMasterPassphraseAsync(CurrentMasterPassphrase, NewMasterPassphrase); _sessionSecurity.RecordMasterAuthentication(DateTimeOffset.UtcNow); CurrentMasterPassphrase = NewMasterPassphrase = ConfirmNewMasterPassphrase = string.Empty; StatusMessage = "Master passphrase changed. Existing recovery and biometric wrappers remain independent wrappers of the same vault key. Create a fresh encrypted backup after security-sensitive changes."; }
+        try
+        {
+            await _vault.ChangeMasterPassphraseAsync(CurrentMasterPassphrase, NewMasterPassphrase);
+            CurrentMasterPassphrase = NewMasterPassphrase = ConfirmNewMasterPassphrase = string.Empty;
+            _sessionSecurity.Clear();
+            await _vault.LockAsync();
+            try { await _clipboard.ClearAsync(); }
+            catch (Exception exception) { _exceptions.Report("Settings.ChangeMasterPassphrase.Clipboard", exception); }
+            StatusMessage = "Master passphrase changed. CipherNest ended the current security session; unlock again with the new master passphrase before biometric convenience unlock can resume. Create a fresh encrypted backup after security-sensitive changes.";
+            await Shell.Current.GoToAsync("//unlock");
+        }
         catch (Exception ex) when (ex is CipherNest.Application.Exceptions.VaultAuthenticationException or ArgumentException) { StatusMessage = $"Master passphrase was not changed: {ex.Message}"; }
         finally { IsBusy = false; }
     }
