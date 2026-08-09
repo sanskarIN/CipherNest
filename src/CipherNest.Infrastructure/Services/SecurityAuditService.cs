@@ -35,6 +35,24 @@ public sealed class SecurityAuditService(IPasswordGenerator passwordGenerator) :
             }
         }
 
+        foreach (var group in active.GroupBy(CreateDuplicateSignature, StringComparer.Ordinal).Where(static group => group.Count() > 1))
+        {
+            foreach (var item in group)
+            {
+                findings.Add(new(item.Id, SecurityFindingKind.DuplicateEntry, "This item is an exact duplicate of another active vault entry. Review both before deleting either copy.", 2));
+            }
+        }
+
         return findings.OrderByDescending(static f => f.Severity).ThenBy(static f => f.Kind).ToArray();
     }
+
+    private static string CreateDuplicateSignature(VaultItem item) => string.Join(
+        '\u001f',
+        item.Type.ToString(),
+        item.Title.Trim(),
+        item.Username.Trim(),
+        item.Secret,
+        item.Url.Trim(),
+        item.Notes,
+        item.Collection.Trim());
 }
