@@ -20,7 +20,11 @@
 - [ ] Crypto known-answer, tamper, wrong-key, hostile-KDF-resource, and format-version tests pass; every cryptographic-format change has focused review.
 - [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments and corrupted-container rejection.
 - [ ] Large attachment streaming, safe text preview, plaintext export warning, and temporary-cache cleanup are exercised.
-- [ ] Threat model, privacy notice, security design, diagnostics policy, third-party notices, changelog, support instructions, and audit status are current.
+- [ ] Threat model, privacy notice, security design, diagnostics policy, third-party notices, changelog, support instructions, roadmap, and audit status are current.
+- [ ] `docs/NEXT_STEPS.md` has been reviewed against the candidate and any completed/obsolete action has been reconciled before release notes are cut.
+- [ ] `AppConstants.BuyMeACoffeeUrl`, About, README, SUPPORT, and `.github/FUNDING.yml` still reference the intended `https://buymeacoffee.com/sanskarIN` project-support URL.
+- [ ] Financial support remains clearly optional and does not change security/privacy treatment, support priority, GPL feature access, or recovery behavior.
+- [ ] The current policy for any external funding/payment CTA has been checked for each target store, distribution method, app category, and region; any disallowed in-app CTA is omitted/disabled in that packaged build.
 - [ ] Store permissions/descriptions match actual app behavior and the store copy makes no unverified security claim.
 - [ ] Primary/adaptive/monochrome/dark branding sources and generated store icons/splash/feature-graphic screenshots are checked for safe-zone clipping, contrast, scaling, creator-credit placement, and synthetic-only demo data.
 - [ ] Localization fallback and large-interface layout are smoke-tested; future translations must preserve the meaning of security warnings.
