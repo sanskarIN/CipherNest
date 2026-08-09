@@ -45,38 +45,23 @@ public sealed class CsvTransferService : IPlaintextTransferService
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (imported + skipped >= MaxRows) throw new InvalidDataException($"CSV exceeds the {MaxRows:N0}-row safety limit.");
+            var logicalRowNumber = imported + skipped + 2;
             var title = Get(row, indexes, mapping.Title).Trim();
             if (title.Length == 0)
             {
                 skipped++;
-                if (warnings.Count < 20) warnings.Add($"Skipped row {imported + skipped + 1}: title is empty.");
+                if (warnings.Count < 20) warnings.Add($"Skipped row {logicalRowNumber}: title is empty.");
                 continue;
             }
             var now = _clock.UtcNow;
             var item = new VaultItem
             {
-                Id = Guid.NewGuid(),
-                Title = title,
-                Username = Get(row, indexes, mapping.Username),
-                Secret = Get(row, indexes, mapping.Secret),
-                Url = Get(row, indexes, mapping.Url),
-                Notes = Get(row, indexes, mapping.Notes),
-                Collection = Get(row, indexes, mapping.Collection),
-                Tags = SplitTags(Get(row, indexes, mapping.Tags)),
-                Type = ParseType(Get(row, indexes, mapping.Type)),
-                CreatedUtc = now,
-                ModifiedUtc = now
+                Id = Guid.NewGuid(), Title = title,
+                Username = Get(row, indexes, mapping.Username), Secret = Get(row, indexes, mapping.Secret), Url = Get(row, indexes, mapping.Url), Notes = Get(row, indexes, mapping.Notes), Collection = Get(row, indexes, mapping.Collection),
+                Tags = SplitTags(Get(row, indexes, mapping.Tags)), Type = ParseType(Get(row, indexes, mapping.Type)), CreatedUtc = now, ModifiedUtc = now
             };
-            try
-            {
-                await _vault.SaveItemAsync(item, cancellationToken).ConfigureAwait(false);
-                imported++;
-            }
-            catch (ArgumentException ex)
-            {
-                skipped++;
-                if (warnings.Count < 20) warnings.Add($"Skipped row {imported + skipped + 1}: {ex.Message}");
-            }
+            try { await _vault.SaveItemAsync(item, cancellationToken).ConfigureAwait(false); imported++; }
+            catch (ArgumentException ex) { skipped++; if (warnings.Count < 20) warnings.Add($"Skipped row {logicalRowNumber}: {ex.Message}"); }
         }
         return new CsvImportResult(imported, skipped, warnings);
     }
@@ -90,11 +75,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
         foreach (var item in items)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var fields = new[]
-            {
-                item.Title, item.Type.ToString(), item.Username, item.Secret, item.Url, item.Notes,
-                string.Join(';', item.Tags), item.Collection, item.IsFavorite ? "true" : "false", item.ReviewAfterUtc?.ToString("O") ?? string.Empty
-            };
+            var fields = new[] { item.Title, item.Type.ToString(), item.Username, item.Secret, item.Url, item.Notes, string.Join(';', item.Tags), item.Collection, item.IsFavorite ? "true" : "false", item.ReviewAfterUtc?.ToString("O") ?? string.Empty };
             await writer.WriteLineAsync(string.Join(',', fields.Select(Escape))).ConfigureAwait(false);
         }
         await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -113,14 +94,9 @@ public sealed class CsvTransferService : IPlaintextTransferService
             if (!string.IsNullOrEmpty(name) && !indexes.ContainsKey(name)) throw new InvalidDataException($"Mapped column '{name}' does not exist.");
     }
 
-    private static string Get(IReadOnlyList<string> row, IReadOnlyDictionary<string, int> indexes, string? name)
-    {
-        if (string.IsNullOrEmpty(name) || !indexes.TryGetValue(name, out var index) || index >= row.Count) return string.Empty;
-        return row[index];
-    }
-
+    private static string Get(IReadOnlyList<string> row, IReadOnlyDictionary<string, int> indexes, string? name) => string.IsNullOrEmpty(name) || !indexes.TryGetValue(name, out var index) || index >= row.Count ? string.Empty : row[index];
     private static IReadOnlyList<string> SplitTags(string value) => value.Split(new[] { ';', ',' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-    private static VaultItemType ParseType(string value) => Enum.TryParse<VaultItemType>(value, ignoreCase: true, out var parsed) ? parsed : VaultItemType.Login;
+    private static VaultItemType ParseType(string value) => Enum.TryParse<VaultItemType>(value, true, out var parsed) ? parsed : VaultItemType.Login;
     private static string Escape(string value) => value.IndexOfAny([',', '"', '\r', '\n']) >= 0 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
 
     private sealed class CsvParser
@@ -136,6 +112,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
             var fields = new List<string>();
             var field = new StringBuilder();
             var quoted = false;
+            var quoteClosed = false;
             var atFieldStart = true;
             while (true)
             {
@@ -156,9 +133,15 @@ public sealed class CsvTransferService : IPlaintextTransferService
                     {
                         var next = _reader.Peek();
                         if (next == '"') { _ = _reader.Read(); field.Append('"'); }
-                        else quoted = false;
+                        else { quoted = false; quoteClosed = true; }
                     }
                     else field.Append(ch);
+                }
+                else if (quoteClosed)
+                {
+                    if (ch == ',') { AddField(fields, field); atFieldStart = true; quoteClosed = false; }
+                    else if (ch == '\r' || ch == '\n') { if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read(); fields.Add(field.ToString()); return fields; }
+                    else throw new InvalidDataException("Characters after a closing CSV quote are not allowed before the delimiter.");
                 }
                 else if (atFieldStart && ch == '"')
                 {
@@ -167,9 +150,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 }
                 else if (ch == ',')
                 {
-                    fields.Add(field.ToString());
-                    if (fields.Count > MaxColumns) throw new InvalidDataException("CSV contains too many columns.");
-                    field.Clear();
+                    AddField(fields, field);
                     atFieldStart = true;
                 }
                 else if (ch == '\r' || ch == '\n')
@@ -180,12 +161,18 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 }
                 else
                 {
-                    if (!atFieldStart && field.Length == 0) throw new InvalidDataException("Characters after a closing CSV quote are not allowed before the delimiter.");
                     field.Append(ch);
                     atFieldStart = false;
                 }
                 if (field.Length > MaxFieldChars) throw new InvalidDataException("CSV field exceeds the safety limit.");
             }
+        }
+
+        private static void AddField(List<string> fields, StringBuilder field)
+        {
+            fields.Add(field.ToString());
+            if (fields.Count > MaxColumns) throw new InvalidDataException("CSV contains too many columns.");
+            field.Clear();
         }
 
         private async Task<int> ReadCharAsync(CancellationToken cancellationToken)
