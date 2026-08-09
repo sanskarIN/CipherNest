@@ -13,5 +13,6 @@ public static class AppConstants
     public const string SupportEmail = "supportramsandesh@gmail.com";
     public const string RepositoryUrl = "https://github.com/sanskarIN/CipherNest";
     public const string CreatorUrl = "https://www.github.com/sanskarIN";
+    public const string BuyMeACoffeeUrl = "https://buymeacoffee.com/sanskarIN";
     public const string Watermark = "Made by the Sanskar";
 }
