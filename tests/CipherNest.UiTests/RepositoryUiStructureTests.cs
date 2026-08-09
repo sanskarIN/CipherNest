@@ -36,11 +36,85 @@ public sealed class RepositoryUiStructureTests
     }
 
     [Fact]
-    public void VaultActions_WrapInsteadOfForcingHorizontalNavigationBar()
+    public void VaultActions_WrapAndLargeResultSetsLoadIncrementally()
     {
         var vault = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "VaultPage.xaml"));
+        var viewModel = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "VaultViewModel.cs"));
         Assert.Contains("<FlexLayout", vault, StringComparison.Ordinal);
         Assert.Contains("Wrap=\"Wrap\"", vault, StringComparison.Ordinal);
+        Assert.Contains("LoadMoreCommand", vault, StringComparison.Ordinal);
+        Assert.Contains("private const int PageSize = 50", viewModel, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ItemEditor_ProvidesExplicitTimedCopyActionsWithoutShowingCustomSecretValues()
+    {
+        var item = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "ItemEditorPage.xaml"));
+        Assert.Contains("CopyUsernameCommand", item, StringComparison.Ordinal);
+        Assert.Contains("CopyCustomSecretCommand", item, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding SecretCustomFields}\"", item, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding Value}\"", item, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SensitivePages_ClearCredentialsWhenTheyDisappear()
+    {
+        string[] paths =
+        [
+            PathAt("src", "CipherNest.App", "Views", "UnlockPage.xaml.cs"),
+            PathAt("src", "CipherNest.App", "Views", "SettingsPage.xaml.cs"),
+            PathAt("src", "CipherNest.App", "Views", "TransferPage.xaml.cs"),
+            PathAt("src", "CipherNest.App", "Views", "TrashPage.xaml.cs"),
+            PathAt("src", "CipherNest.App", "Views", "ItemEditorPage.xaml.cs"),
+            PathAt("src", "CipherNest.App", "Views", "OnboardingPage.xaml.cs")
+        ];
+
+        foreach (var path in paths)
+        {
+            var source = File.ReadAllText(path);
+            Assert.Contains("OnDisappearing", source, StringComparison.Ordinal);
+            Assert.Contains("ClearSensitiveState", source, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void MasterPassphraseChange_EndsSecuritySessionAndLocksVault()
+    {
+        var settings = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "SettingsViewModel.cs"));
+        Assert.Contains("_sessionSecurity.Clear();", settings, StringComparison.Ordinal);
+        Assert.Contains("await _vault.LockAsync();", settings, StringComparison.Ordinal);
+        Assert.Contains("Settings.ChangeMasterPassphrase.Clipboard", settings, StringComparison.Ordinal);
+        Assert.Contains("//unlock", settings, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrashManualDeletion_RequiresMasterReauthentication()
+    {
+        var trash = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "TrashViewModel.cs"));
+        var page = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "TrashPage.xaml"));
+        Assert.Contains("ConfirmMasterPassphraseAsync", trash, StringComparison.Ordinal);
+        Assert.Contains("ReauthenticateAsync", trash, StringComparison.Ordinal);
+        Assert.Contains("EmptyTrashCommand", page, StringComparison.Ordinal);
+        Assert.Contains("DeletionPassphrase", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnlockCapabilityProbe_DoesNotWriteRawExceptionMessageToDebug()
+    {
+        var unlockPage = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "UnlockPage.xaml.cs"));
+        Assert.Contains("IPrivacySafeExceptionReporter", unlockPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("Debug.WriteLine", unlockPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("ex.Message", unlockPage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SplashAndBrandingSources_IncludeRequiredCreatorCreditAndVariants()
+    {
+        var splash = File.ReadAllText(PathAt("src", "CipherNest.App", "Resources", "Splash", "splash.svg"));
+        Assert.Contains("CipherNest", splash, StringComparison.Ordinal);
+        Assert.Contains("Made by the Sanskar", splash, StringComparison.Ordinal);
+        Assert.True(File.Exists(PathAt("src", "CipherNest.App", "Resources", "AppIcon", "appicon-mono.svg")));
+        Assert.True(File.Exists(PathAt("src", "CipherNest.App", "Resources", "Images", "ciphernest_logo_dark.svg")));
     }
 
     [Fact]
