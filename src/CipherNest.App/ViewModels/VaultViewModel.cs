@@ -12,8 +12,12 @@ public partial class VaultViewModel : ObservableObject
     private readonly IVaultService _vault;
     private readonly ISettingsStore _settings;
     private CancellationTokenSource? _searchCts;
+    private IReadOnlyList<VaultItem> _lastResults = Array.Empty<VaultItem>();
+
     public ObservableCollection<VaultItem> Items { get; } = [];
+    public IReadOnlyList<string> SortModes { get; } = ["Favorites & title", "Recently used", "Recently modified", "Title"];
     [ObservableProperty] private string searchText = string.Empty;
+    [ObservableProperty] private string selectedSortMode = "Favorites & title";
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty] private string backupReminderMessage = string.Empty;
@@ -25,7 +29,15 @@ public partial class VaultViewModel : ObservableObject
         _settings = settings;
     }
 
-    partial void OnSearchTextChanged(string value) { _searchCts?.Cancel(); _searchCts?.Dispose(); _searchCts = new CancellationTokenSource(); _ = SearchDelayedAsync(value, _searchCts.Token); }
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        _ = SearchDelayedAsync(value, _searchCts.Token);
+    }
+
+    partial void OnSelectedSortModeChanged(string value) => ReplaceItems(_lastResults);
 
     [RelayCommand]
     public async Task LoadAsync()
@@ -34,7 +46,7 @@ public partial class VaultViewModel : ObservableObject
         IsBusy = true; ErrorMessage = string.Empty;
         try
         {
-            ReplaceItems(await _vault.GetItemsAsync());
+            ReplaceItems(await _vault.SearchAsync(SearchText));
             var preferences = await _settings.LoadAsync();
             var due = preferences.LastSuccessfulBackupUtc is null || DateTimeOffset.UtcNow - preferences.LastSuccessfulBackupUtc.Value >= TimeSpan.FromDays(Math.Clamp(preferences.BackupReminderDays, 1, 365));
             BackupReminderMessage = due ? "Encrypted backup reminder: create and test a backup from Settings." : string.Empty;
@@ -44,8 +56,17 @@ public partial class VaultViewModel : ObservableObject
     }
 
     [RelayCommand] private async Task AddAsync() => await Shell.Current.GoToAsync(nameof(ItemEditorPage));
-    [RelayCommand] private async Task EditAsync(VaultItem item) { if (item is not null) await Shell.Current.GoToAsync($"{nameof(ItemEditorPage)}?id={item.Id:D}"); }
-    [RelayCommand] private async Task LockAsync() { await _vault.LockAsync(); Items.Clear(); await Shell.Current.GoToAsync("//unlock"); }
+
+    [RelayCommand]
+    private async Task EditAsync(VaultItem item)
+    {
+        if (item is null) return;
+        try { await _vault.MarkAccessedAsync(item.Id); }
+        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException) { ErrorMessage = $"Could not update recent-use information: {ex.Message}"; }
+        await Shell.Current.GoToAsync($"{nameof(ItemEditorPage)}?id={item.Id:D}");
+    }
+
+    [RelayCommand] private async Task LockAsync() { await _vault.LockAsync(); Items.Clear(); _lastResults = Array.Empty<VaultItem>(); await Shell.Current.GoToAsync("//unlock"); }
     [RelayCommand] private async Task GeneratorAsync() => await Shell.Current.GoToAsync("//generator");
     [RelayCommand] private async Task AuditAsync() => await Shell.Current.GoToAsync("//audit");
     [RelayCommand] private async Task TrashAsync() => await Shell.Current.GoToAsync("//trash");
@@ -66,6 +87,16 @@ public partial class VaultViewModel : ObservableObject
 
     private void ReplaceItems(IReadOnlyList<VaultItem> items)
     {
-        Items.Clear(); foreach (var item in items) Items.Add(item); IsEmpty = Items.Count == 0;
+        _lastResults = items;
+        IEnumerable<VaultItem> sorted = SelectedSortMode switch
+        {
+            "Recently used" => items.OrderByDescending(static x => x.LastAccessedUtc ?? DateTimeOffset.MinValue).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
+            "Recently modified" => items.OrderByDescending(static x => x.ModifiedUtc).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
+            "Title" => items.OrderBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase),
+            _ => items.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase)
+        };
+        Items.Clear();
+        foreach (var item in sorted) Items.Add(item);
+        IsEmpty = Items.Count == 0;
     }
 }
