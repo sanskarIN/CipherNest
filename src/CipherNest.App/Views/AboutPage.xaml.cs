@@ -23,18 +23,18 @@ public partial class AboutPage : ContentPage
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
         {
-            await DisplayAlert("Link unavailable", $"The configured {description} link is invalid.", "Close");
+            await DisplayAlertAsync("Link unavailable", $"The configured {description} link is invalid.", "Close");
             return;
         }
 
         try
         {
             if (!await Launcher.Default.OpenAsync(uri))
-                await DisplayAlert("Could not open link", $"The system could not open the {description}.", "Close");
+                await DisplayAlertAsync("Could not open link", $"The system could not open the {description}.", "Close");
         }
         catch (Exception ex) when (ex is FeatureNotSupportedException or InvalidOperationException)
         {
-            await DisplayAlert("Could not open link", $"The {description} is not available through the current system launcher.", "Close");
+            await DisplayAlertAsync("Could not open link", $"The {description} is not available through the current system launcher.", "Close");
         }
     }
 
