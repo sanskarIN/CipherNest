@@ -469,3 +469,203 @@ The following remain deliberate future-version items instead of fake or placehol
 - complete Hindi/additional translation catalogs beyond the English-first resource/preference architecture.
 
 Those deferrals follow the uploaded master prompt's own security-review/future-version conditions. They are documented in `PROJECT_STATUS.md`, `DECISIONS.md`, the threat model, and related security/release documents, and they must not be presented as complete in the current UI.
+
+## 2026-08-09 — Continuation: clipboard safety, lifecycle session reset, trash hardening, large-vault rendering, sensitive-state cleanup, and branding completion
+
+This pass continued directly from the previous `main` head. It focused on master-prompt requirements that were already partially represented but still had concrete gaps in explicit clipboard behavior, lifecycle testability, destructive trash handling, master-passphrase security-session transitions, large local vault rendering, sensitive ViewModel lifetime, and source branding variants. Changes were kept in small commits and continue to use `Signed-off-by: Sanskar <sanskarin@outlook.in>` because connector authorship metadata cannot be overridden directly.
+
+### Explicit clipboard actions and clearing policy
+
+- Added a dedicated `ItemEditorViewModel.Clipboard` partial implementation rather than mixing more clipboard code into the main editor class.
+- Added explicit username copy using the same configurable timed-clear flow already used for the primary secret.
+- Added a `SecretCustomFields` view that exposes only the encrypted custom-field names for quick-copy selection; secret values are not displayed in that list.
+- Added explicit custom-secret copy commands gated by per-item re-authentication state.
+- Added `ClipboardSafetyPolicy` in the Application layer so clipboard delay and replacement-preservation rules are testable without MAUI platform APIs.
+- Scheduled clear delay is bounded to one second through five minutes for positive values; a zero delay disables the scheduled timer.
+- Timed clearing only erases the clipboard if it still equals the exact value CipherNest copied. If the user copied something else afterward, CipherNest preserves the newer content.
+- Manual vault locking now attempts immediate clipboard clearing after locking.
+- Background/timeout lifecycle locks also attempt immediate clipboard clearing.
+- Clipboard cleanup failures in lifecycle/manual-lock/security-transition paths are routed through the privacy-safe reporter rather than silently swallowed or logged with raw exception text.
+- Added unit coverage for clear-delay bounds and preserving newer clipboard values.
+
+### Testable lock and failed-attempt policies
+
+- Added `SessionLockPolicy` in the Application layer.
+- Background locking is now expressed as a pure rule based on `LockOnBackground` plus actual vault-unlocked state.
+- Inactivity locking clamps timeout to the supported 5–3600 second range.
+- A system-clock rollback relative to the recorded inactive timestamp fails closed and requests a lock rather than extending an unlocked session unexpectedly.
+- MAUI `App` lifecycle code now delegates the decision to this policy instead of maintaining separate inline timing logic.
+- Added unit tests for background locking, timeout boundary behavior, no-inactive/no-unlocked cases, and clock rollback.
+- Added `UnlockBackoffPolicy` for deterministic failed-attempt delays.
+- The existing thread-safe `UnlockRateLimiter` now uses the shared policy.
+- Backoff begins on the fifth failed attempt at 5 seconds, doubles through subsequent failures, and caps at 300 seconds.
+- Added unit coverage for the complete schedule and cap.
+- Documentation continues to state that interactive throttling does not prevent offline guessing against a copied database.
+
+### Master-passphrase rotation security transition
+
+- Identified a security-state inconsistency: after changing the master passphrase, Settings previously recorded the same process/session as freshly master-authenticated and kept the vault unlocked.
+- Corrected that flow so a successful master-passphrase change now:
+  1. rewrites the authenticated master wrapper,
+  2. clears passphrase input fields,
+  3. clears the in-memory remembered master-authentication session,
+  4. locks the vault,
+  5. attempts clipboard cleanup,
+  6. reports clipboard-cleanup failure through the privacy-safe reporter if needed, and
+  7. routes to the unlock screen.
+- The next security session therefore requires the new master passphrase before biometric convenience unlock can resume.
+- Updated the threat model, README, test plan, release checklist, changelog, status, and UI-structure regression checks for this rule.
+
+### Sensitive ViewModel lifetime reduction
+
+- Item Editor now clears title, username, primary secret, URL, notes, collection, tags, custom-field text, re-authentication passphrase, checklist draft, safe-preview text, attachment references, secret custom-field references, and the cached decrypted item reference when the page disappears.
+- Unlock clears the entered master/recovery-passphrase text when the page disappears.
+- Settings clears backup passphrase, current/new/confirmation master passphrases, deletion passphrase, and destructive confirmation phrase when the page disappears.
+- Transfer clears plaintext-export master-passphrase and confirmation text when the page disappears.
+- Trash clears the destructive-deletion master passphrase when the page disappears.
+- Onboarding clears master passphrase, confirmation, one-time recovery-key text, recovery acknowledgement state, and recovery-key visibility when the page disappears.
+- These changes reduce application-held reference lifetime but do not claim deterministic erasure of .NET managed strings or GC copies.
+- UI-structure regression tests now require the cleanup hook on all six sensitive pages.
+
+### Trash retention and destructive deletion
+
+- Added `TrashRetentionPolicy` with deterministic 1–365 day bounds and explicit cutoff behavior.
+- Added unit tests for retention boundaries and exact cutoff inclusion.
+- `TrashViewModel` now uses the shared policy instead of duplicated date arithmetic.
+- Routine vault loading now runs configured-retention cleanup so expired encrypted records do not depend on the user manually opening the Trash page.
+- Manual permanent deletion now requires the current master passphrase; recovery keys are not accepted for this destructive confirmation.
+- Added an Empty Trash action that requires current-master re-authentication plus a separate explicit destructive confirmation.
+- The UI explains that CipherNest can remove its managed encrypted records/attachment containers but cannot guarantee physical flash/filesystem-remnant erasure.
+- Trash passphrase input is cleared when leaving the screen.
+
+### Large local vault rendering
+
+- Added an incremental UI-rendering layer for sorted/filtered local results.
+- Search/filter/sort semantics remain local and operate on authenticated decrypted in-memory items while unlocked.
+- The ViewModel keeps the ordered matching set but places only the first 50 entries into the observable visual collection initially.
+- Added an explicit Load More command that appends the next 50 entries.
+- Added `ResultCountMessage` so the UI reports `Showing X of Y` rather than hiding how much of the local result set is currently rendered.
+- Locking clears both the displayed items and the cached ordered result set.
+- UI-structure tests verify the page-size constant and Load More binding.
+- This is UI-tree/presentation paging, not a claim that encrypted database search itself is indexed or paged at rest; the design continues to avoid plaintext searchable SQL indexes.
+
+### Unlock diagnostics privacy fix
+
+- Found one remaining raw-debug path in `UnlockPage.xaml.cs` that wrote biometric capability-check exception messages with `Debug.WriteLine`.
+- Replaced it with `IPrivacySafeExceptionReporter` using the sanitized `Unlock.BiometricCapabilityProbe` operation identifier.
+- The normal master-passphrase fallback remains available if biometric capability probing fails.
+- Added UI/source regression checks that reject raw `Debug.WriteLine`/`ex.Message` in this path.
+- A final indexed source search found no remaining raw `Debug.WriteLine` matches at the time of this pass.
+
+### Branding source completion
+
+- Updated the splash SVG to include the CipherNest wordmark and the required `Made by the Sanskar` creator credit while keeping the original shield/nest geometry.
+- Added `Resources/AppIcon/appicon-mono.svg` as a committed monochrome system-mark source.
+- Added `Resources/Images/ciphernest_logo_dark.svg` as a higher-contrast dark-surface source.
+- Kept the launcher mark itself text-free while allowing wordmark/creator credit on the splash/branding surface.
+- Expanded `docs/branding/ASSETS.md` with the actual source inventory, platform inspection rules, monochrome guidance, dark-variant guidance, safe-zone checks, and the distinction between committed sources and release-time generated outputs.
+- Added UI-structure tests that verify the splash includes both `CipherNest` and `Made by the Sanskar` and that the new source variants exist.
+
+### Tests and source-quality regression coverage added in this pass
+
+- `SessionLockPolicyTests`
+- `ClipboardSafetyPolicyTests`
+- `TrashRetentionPolicyTests`
+- `UnlockBackoffPolicyTests`
+- Expanded `RepositoryUiStructureTests` for:
+  - incremental vault rendering,
+  - explicit username/custom-secret copy actions,
+  - no direct secret-value binding in the quick-copy list,
+  - sensitive-page cleanup hooks,
+  - master-passphrase security-session reset,
+  - guarded Trash/Empty Trash re-authentication,
+  - privacy-safe unlock capability diagnostics,
+  - splash creator credit,
+  - monochrome/dark branding source presence.
+- Re-ran indexed source searches for empty `catch { }`, raw `Debug.WriteLine`, `TODO`, `FIXME`, `NotImplementedException`, placeholder, and fake-service markers; no matches were returned at the time of this pass.
+
+### Commits created during this continuation
+
+- `feat(clipboard): add explicit username and custom-secret copy flows`
+- `feat(ui): expose temporary copy actions for username and custom secrets`
+- `feat(memory): clear item-editor sensitive state when leaving page`
+- `fix(memory): clear all decrypted item fields when editor closes`
+- `feat(vault): add incremental rendering for large local vaults`
+- `feat(ui): add vault result counts and incremental load action`
+- `feat(lock): add testable session lock policy`
+- `test(lock): cover background and inactivity lock policy`
+- `refactor(lock): use tested lock policy in app lifecycle`
+- `feat(lock): register session lock policy`
+- `feat(clipboard): add testable clear-safety policy`
+- `refactor(clipboard): enforce bounded clear policy and preserve newer clipboard values`
+- `test(clipboard): cover bounded clearing and replacement preservation`
+- `feat(clipboard): clear clipboard when lifecycle security locks vault`
+- `feat(clipboard): clear clipboard on explicit manual vault lock`
+- `feat(trash): add deterministic retention policy`
+- `test(trash): cover expiry cutoff and retention bounds`
+- `test(trash): avoid ambiguous collection-expression inference`
+- `refactor(trash): use shared retention policy for expiry cleanup`
+- `feat(trash): run retention cleanup during normal vault maintenance`
+- `feat(trash): require master re-authentication for manual permanent deletion`
+- `feat(ui): add guarded empty-trash and permanent-delete controls`
+- `fix(memory): clear trash re-authentication secret when leaving page`
+- `feat(unlock): extract deterministic failed-attempt backoff policy`
+- `refactor(unlock): use shared exponential backoff policy`
+- `test(unlock): cover failed-attempt backoff schedule and cap`
+- `feat(memory): add explicit unlock-passphrase cleanup hook`
+- `fix(diagnostics): keep unlock capability errors privacy-safe`
+- `feat(branding): add CipherNest wordmark and creator credit to splash`
+- `feat(branding): add monochrome CipherNest system mark source`
+- `feat(branding): add dark-surface logo variant`
+- `fix(diagnostics): report manual-lock clipboard cleanup failures safely`
+- `fix(security): require fresh master session after passphrase change`
+- `feat(memory): add settings sensitive-state cleanup hook`
+- `fix(memory): clear settings passphrases when leaving page`
+- `feat(memory): add transfer sensitive-state cleanup hook`
+- `fix(memory): clear plaintext-export credentials when leaving transfer page`
+- `feat(memory): add onboarding credential cleanup hook`
+- `fix(memory): clear onboarding passphrase and recovery material on exit`
+- `test(ui): cover security-session clipboard trash and branding hardening`
+- `docs(testing): add clipboard lock trash and session-transition gates`
+- `docs(branding): record splash monochrome and dark logo sources`
+- `docs(security): cover clipboard rotation trash and sensitive-state hardening`
+- `docs(changelog): record session clipboard trash paging and branding hardening`
+- `docs(status): record clipboard session trash paging and branding completion`
+- `docs(readme): align current clipboard trash session and paging behavior`
+- `docs(release): add session clipboard trash paging and branding checks`
+- this `what_changed.md` update.
+
+### Verification limits retained for this pass
+
+The connected GitHub environment still cannot run the current .NET 10/MAUI workloads, target-device lifecycle callbacks, platform clipboard APIs, biometric hardware, screenshot behavior, store packaging, signed artifacts, or the hosted CI checks as a substitute for an actual release environment. Source-level policy tests and UI-structure regression tests were added, but they do not replace target-platform execution.
+
+The following remain external release gates:
+
+- compile/test/format/analyzer execution using the pinned/current .NET SDK and MAUI workloads;
+- Android, Windows, iOS, and Mac Catalyst smoke tests;
+- real-device biometric enrollment/cancel/failure/change behavior;
+- clipboard history/clearing behavior on each platform;
+- sleep/background/resume lifecycle behavior on each platform;
+- screenshot protection behavior where supported and honest fallback elsewhere;
+- accessibility and localization rendering on real target environments;
+- generated launcher/adaptive/monochrome/store asset inspection;
+- package signing and store submission validation;
+- CodeQL/dependency-review/vulnerability/secret-scan results;
+- exact third-party license reconciliation after restore;
+- independent professional cryptographic/security audit.
+
+No signing key, certificate, store credential, API secret, private key, or production crash/analytics credential was added to source control. No claim is made that CipherNest is independently audited, unhackable, military-grade, 100% secure, or appropriate for high-risk use.
+
+### Future-version/security-review deferrals remain unchanged
+
+The following remain deliberately deferred rather than represented by fake or incomplete current UI:
+
+- cloud synchronization, accounts, collaboration, server storage, device enrollment, and conflict resolution;
+- autofill/type integration with browsers and other applications;
+- TOTP seed storage/generation;
+- Windows Hello biometric convenience unlock;
+- rich binary/PDF document preview beyond the bounded safe text-preview path;
+- local document scanning;
+- pronounceable-password mode until a reviewed design is selected;
+- destructive automatic wipe after failed unlock attempts;
+- complete Hindi/additional translation catalogs beyond the English-first resource/preference architecture.
