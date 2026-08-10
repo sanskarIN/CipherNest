@@ -39,11 +39,12 @@ public partial class OnboardingViewModel : ObservableObject
     {
         IsBusy = true;
         ErrorMessage = string.Empty;
+        var passphrase = MasterPassphrase;
+        MasterPassphrase = string.Empty;
+        Confirmation = string.Empty;
         try
         {
-            var recovery = await _vault.CreateAsync(MasterPassphrase, RecoveryKeyEnabled);
-            MasterPassphrase = string.Empty;
-            Confirmation = string.Empty;
+            var recovery = await _vault.CreateAsync(passphrase, RecoveryKeyEnabled);
             if (!string.IsNullOrEmpty(recovery))
             {
                 RecoveryKey = recovery;
@@ -60,6 +61,7 @@ public partial class OnboardingViewModel : ObservableObject
         }
         finally
         {
+            passphrase = string.Empty;
             IsBusy = false;
         }
     }
