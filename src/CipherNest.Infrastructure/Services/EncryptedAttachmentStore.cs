@@ -28,12 +28,12 @@ public sealed class EncryptedAttachmentStore
         Directory.CreateDirectory(_directory);
         var finalPath = GetPath(opaqueFileName);
         var tempPath = finalPath + ".tmp";
+        var buffer = new byte[ChunkSize];
         long total = 0;
         try
         {
             await using var output = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
             await output.WriteAsync(Magic, cancellationToken).ConfigureAwait(false);
-            var buffer = new byte[ChunkSize];
             var chunkIndex = 0;
             int read;
             while ((read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
@@ -46,6 +46,7 @@ public sealed class EncryptedAttachmentStore
                 await output.WriteAsync(envelope.Nonce, cancellationToken).ConfigureAwait(false);
                 await output.WriteAsync(envelope.Tag, cancellationToken).ConfigureAwait(false);
                 await output.WriteAsync(envelope.Ciphertext, cancellationToken).ConfigureAwait(false);
+                CryptographicOperations.ZeroMemory(buffer.AsSpan(0, read));
                 chunkIndex++;
             }
             await WriteInt32Async(output, -1, cancellationToken).ConfigureAwait(false);
@@ -55,6 +56,7 @@ public sealed class EncryptedAttachmentStore
         }
         finally
         {
+            CryptographicOperations.ZeroMemory(buffer);
             if (File.Exists(tempPath)) File.Delete(tempPath);
         }
     }
