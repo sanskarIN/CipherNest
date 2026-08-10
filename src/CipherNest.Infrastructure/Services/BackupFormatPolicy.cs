@@ -1,5 +1,5 @@
+using CipherNest.Application.Abstractions;
 using CipherNest.Infrastructure.Crypto;
-using CipherNest.Shared;
 
 namespace CipherNest.Infrastructure.Services;
 
