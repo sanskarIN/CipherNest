@@ -46,6 +46,8 @@ jobs:
         run: dotnet restore src/CipherNest.App/CipherNest.App.csproj -p:TargetFramework=net10.0-windows10.0.19041.0
       - name: Build Windows app with analyzers
         run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-windows10.0.19041.0 --no-restore -p:WindowsPackageType=None
+      - name: Build Windows app with in-app funding disabled
+        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-windows10.0.19041.0 --no-restore -p:WindowsPackageType=None -p:CipherNestEnableFundingLink=false
 
   build-android:
     runs-on: ubuntu-latest
