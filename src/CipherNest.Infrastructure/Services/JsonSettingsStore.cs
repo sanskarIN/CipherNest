@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Services;
 using CipherNest.Domain.Models;
 
 namespace CipherNest.Infrastructure.Services;
@@ -15,11 +16,11 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
         try
         {
             if (!File.Exists(path))
-            {
                 return new AppPreferences();
-            }
+
             await using var stream = File.OpenRead(path);
-            return await JsonSerializer.DeserializeAsync<AppPreferences>(stream, Options, cancellationToken).ConfigureAwait(false) ?? new AppPreferences();
+            var loaded = await JsonSerializer.DeserializeAsync<AppPreferences>(stream, Options, cancellationToken).ConfigureAwait(false);
+            return AppPreferencesPolicy.Normalize(loaded ?? new AppPreferences());
         }
         catch (JsonException)
         {
@@ -39,12 +40,29 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Settings directory is missing."));
             var temp = path + ".tmp";
-            await using (var stream = File.Create(temp))
+            try
             {
-                await JsonSerializer.SerializeAsync(stream, preferences, Options, cancellationToken).ConfigureAwait(false);
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                var normalized = AppPreferencesPolicy.Normalize(preferences);
+                await using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 16 * 1024, FileOptions.Asynchronous))
+                {
+                    await JsonSerializer.SerializeAsync(stream, normalized, Options, cancellationToken).ConfigureAwait(false);
+                    await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                }
+                File.Move(temp, path, overwrite: true);
             }
-            File.Move(temp, path, overwrite: true);
+            finally
+            {
+                try
+                {
+                    if (File.Exists(temp)) File.Delete(temp);
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+            }
         }
         finally
         {
