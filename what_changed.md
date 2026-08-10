@@ -66,11 +66,7 @@ This continuation was implemented as many small, reviewable commits instead of o
 - Added encrypted `LastAccessedUtc` data to `VaultItem`; it is part of the encrypted record payload rather than new plaintext database metadata.
 - Added `IVaultService.MarkAccessedAsync` and a persistence path that updates access time without changing the item's user-visible modification timestamp.
 - Opening an item records recent access locally.
-- Added vault sorting options for:
-  - Favorites & title
-  - Recently used
-  - Recently modified
-  - Title
+- Added vault sorting options for Favorites & title, Recently used, Recently modified, and Title.
 - Search results continue to be decrypted and processed only while the vault is unlocked, then use the selected sort order locally.
 
 ### Attachment export
@@ -96,8 +92,6 @@ This continuation was implemented as many small, reviewable commits instead of o
 - Updated the threat model and added the dedicated biometric design document.
 
 ### Commits created during this continuation
-
-The continuation was intentionally split into atomic commits, including:
 
 - `feat(security): add secondary biometric unlock contract`
 - `feat(security): implement secondary wrapped-key unlock`
@@ -135,15 +129,13 @@ The continuation was intentionally split into atomic commits, including:
 
 The connected GitHub environment can inspect and edit repository content but does not provide a local .NET/MAUI SDK, Android emulator, Apple simulator, Windows packaging environment, or physical biometric hardware. Therefore this work does **not** claim that platform builds or physical-device tests have passed merely because the source has been committed.
 
-The repository contains CI/build/test configuration, but final release gating still requires execution with the actual .NET 10 MAUI workloads and target SDKs. In particular, the Android biometric binding/API surface, iOS/Mac Catalyst LocalAuthentication behavior, secure-storage lifecycle, biometric enrollment changes, screenshot blocking, clipboard clearing, app sleep/background behavior, temporary share-file cleanup, accessibility behavior, large attachment streaming, and packaging/signing must be exercised on the real target environments.
+The repository contains CI/build/test configuration, but final release gating still requires execution with the actual .NET 10 MAUI workloads and target SDKs. In particular, Android biometric binding/API surface, iOS/Mac Catalyst LocalAuthentication behavior, secure-storage lifecycle, biometric enrollment changes, screenshot blocking, clipboard clearing, app sleep/background behavior, temporary share-file cleanup, accessibility behavior, large attachment streaming, and packaging/signing must be exercised on the real target environments.
 
 Signing certificates, store credentials, API secrets, and private keys remain intentionally absent from the public repository. They must be supplied through protected CI/store configuration and must never be committed.
 
 An independent security audit is still outstanding. The application must not be described as audited, unhackable, military-grade, 100% secure, or appropriate for high-risk use until the relevant implementation and cryptographic design have received independent professional review.
 
 ### Deliberately deferred
-
-These items remain intentionally outside the current local-only release until dedicated design/review work is completed:
 
 - cloud synchronization, accounts, collaboration, and server-side storage;
 - autofill/type integration with other apps and browsers;
@@ -207,127 +199,86 @@ This pass continued directly from the existing `main` branch and the uploaded Ci
 
 - Added `DatabaseMigrator` as an explicit ordered transactional schema migration runner.
 - Added `MigrationHistory(Version, AppliedUtc)`.
-- Database initialization now:
-  1. creates migration history if required,
-  2. reads the highest completed version,
-  3. rejects a database created by a newer unsupported schema,
-  4. applies missing migrations transactionally,
-  5. records completed versions, and
-  6. verifies the final version equals `AppConstants.DatabaseSchemaVersion`.
+- Database initialization now creates migration history, reads completed version, rejects newer unsupported schema, applies missing migrations transactionally, records completed versions, and verifies the final version.
 - Added migration idempotence and future-version rejection integration tests.
 - Updated database architecture documentation and ADR/status material so released migrations are treated as append-only compatibility artifacts.
 
 ### Cryptographic known-answer and hostile-resource hardening
 
 - Added an Argon2id known-answer test for the current default parameters using fixed passphrase/salt input and expected 32-byte output.
-- During the source audit, found a real hardening issue: KDF parameters stored in a vault/backup header were minimum-bounded but did not have upper resource bounds. A malicious unauthenticated container could therefore request excessive Argon2 memory/iterations/parallelism before authentication completed.
-- Fixed that issue by validating untrusted KDF metadata before Argon2 allocation/work.
-- Current accepted parser/resource bounds are:
-  - salt length: 16–64 bytes,
-  - memory: 16 MiB–512 MiB,
-  - iterations: 1–10,
-  - parallelism: 1–16.
-- New key wrappers continue to use the current default of 64 MiB, 3 iterations, parallelism 1.
-- Wrapped-key validation maps hostile/out-of-bounds KDF metadata to vault authentication failure rather than honoring the resource request.
-- Added dedicated hostile-KDF tests for too-small/too-large memory, invalid iterations/parallelism, and a malicious wrapped-key envelope.
-- Added the previously missing canonical `docs/security/CRYPTOGRAPHIC_DESIGN.md` so in-app and repository security references no longer point to a nonexistent design document.
-- The cryptographic design document now records key hierarchy, associated data, KDF bounds, recovery/biometric wrappers, record/attachment/backup encryption, known-answer vector, nonce assumptions, memory limitations, versioning, and audit status.
+- Found and fixed an untrusted-KDF resource issue: header metadata could previously request excessive Argon2 resource usage before authentication.
+- Current accepted parser/resource bounds are salt 16–64 bytes, memory 16–512 MiB, iterations 1–10, parallelism 1–16.
+- New wrappers continue to use 64 MiB, 3 iterations, parallelism 1.
+- Added hostile-KDF tests.
+- Added canonical `docs/security/CRYPTOGRAPHIC_DESIGN.md` covering hierarchy, associated data, KDF bounds, wrappers, records, attachments, backup, known-answer vector, nonce assumptions, memory limits, versioning, and audit status.
 
 ### Encrypted attachments and safe document preview
 
-- Added attachment media-type normalization and a conservative preview policy.
-- Small UTF-8 TXT, Markdown, CSV, JSON, and LOG attachments can now be previewed in memory without first creating a plaintext preview file.
-- In-memory text preview is capped at 512 KiB, requires strict UTF-8 decoding, replaces unsafe control characters, neutralizes angle brackets, and limits displayed text to 20,000 characters.
-- CipherNest zeroes the owned byte buffer after preview where practical and explicitly states that the resulting managed `string` cannot be deterministically erased.
-- Other file formats remain encrypted until the user explicitly selects guarded plaintext export.
-- Attachment import records a normalized/inferred media type for supported text formats rather than blindly treating every selected file as `application/octet-stream`.
-- Added an 8 MiB streaming attachment integration test that verifies round-trip SHA-256 equality without whole-file buffering.
-- Added encrypted attachment tamper and truncation tests.
-- Existing explicit plaintext attachment export warning/cache-cleanup path remains in place.
+- Added attachment media-type normalization and conservative preview policy.
+- Small UTF-8 TXT, Markdown, CSV, JSON, and LOG attachments can be previewed in memory without creating a plaintext preview file first.
+- In-memory text preview is capped at 512 KiB, strict UTF-8, sanitized, and display-limited to 20,000 characters.
+- Owned byte buffers are zeroed where practical; managed strings cannot be deterministically erased.
+- Added multi-megabyte streaming, tamper, and truncation tests.
 
 ### Backup corruption and restore preservation tests
 
-- Added integration coverage that corrupts an encrypted backup and verifies restore rejection occurs without replacing the current active vault.
+- Added integration coverage that corrupts an encrypted backup and verifies restore rejection without replacing the active vault.
 - Added wrong-backup-passphrase preservation coverage.
-- Existing restore staging/validation/rollback behavior remains the production path.
-- Updated test/release documentation so restore preservation is an explicit quality gate rather than an implied assumption.
+- Existing restore staging/validation/rollback behavior remains production path.
 
 ### CSV import parser robustness
 
-- Added malformed-parser corpus tests covering unterminated quotes, invalid characters after closing quotes, duplicate/empty headers, excessive columns, and quoted embedded commas.
-- Existing parser field/row/column bounds remain enforced.
-- Import remains explicit-column-mapping only; no silent guessing of secret fields was introduced.
+- Added malformed-parser corpus tests for unterminated quotes, invalid post-quote characters, duplicate/empty headers, excessive columns, and quoted embedded commas.
+- Import remains explicit-column-mapping only.
 
 ### Storage and cache management
 
 - Added `IStorageMaintenanceService` and `StorageMaintenanceService`.
 - Settings can measure encrypted app-data usage, temporary cache usage, and total local footprint.
 - Cache enumeration avoids following reparse-point directory loops.
-- Settings now provides a deliberate temporary-cache cleanup action with a warning that it does not delete the encrypted vault, attachment store, or backups kept in app data.
-- Redacted diagnostic sharing now deletes its temporary cache file after the share request returns where the OS permits it; if deletion cannot be confirmed, the UI directs the user to the cache-cleanup control.
+- Added deliberate temporary-cache cleanup action.
+- Redacted diagnostic sharing deletes its temporary cache file after share where possible and surfaces cleanup limitations.
 
 ### Privacy-safe centralized diagnostics
 
 - Added `IPrivacySafeExceptionReporter` and `PrivacySafeExceptionReporter`.
-- The reporter records only a sanitized operation identifier, exception type, HResult, severity, and fixed text saying the sensitive exception details were omitted.
-- It deliberately does not log the `Exception` object, exception message, or stack trace because those can contain file paths or application/user context.
-- `AppDomain.CurrentDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException` now route through this privacy-safe reporter.
-- Lifecycle preference/resume failures also use this reporter before the app takes its fail-closed lock/default behavior.
-- Added UI/source-structure tests that specifically check the reporter source does not log exception messages/stacks or pass the raw exception object to the error logger.
-- Added `docs/privacy/DIAGNOSTICS.md`.
+- Reporter records only sanitized operation identifier, exception type, HResult, severity, and fixed omission text.
+- It intentionally does not log exception messages, stacks, or raw exception objects.
+- AppDomain/TaskScheduler/lifecycle failures route through it.
+- Added diagnostics privacy source tests and `docs/privacy/DIAGNOSTICS.md`.
 
 ### Accessibility and responsive UI
 
-- Added dynamic font-size resources for body, caption, title, and controls.
-- `LargerInterface` now changes runtime typography rather than being a stored setting with no effect.
-- `ReducedMotion` preference is also applied to runtime resource state for feature-level motion consumers.
-- Accessibility preferences are restored at startup/resume.
-- Default button minimum height is 44 device-independent units.
-- Added/retained semantic descriptions and live-region metadata on security-sensitive screens.
-- Vault actions now wrap instead of forcing a horizontally scrolling navigation strip.
-- Added UI-structure checks for core routes, semantic metadata, localization structure, responsive action wrapping, legal surfaces, and diagnostics-source privacy constraints.
+- Added dynamic font-size resources and made LargerInterface functional at runtime.
+- ReducedMotion is exposed through runtime resources for motion consumers.
+- Accessibility preferences restore at startup/resume.
+- Default button minimum height is 44 DIP.
+- Added semantic descriptions/live regions and responsive vault actions.
 
 ### English-first localization architecture
 
-- Added `AppLanguagePreference` with `System` and `English`.
-- Added a neutral English `.resx` catalog under `Resources/Localization/AppStrings.resx`.
-- Added `ILocalizationService` / `LocalizationService` using resource lookup and saved UI-culture preference.
-- Added language preference to `AppPreferences` and Settings.
-- Saved language preference is applied at startup/resume and when changed in Settings.
-- Added `docs/architecture/LOCALIZATION.md` with the steps for future Hindi/additional catalogs.
-- Current release is still honestly described as English-first: the resource/service/preference architecture exists, but not every existing literal XAML string has been migrated to a resource binding and no complete Hindi catalog is claimed.
+- Added `AppLanguagePreference` System/English, neutral English `.resx`, localization service, settings persistence, and startup/resume culture application.
+- Added `docs/architecture/LOCALIZATION.md`.
+- Current release remains honestly English-first; complete Hindi catalog is not claimed.
 
 ### In-app security/privacy/legal surfaces
 
-- Added a dedicated Security & Privacy page covering local-only data flow, protection goals, partial mitigations, out-of-scope threats, recovery limitations, audit status, and responsible disclosure.
-- Settings now links directly to the local security audit and Security & Privacy page.
-- About now displays runtime application version/build plus cryptographic format and database schema versions instead of only static version text.
-- About now includes GPL-3.0-or-later/open-source information, privacy/terms references, third-party notices, acknowledgements, repository/support contacts, and honest audit status.
-- Settings now provides an About/legal/acknowledgements entry point.
-- Added `THIRD_PARTY_NOTICES.md` for runtime/test dependency license families with an explicit release-time exact-package verification requirement.
-- Expanded `PRIVACY.md`, `TERMS.md`, `SECURITY.md`, the threat model, architecture docs, and ADR summary to match current behavior.
+- Added dedicated Security & Privacy page, Settings links, runtime version/build metadata, GPL/privacy/terms references, third-party notices, acknowledgements, repository/support contacts, and honest audit status.
+- Added `THIRD_PARTY_NOTICES.md` with release-time exact-package verification requirement.
 
 ### Release, packaging, branding, and reproducibility documentation
 
-- Added `docs/releases/PACKAGING.md` with Android, Windows, iOS, and Mac Catalyst release/signing guidance.
-- Expanded `docs/releases/REPRODUCIBLE_BUILDS.md` with clean-checkout/environment/package-feed/unsigned-comparison/signing guidance while explicitly refusing an unverified bit-for-bit reproducibility claim.
-- Added `docs/releases/STORE_LISTING_GUIDE.md` with honest product positioning, privacy screenshot rules, security-claim restrictions, and asset verification gates.
-- Added `docs/branding/ASSETS.md` documenting the editable SVG asset sources, generation path, adaptive/small-icon rules, monochrome derivation, watermark placement, and future favicon handling.
-- Expanded `docs/setup/BUILD.md` with target-specific core/Windows/Android/iOS/Mac Catalyst build and test commands.
-- Expanded `docs/RELEASE_CHECKLIST.md` and `docs/TEST_PLAN.md` to cover KDF resource bounds, migration compatibility, backup corruption, attachment streaming/tamper, safe preview, parser robustness, diagnostics privacy, localization/accessibility, platform biometrics, screenshot/clipboard/lifecycle behavior, dependency/license review, signing, and store assets.
+- Added/expanded packaging, reproducible build, store listing, branding asset, build, release checklist, and test-plan documentation.
 
 ### CI and repository quality
 
-- Main core CI job now restores, builds, and runs UnitTests, IntegrationTests, and UiTests.
+- Main core CI restores/builds/runs UnitTests, IntegrationTests, and UiTests.
 - Windows CI remains a separate MAUI workload/build gate.
-- Existing dependency-review and CodeQL workflows remain part of the repository security gate.
-- Repeated source searches found no `TODO`, `FIXME`, `NotImplementedException`, placeholder/fake-service marker, or similarly named unfinished implementation marker in the indexed repository source at the time of this pass.
-- Normalized Settings navigation RelayCommands to instance methods to avoid unnecessary source-generator compatibility risk.
-- Removed the duplicate recent-access write from vault navigation, leaving item-load as the single source of recent-access persistence.
+- Dependency-review and CodeQL workflows remain configured.
+- Source scans found no TODO/FIXME/NotImplemented/placeholder/fake-service marker at the time of the pass.
+- Settings navigation source-generator risk and duplicate recent-access write were fixed.
 
 ### Commits created during this continuation
-
-This continuation intentionally used many small commits, including the following commit messages in repository history:
 
 - `feat(notes): add safe note preview model`
 - `feat(notes): add safe Markdown service contract`
@@ -443,146 +394,70 @@ This continuation intentionally used many small commits, including the following
 
 ### Verification status for this continuation
 
-The connected GitHub editing environment can inspect and write repository source but cannot run the current .NET/MAUI solution, execute the GitHub-hosted push workflows through this connector, start Android/iOS/macOS/Windows emulators, access physical biometric hardware, or produce signed store packages. Accordingly:
-
-- no claim is made that the current repository head has passed compilation merely because the source was committed;
-- no claim is made that device-specific biometric, screenshot, clipboard, lifecycle, accessibility, localization, file-picker/share, or secure-storage behavior has passed physical-device validation;
-- no claim is made that CI/CodeQL/dependency review has passed the current head until those GitHub services actually execute and their results are reviewed;
-- no claim is made that third-party license notices have been reconciled against the exact restored package metadata until release restore occurs;
-- no claim is made that generated store artifacts are byte-for-byte reproducible or meet current store packaging requirements until the documented release process verifies them;
-- no claim is made that CipherNest is independently audited, unhackable, military-grade, 100% secure, or appropriate for high-risk use.
-
-The repository now contains the build/test/release/packaging/reproducibility instructions needed to perform those external gates with the required SDKs, target hardware, signing identities, and store environments. Signing keys, certificates, store credentials, API secrets, and private keys remain deliberately absent from source control.
+The connected GitHub editing environment can inspect/write source but cannot run the current .NET/MAUI solution, execute hosted push workflows through this connector, start target emulators/simulators, access physical biometrics, or produce signed packages. No build/test/device/audit claim is implied by committed source.
 
 ### Scope intentionally left for later reviewed versions
 
-The following remain deliberate future-version items instead of fake or placeholder current features:
-
 - cloud synchronization, accounts, collaboration, server storage, device enrollment, and conflict resolution;
-- autofill/type integration with browsers and other applications;
+- autofill/type integration;
 - TOTP seed storage/generation;
 - Windows Hello biometric convenience unlock;
-- rich binary/PDF document preview beyond the bounded safe text-preview path;
+- rich binary/PDF document preview beyond bounded text preview;
 - local document scanning;
-- pronounceable password mode until a reviewed design is selected;
+- pronounceable password mode pending reviewed design;
 - automatic destructive wipe after failed attempts;
-- complete Hindi/additional translation catalogs beyond the English-first resource/preference architecture.
-
-Those deferrals follow the uploaded master prompt's own security-review/future-version conditions. They are documented in `PROJECT_STATUS.md`, `DECISIONS.md`, the threat model, and related security/release documents, and they must not be presented as complete in the current UI.
+- complete Hindi/additional translation catalogs beyond English-first architecture.
 
 ## 2026-08-09 — Continuation: clipboard safety, lifecycle session reset, trash hardening, large-vault rendering, sensitive-state cleanup, and branding completion
 
-This pass continued directly from the previous `main` head. It focused on master-prompt requirements that were already partially represented but still had concrete gaps in explicit clipboard behavior, lifecycle testability, destructive trash handling, master-passphrase security-session transitions, large local vault rendering, sensitive ViewModel lifetime, and source branding variants. Changes were kept in small commits and continue to use `Signed-off-by: Sanskar <sanskarin@outlook.in>` because connector authorship metadata cannot be overridden directly.
+This pass continued directly from the previous `main` head. It focused on explicit clipboard behavior, lifecycle testability, destructive trash handling, master-passphrase security-session transitions, large local vault rendering, sensitive ViewModel lifetime, and source branding variants. Changes remained atomic and signed off.
 
 ### Explicit clipboard actions and clearing policy
 
-- Added a dedicated `ItemEditorViewModel.Clipboard` partial implementation rather than mixing more clipboard code into the main editor class.
-- Added explicit username copy using the same configurable timed-clear flow already used for the primary secret.
-- Added a `SecretCustomFields` view that exposes only the encrypted custom-field names for quick-copy selection; secret values are not displayed in that list.
-- Added explicit custom-secret copy commands gated by per-item re-authentication state.
-- Added `ClipboardSafetyPolicy` in the Application layer so clipboard delay and replacement-preservation rules are testable without MAUI platform APIs.
-- Scheduled clear delay is bounded to one second through five minutes for positive values; a zero delay disables the scheduled timer.
-- Timed clearing only erases the clipboard if it still equals the exact value CipherNest copied. If the user copied something else afterward, CipherNest preserves the newer content.
-- Manual vault locking now attempts immediate clipboard clearing after locking.
-- Background/timeout lifecycle locks also attempt immediate clipboard clearing.
-- Clipboard cleanup failures in lifecycle/manual-lock/security-transition paths are routed through the privacy-safe reporter rather than silently swallowed or logged with raw exception text.
-- Added unit coverage for clear-delay bounds and preserving newer clipboard values.
+- Added dedicated item-editor clipboard partial implementation.
+- Added explicit username and secret custom-field copy flows.
+- Secret custom-field values are not shown in the quick-copy list.
+- Added `ClipboardSafetyPolicy` with bounded delay and replacement-preservation behavior.
+- Manual/background/timeout locks attempt clipboard cleanup.
+- Cleanup failures route through privacy-safe diagnostics.
 
 ### Testable lock and failed-attempt policies
 
-- Added `SessionLockPolicy` in the Application layer.
-- Background locking is now expressed as a pure rule based on `LockOnBackground` plus actual vault-unlocked state.
-- Inactivity locking clamps timeout to the supported 5–3600 second range.
-- A system-clock rollback relative to the recorded inactive timestamp fails closed and requests a lock rather than extending an unlocked session unexpectedly.
-- MAUI `App` lifecycle code now delegates the decision to this policy instead of maintaining separate inline timing logic.
-- Added unit tests for background locking, timeout boundary behavior, no-inactive/no-unlocked cases, and clock rollback.
-- Added `UnlockBackoffPolicy` for deterministic failed-attempt delays.
-- The existing thread-safe `UnlockRateLimiter` now uses the shared policy.
-- Backoff begins on the fifth failed attempt at 5 seconds, doubles through subsequent failures, and caps at 300 seconds.
-- Added unit coverage for the complete schedule and cap.
-- Documentation continues to state that interactive throttling does not prevent offline guessing against a copied database.
+- Added `SessionLockPolicy` and tests for background/inactivity/clock rollback.
+- Added `UnlockBackoffPolicy` and tests; backoff starts after repeated failures and caps at five minutes.
 
 ### Master-passphrase rotation security transition
 
-- Identified a security-state inconsistency: after changing the master passphrase, Settings previously recorded the same process/session as freshly master-authenticated and kept the vault unlocked.
-- Corrected that flow so a successful master-passphrase change now:
-  1. rewrites the authenticated master wrapper,
-  2. clears passphrase input fields,
-  3. clears the in-memory remembered master-authentication session,
-  4. locks the vault,
-  5. attempts clipboard cleanup,
-  6. reports clipboard-cleanup failure through the privacy-safe reporter if needed, and
-  7. routes to the unlock screen.
-- The next security session therefore requires the new master passphrase before biometric convenience unlock can resume.
-- Updated the threat model, README, test plan, release checklist, changelog, status, and UI-structure regression checks for this rule.
+- Successful master-passphrase change clears entered credentials and remembered master-authentication session, locks the vault, attempts clipboard cleanup, and routes to unlock.
 
 ### Sensitive ViewModel lifetime reduction
 
-- Item Editor now clears title, username, primary secret, URL, notes, collection, tags, custom-field text, re-authentication passphrase, checklist draft, safe-preview text, attachment references, secret custom-field references, and the cached decrypted item reference when the page disappears.
-- Unlock clears the entered master/recovery-passphrase text when the page disappears.
-- Settings clears backup passphrase, current/new/confirmation master passphrases, deletion passphrase, and destructive confirmation phrase when the page disappears.
-- Transfer clears plaintext-export master-passphrase and confirmation text when the page disappears.
-- Trash clears the destructive-deletion master passphrase when the page disappears.
-- Onboarding clears master passphrase, confirmation, one-time recovery-key text, recovery acknowledgement state, and recovery-key visibility when the page disappears.
-- These changes reduce application-held reference lifetime but do not claim deterministic erasure of .NET managed strings or GC copies.
-- UI-structure regression tests now require the cleanup hook on all six sensitive pages.
+- Unlock, Settings, Transfer, Trash, Item Editor, and Onboarding clear sensitive bound state when pages disappear.
+- Managed strings remain non-deterministically erasable.
 
 ### Trash retention and destructive deletion
 
-- Added `TrashRetentionPolicy` with deterministic 1–365 day bounds and explicit cutoff behavior.
-- Added unit tests for retention boundaries and exact cutoff inclusion.
-- `TrashViewModel` now uses the shared policy instead of duplicated date arithmetic.
-- Routine vault loading now runs configured-retention cleanup so expired encrypted records do not depend on the user manually opening the Trash page.
-- Manual permanent deletion now requires the current master passphrase; recovery keys are not accepted for this destructive confirmation.
-- Added an Empty Trash action that requires current-master re-authentication plus a separate explicit destructive confirmation.
-- The UI explains that CipherNest can remove its managed encrypted records/attachment containers but cannot guarantee physical flash/filesystem-remnant erasure.
-- Trash passphrase input is cleared when leaving the screen.
+- Added deterministic `TrashRetentionPolicy` and tests.
+- Routine maintenance removes expired trash.
+- Manual permanent delete/empty trash require current-master re-authentication and explicit confirmation.
 
 ### Large local vault rendering
 
-- Added an incremental UI-rendering layer for sorted/filtered local results.
-- Search/filter/sort semantics remain local and operate on authenticated decrypted in-memory items while unlocked.
-- The ViewModel keeps the ordered matching set but places only the first 50 entries into the observable visual collection initially.
-- Added an explicit Load More command that appends the next 50 entries.
-- Added `ResultCountMessage` so the UI reports `Showing X of Y` rather than hiding how much of the local result set is currently rendered.
-- Locking clears both the displayed items and the cached ordered result set.
-- UI-structure tests verify the page-size constant and Load More binding.
-- This is UI-tree/presentation paging, not a claim that encrypted database search itself is indexed or paged at rest; the design continues to avoid plaintext searchable SQL indexes.
+- Added incremental 50-item visual rendering and Load More/result-count behavior.
 
 ### Unlock diagnostics privacy fix
 
-- Found one remaining raw-debug path in `UnlockPage.xaml.cs` that wrote biometric capability-check exception messages with `Debug.WriteLine`.
-- Replaced it with `IPrivacySafeExceptionReporter` using the sanitized `Unlock.BiometricCapabilityProbe` operation identifier.
-- The normal master-passphrase fallback remains available if biometric capability probing fails.
-- Added UI/source regression checks that reject raw `Debug.WriteLine`/`ex.Message` in this path.
-- A final indexed source search found no remaining raw `Debug.WriteLine` matches at the time of this pass.
+- Replaced remaining raw biometric capability debug exception output with privacy-safe reporting.
 
 ### Branding source completion
 
-- Updated the splash SVG to include the CipherNest wordmark and the required `Made by the Sanskar` creator credit while keeping the original shield/nest geometry.
-- Added `Resources/AppIcon/appicon-mono.svg` as a committed monochrome system-mark source.
-- Added `Resources/Images/ciphernest_logo_dark.svg` as a higher-contrast dark-surface source.
-- Kept the launcher mark itself text-free while allowing wordmark/creator credit on the splash/branding surface.
-- Expanded `docs/branding/ASSETS.md` with the actual source inventory, platform inspection rules, monochrome guidance, dark-variant guidance, safe-zone checks, and the distinction between committed sources and release-time generated outputs.
-- Added UI-structure tests that verify the splash includes both `CipherNest` and `Made by the Sanskar` and that the new source variants exist.
+- Splash includes CipherNest wordmark and `Made by the Sanskar`.
+- Added monochrome system mark and dark-surface logo source.
 
-### Tests and source-quality regression coverage added in this pass
+### Tests and source-quality regression coverage added
 
-- `SessionLockPolicyTests`
-- `ClipboardSafetyPolicyTests`
-- `TrashRetentionPolicyTests`
-- `UnlockBackoffPolicyTests`
-- Expanded `RepositoryUiStructureTests` for:
-  - incremental vault rendering,
-  - explicit username/custom-secret copy actions,
-  - no direct secret-value binding in the quick-copy list,
-  - sensitive-page cleanup hooks,
-  - master-passphrase security-session reset,
-  - guarded Trash/Empty Trash re-authentication,
-  - privacy-safe unlock capability diagnostics,
-  - splash creator credit,
-  - monochrome/dark branding source presence.
-- Re-ran indexed source searches for empty `catch { }`, raw `Debug.WriteLine`, `TODO`, `FIXME`, `NotImplementedException`, placeholder, and fake-service markers; no matches were returned at the time of this pass.
+- Session lock, clipboard, trash retention, unlock backoff, security-session, destructive deletion, responsive rendering, diagnostics, and branding source tests.
+- Indexed source scans found no raw Debug.WriteLine/TODO/FIXME/NotImplemented/placeholder markers at that pass.
 
 ### Commits created during this continuation
 
@@ -635,117 +510,48 @@ This pass continued directly from the previous `main` head. It focused on master
 - `docs(release): add session clipboard trash paging and branding checks`
 - this `what_changed.md` update.
 
-### Verification limits retained for this pass
-
-The connected GitHub environment still cannot run the current .NET 10/MAUI workloads, target-device lifecycle callbacks, platform clipboard APIs, biometric hardware, screenshot behavior, store packaging, signed artifacts, or the hosted CI checks as a substitute for an actual release environment. Source-level policy tests and UI-structure regression tests were added, but they do not replace target-platform execution.
-
-The following remain external release gates:
-
-- compile/test/format/analyzer execution using the pinned/current .NET SDK and MAUI workloads;
-- Android, Windows, iOS, and Mac Catalyst smoke tests;
-- real-device biometric enrollment/cancel/failure/change behavior;
-- clipboard history/clearing behavior on each platform;
-- sleep/background/resume lifecycle behavior on each platform;
-- screenshot protection behavior where supported and honest fallback elsewhere;
-- accessibility and localization rendering on real target environments;
-- generated launcher/adaptive/monochrome/store asset inspection;
-- package signing and store submission validation;
-- CodeQL/dependency-review/vulnerability/secret-scan results;
-- exact third-party license reconciliation after restore;
-- independent professional cryptographic/security audit.
-
-No signing key, certificate, store credential, API secret, private key, or production crash/analytics credential was added to source control. No claim is made that CipherNest is independently audited, unhackable, military-grade, 100% secure, or appropriate for high-risk use.
-
-### Future-version/security-review deferrals remain unchanged
-
-The following remain deliberately deferred rather than represented by fake or incomplete current UI:
-
-- cloud synchronization, accounts, collaboration, server storage, device enrollment, and conflict resolution;
-- autofill/type integration with browsers and other applications;
-- TOTP seed storage/generation;
-- Windows Hello biometric convenience unlock;
-- rich binary/PDF document preview beyond the bounded safe text-preview path;
-- local document scanning;
-- pronounceable-password mode until a reviewed design is selected;
-- destructive automatic wipe after failed unlock attempts;
-- complete Hindi/additional translation catalogs beyond the English-first resource/preference architecture.
-
 ### Final follow-up after the continuation ledger
 
-- Added `fix(memory): clear trash passphrase immediately after destructive authentication` after the main continuation ledger commit.
-- Manual permanent-delete and Empty Trash flows now clear the destructive passphrase immediately after the re-authentication decision and before returning from a cancelled confirmation; failed master re-authentication also clears the entered passphrase.
-- Re-ran indexed source searches after that fix. No `Console.WriteLine` matches were returned, and no logger search result matching `LogInformation`, `LogWarning`, or `LogError` together with secret/passphrase/password terms was returned.
-- The exact `docs(progress)` head check showed the progress file commit in history; GitHub returned no combined commit-status entries for that checked progress commit, so hosted CI remains an external release gate rather than being represented as passed.
-- This final progress-file update intentionally leaves the repository documentation as the last change in this work pass.
+- Added `fix(memory): clear trash passphrase immediately after destructive authentication`.
+- Manual permanent-delete and Empty Trash flows now clear destructive passphrase immediately after re-authentication decision.
+- Indexed source logging scans remained clean at that pass.
+- Hosted CI remained an external gate.
 
 ## 2026-08-09 — Continuation: project support link, executable next-step roadmap, and store-build policy
 
-This pass continued directly from the hardened `main` branch and added the requested project-support URL `https://buymeacoffee.com/sanskarIN` across the relevant repository and application surfaces. It also converted the requested “next steps to consider” into a source-controlled execution roadmap and added a build-time policy mechanism so store packages can omit the in-app funding CTA without source edits when required by the applicable distribution rules.
+This pass added the requested support URL `https://buymeacoffee.com/sanskarIN` across relevant repository/application surfaces, added a source-controlled execution roadmap, and made the in-app funding CTA build-toggleable for store compliance.
 
 ### Project-support URL and metadata
 
-- Added `AppConstants.BuyMeACoffeeUrl = "https://buymeacoffee.com/sanskarIN"` so application code has one canonical support URL.
-- Added `.github/FUNDING.yml` with the same custom support URL so GitHub repository funding metadata points to the intended page.
-- Added the support URL to `README.md` and `SUPPORT.md`.
-- Kept the support wording explicitly voluntary: financial support does not change feature access, security/privacy handling, support priority, GPL rights, or recovery capability.
-- Added a dedicated “Support development” surface to About with the URL and an explicit user-initiated “Buy me a coffee” action.
-- Added user-initiated repository and creator-profile actions to the same About surface.
+- Added `AppConstants.BuyMeACoffeeUrl`.
+- Added `.github/FUNDING.yml` custom link.
+- Added support URL to README and SUPPORT.
+- About includes voluntary project-support action plus repository/creator actions.
+- Support remains explicitly voluntary and does not alter features, security/privacy treatment, support priority, GPL rights, or recovery.
 
 ### Centralized About metadata
 
-- Refactored About so product name, watermark, business email, support email, repository URL, creator URL, and Buy Me a Coffee URL bind from `AppConstants` rather than duplicating public values in XAML.
-- The About code-behind opens only absolute HTTPS links from the configured constants.
-- External launcher failures use `DisplayAlertAsync` and are routed through `IPrivacySafeExceptionReporter` with the fixed operation identifier `About.ExternalLink`; raw exception messages are not shown or logged through that path.
-- Added source-level UI regression checks for the centralized bindings and privacy-safe external-link failure handling.
+- About binds product/contact/repository/profile/support metadata from shared constants.
+- External links are HTTPS-only and launcher failures use privacy-safe diagnostics.
 
 ### Store/distribution build-time funding switch
 
-- Added `BuildFeatureFlags.IsFundingLinkEnabled` in the MAUI app.
-- Added the `CipherNestEnableFundingLink` MSBuild property. It defaults to `true`.
-- Setting `-p:CipherNestEnableFundingLink=false` explicitly defines `CIPHERNEST_DISABLE_FUNDING_LINK` for the app build.
-- When disabled, the About funding frame and funding metadata label are hidden and the Buy Me a Coffee action cannot launch.
-- The disable condition was tightened to explicit `false`; unrelated or accidental property values do not silently disable the normal UI.
-- Repository metadata such as README, SUPPORT, and `.github/FUNDING.yml` remains unchanged by that compiled-app switch.
-- Added UI/source regression checks for the feature flag, project property, hidden About surfaces, centralized URL, and GitHub funding metadata.
+- Added `BuildFeatureFlags.IsFundingLinkEnabled` and `CipherNestEnableFundingLink` MSBuild property.
+- Explicit `false` defines `CIPHERNEST_DISABLE_FUNDING_LINK` and hides in-app funding surface.
+- Repository funding metadata is unaffected.
 
 ### Current store-policy handling
 
-- The repository does not claim that a Buy Me a Coffee CTA is permitted by every current app store, region, distribution method, or app category.
-- `docs/releases/STORE_LISTING_GUIDE.md`, `docs/releases/PACKAGING.md`, `docs/setup/BUILD.md`, `docs/RELEASE_CHECKLIST.md`, and `docs/NEXT_STEPS.md` now require release engineers to verify the current policy for each exact target.
-- If an applicable policy requires the in-app external funding CTA to be absent, the documented package command uses `-p:CipherNestEnableFundingLink=false` rather than source edits.
-- Release provenance should record the chosen funding-link property value so a packaged artifact can be reproduced consistently.
+- Store guidance requires current policy verification for exact target/region/distribution.
+- Builds can use `-p:CipherNestEnableFundingLink=false` instead of source edits.
 
 ### Executable next-step roadmap
 
-- Added `docs/NEXT_STEPS.md` as the ordered follow-up plan instead of leaving next steps only in chat.
-- Priority 0 covers clean build, restore, tests, formatting/analyzers, platform build proof, CI/security-service review, and release-blocking failure handling.
-- Priority 1 covers lifecycle locking, clipboard behavior, biometrics, screenshot/privacy controls, and real-device validation.
-- Priority 2 covers destructive/recovery flows, master/recovery authorization boundaries, passphrase rotation, trash, and vault deletion.
-- Priority 3 covers encrypted backup/restore, CSV interoperability, attachment streaming, safe preview, export warnings, and plaintext-cache cleanup.
-- Priority 4 covers TalkBack/VoiceOver/Narrator, keyboard navigation, focus, large text, reduced motion, responsive layouts, contrast, and future localization completion.
-- Priority 5 covers synthetic 1k/5k/10k-vault performance measurement, search/audit latency, memory, incremental rendering, attachment throughput, and backup performance.
-- Priority 6 covers release engineering, exact dependency/license review, signing isolation, package metadata, store security claims, funding-CTA policy verification, and `CipherNestEnableFundingLink` provenance.
-- Priority 7 covers independent review of crypto, KDF/nonce/AAD design, recovery/biometric wrappers, attachment/backup formats, memory lifetime, parser fuzzing, downgrade behavior, and supply-chain provenance.
-- Priority 8 covers release notes/checksums, synchronized legal/security/support files, safe bug-report triage, open-source operations, and voluntary support wording.
-- Priority 9 preserves cloud sync, collaboration, autofill, TOTP, Windows Hello, rich document scanning/preview, pronounceable passwords, translations, and destructive wipe as separately reviewed future-version work.
-- `PROJECT_STATUS.md` and README now link to the roadmap.
+- Added `docs/NEXT_STEPS.md` with priorities for build proof, device security, destructive/recovery, backup/transfer, accessibility/localization, performance, release engineering, security review, launch/open-source operations, and future reviewed versions.
 
 ### Documentation and release-gate synchronization
 
-Updated in this pass:
-
-- `README.md`
-- `SUPPORT.md`
-- `.github/FUNDING.yml`
-- `PROJECT_STATUS.md`
-- `CHANGELOG.md`
-- `docs/NEXT_STEPS.md`
-- `docs/RELEASE_CHECKLIST.md`
-- `docs/TEST_PLAN.md`
-- `docs/setup/BUILD.md`
-- `docs/releases/PACKAGING.md`
-- `docs/releases/STORE_LISTING_GUIDE.md`
-- this `what_changed.md` ledger.
+Updated README, SUPPORT, FUNDING, PROJECT_STATUS, CHANGELOG, NEXT_STEPS, RELEASE_CHECKLIST, TEST_PLAN, BUILD, PACKAGING, STORE_LISTING_GUIDE, and progress ledger.
 
 ### Commits created during this continuation
 
@@ -784,161 +590,85 @@ Updated in this pass:
 
 ### Verification limits and next execution point
 
-The connected GitHub environment still cannot execute the repository's .NET 10/MAUI workloads, physical-device behavior, store review, signing, or the hosted push workflows as a substitute for a real release environment. The new support/funding behavior has source-level UI-structure regression checks, but release validation must still compile both normal/default and `CipherNestEnableFundingLink=false` variants on the intended target SDKs.
-
-The immediate next execution point is Priority 0 in `docs/NEXT_STEPS.md`: clean restore/build/tests/format/analyzers, then Android/Windows smoke tests, Apple-host builds, real-device security behavior, backup/transfer compatibility, accessibility/localization, performance, dependency/license review, signed packaging, and independent security review before stronger security claims.
-
-No signing credential, store credential, API secret, private key, vault secret, recovery material, or production analytics/crash token was added to source control during this continuation.
+The connected GitHub environment still cannot execute .NET 10/MAUI workloads, physical-device behavior, store review, signing, or hosted push workflows. Release validation still requires compiling normal/funding-disabled variants and executing all target gates.
 
 ## 2026-08-10 — Continuation: cross-platform verification, transient-secret lifetime, clipboard fingerprinting, and platform compile hardening
 
-This continuation followed the committed `docs/NEXT_STEPS.md` Priority 0 and security-hardening work. It expanded configured build proof across every current MAUI target family, added reproducible local verification entry points, hardened native biometric source against an Android API-level mismatch, contained lifecycle fallback failures, redesigned delayed clipboard cleanup to avoid retaining plaintext secrets, migrated the MAUI application away from legacy alert APIs, shortened bound credential lifetime across sensitive workflows, and removed path/context-bearing raw exception messages from high-risk UI surfaces. Changes were intentionally split into small commits and continue to carry `Signed-off-by: Sanskar <sanskarin@outlook.in>`.
+This continuation followed `docs/NEXT_STEPS.md` Priority 0 and security-hardening work. It expanded configured build proof across every current MAUI target family, added reproducible local verification entry points, hardened native biometric source, contained lifecycle fallback failures, redesigned delayed clipboard cleanup to avoid retaining plaintext secrets, migrated legacy MAUI alert calls, shortened credential lifetime, and removed path/context-bearing raw exception messages from high-risk UI surfaces.
 
 ### Cross-platform CI expansion
 
-- Extended `.github/workflows/dotnet-desktop.yml` with an Android Release compile job on Ubuntu using the .NET MAUI Android workload and `net10.0-android`.
-- Added a macOS Apple compile job that installs the iOS and Mac Catalyst workloads and builds both `net10.0-ios` and `net10.0-maccatalyst`.
-- Retained the Windows Release compile gate and added a second Windows compile using `-p:CipherNestEnableFundingLink=false` so the documented store-policy build variant is continuously compiled.
-- Added `dotnet format --verify-no-changes` gates for Domain, Application, Infrastructure, Shared, UnitTests, IntegrationTests, and UiTests after the existing core restore/build/test sequence.
-- Added workflow concurrency groups with `cancel-in-progress: true` so superseded main/PR runs stop consuming hosted runner time.
-- Added explicit timeouts for core, Windows, Android, and Apple jobs so stuck workload/toolchain failures are bounded and visible.
-- Expanded CodeQL from the core/integration build path to also install the Android MAUI workload and build the MAUI application target before analysis.
-- Added timeout and superseded-run cancellation to CodeQL.
-- Added timeout and superseded-run cancellation to dependency review while retaining `fail-on-severity: high`.
-- Added repository source tests that require Windows/Android/Apple jobs, target framework strings, the funding-disabled build, formatting, timeouts/cancellation, CodeQL MAUI coverage, dependency-review severity policy, and verification-script presence.
+- Added Android Release compile job.
+- Added iOS/Mac Catalyst compile job on macOS.
+- Windows builds normal and funding-disabled variants.
+- Added core formatting verification.
+- Added workflow concurrency/cancel-in-progress and timeouts.
+- CodeQL now also builds Android MAUI application path.
+- Dependency review also has bounded/cancelable execution.
+- Added source tests requiring cross-platform CI gates and verification scripts.
 
 ### Reproducible local verification scripts
 
-Added committed verification entry points rather than leaving release commands only in prose:
+Added:
 
 - `scripts/verify-core.ps1`
 - `scripts/verify-core.sh`
 - `scripts/verify-windows.ps1`
 - `scripts/verify-android.sh`
 - `scripts/verify-apple.sh`
-
-The core scripts restore/build/test UnitTests, IntegrationTests, and UiTests and verify formatting across the host-independent source/test projects. The Windows script restores/builds the Windows target in both normal and funding-disabled variants. Android and Apple scripts restore/build their target families on appropriate hosts.
-
-Added `docs/verification/CI_GATES.md` to document the exact configured jobs, local equivalents, evidence that must be recorded for a release, and the important distinction between a configured compile gate and real device/simulator/security/store validation.
+- `docs/verification/CI_GATES.md`
 
 ### Native biometric source hardening
 
-- Found an Android API-level mismatch: the app supported `BiometricPrompt` from API 28 but its availability preflight queried `BiometricManager`, an API surface introduced later.
-- Removed that newer manager dependency from the API-28 path.
-- Android availability now checks the API-28 `BiometricPrompt` baseline and current activity; enrollment, lockout, hardware availability, and related failures are left to the native prompt/fallback path.
-- Apple biometric request cancellation now invalidates `LAContext` through the request cancellation token and checks cancellation after native evaluation.
-- Added roadmap/test/status/threat-model requirements for physical-device validation of these native paths rather than treating source compilation as behavior proof.
+- Removed Android `BiometricManager` preflight mismatch from API-28 path.
+- Apple cancellation invalidates `LAContext` and checks cancellation.
 
 ### Lifecycle fail-closed containment
 
-- Identified that the existing `async void` Window lifecycle handlers had a second-failure risk: their catch blocks attempted another vault lock and clipboard clear, either of which could itself throw out of the native event callback.
-- Added `FailClosedLockAndClearClipboardAsync`.
-- Primary lifecycle failures are privacy-safe reported.
-- Fallback vault lock and clipboard cleanup are then attempted separately, and each secondary failure is independently caught and privacy-safe reported as `<operation>.Lock` or `<operation>.Clipboard`.
-- Added `LifecycleFailClosedSourceTests` to require the contained/reporting structure and reject raw debug/console output in that path.
+- Added contained fallback lock/clipboard cleanup with separate privacy-safe reporting.
 
 ### Clipboard fingerprint-only delayed cleanup
 
-- Replaced delayed plaintext-secret retention with a fixed-size SHA-256 fingerprint.
-- `ClipboardSafetyPolicy.CreateFingerprint` encodes the value to UTF-8, hashes it with SHA-256, and zeroes the owned UTF-8 byte buffer afterward.
-- `ClipboardSafetyPolicy.MatchesFingerprint` validates fingerprint length, hashes the current clipboard value, performs `CryptographicOperations.FixedTimeEquals`, and zeroes the temporary actual hash.
-- Removed the old direct plaintext comparison policy.
-- `ClipboardSecurityService` now serializes clipboard state with a semaphore and tracks `_lastCopiedFingerprint` instead of a copied plaintext string.
-- The tracked fingerprint is zeroed when replaced, cleared, or disposed.
-- The delayed timer uses its own cancellation token source after a successful copy; cancellation of the initiating caller can no longer silently disable the configured security timer after the clipboard write succeeded.
-- Timer and lock-triggered cleanup clear the clipboard only if the current clipboard still hashes to CipherNest's tracked value, preserving unrelated content copied afterward.
-- Scheduled cleanup errors use the privacy-safe reporter with `Clipboard.ScheduledClear`.
-- Added unit coverage for fingerprint size/exact matching/bounds and source regression tests that require fingerprint-only delayed state, zeroing, reporting, and absence of the old linked caller-token/plaintext signature.
-- Documentation explicitly notes that the fingerprint reduces raw-secret lifetime but is not intended as password storage and does not make compromised process memory safe.
+- Replaced delayed plaintext retention with SHA-256 fingerprint state.
+- Uses fixed-time comparison and zeroing owned hash buffers.
+- Security timer is independent from initiating caller cancellation after successful copy.
+- Lock/timer cleanup only clear if current clipboard still matches CipherNest copy.
 
 ### MAUI warnings-as-errors API cleanup
 
-- Converted legacy `Shell.Current.DisplayAlert(...)` calls to `DisplayAlertAsync(...)` in:
-  - `TransferViewModel`
-  - `SettingsViewModel`
-  - `TrashViewModel`
-  - `ItemEditorViewModel`
-- Added `MauiApiSourceTests` which enumerates all MAUI app C# source files and rejects `.DisplayAlert(` so the legacy API cannot silently return while warnings are treated as errors.
-- Final indexed source search returned no `.DisplayAlert(` matches at the time of this pass.
+- Converted Transfer, Settings, Trash, Item Editor legacy `DisplayAlert` to `DisplayAlertAsync`.
+- Added repository-wide source test rejecting `.DisplayAlert(`.
 
 ### Shortened credential binding lifetime
 
-Beyond the existing page-disappearance cleanup, bound passphrase fields are now cleared before longer-running/authenticated operations where practical:
-
-- Unlock copies the entered passphrase to a local variable and clears `MasterPassphrase` before vault authentication/reauthentication; the local reference is cleared in `finally`.
-- Onboarding copies the new master passphrase locally and clears both master/confirmation bound properties before vault creation; the local reference is cleared in `finally`.
-- Plaintext CSV export clears `ExportMasterPassphrase` immediately after the re-authentication decision and clears the confirmation phrase on cancellation/success.
-- Trash clears `DeletionPassphrase` immediately after re-authentication and before displaying the final destructive confirmation.
-- Per-item re-authentication clears `ReauthenticationPassphrase` immediately after the authentication decision, including failure.
-- Biometric enable/disable copies the current master passphrase locally, clears the Settings bound field immediately, and clears the local reference in `finally`.
-- Backup export/restore copies the backup passphrase locally, clears the Settings bound field before confirmation/file-picker/share work, and clears the local reference in `finally`.
-- Master-passphrase rotation copies validated current/new passphrases locally, clears current/new/confirmation bound properties before the rotation service call, and clears local references in `finally`.
-- Full-vault deletion copies the current master passphrase locally and clears both deletion-passphrase and destructive-confirmation bound properties before the final destructive alert, then clears the local reference in `finally`.
-- Added `SensitiveCredentialLifetimeSourceTests` to enforce ordering of these field-clearing operations relative to longer security/file operations.
-- These changes reduce application-held reference lifetime but do not claim deterministic erasure of managed strings or GC copies.
+- Unlock, Onboarding, plaintext export, Trash, item re-authentication, biometric settings, backup/restore, master-passphrase rotation, and full-vault deletion clear bound credential properties earlier before long work where practical.
 
 ### Backup/restore cleanup and biometric rollback reporting
 
-- Restore staging cleanup no longer silently swallows an `IOException`; it reports a redacted `Settings.RestoreBackup.TempCleanup` event.
-- Biometric enable rollback now catches failure of secure-storage cleanup separately and privacy-safe reports `Settings.BiometricEnable.Rollback` without masking the original vault-wrapper failure.
-- Biometric enable failure itself now uses fixed user-facing text plus `Settings.BiometricEnable` redacted reporting.
+- Restore temp cleanup is privacy-safe reported.
+- Biometric enable rollback cleanup failure is reported separately without masking original failure.
 
 ### Redacted sensitive UI error surfaces
 
-Removed direct rendering of raw exception messages from high-risk file/security paths where those messages can expose filesystem paths or other environment context:
-
-- Settings storage measurement → `Settings.StorageUsage`.
-- Settings encrypted backup export → `Settings.BackupExport`.
-- Settings encrypted backup restore → `Settings.BackupRestore`.
-- Settings backup staging cleanup → `Settings.RestoreBackup.TempCleanup`.
-- Settings master-passphrase argument rejection → `Settings.ChangeMasterPassphrase`.
-- Settings vault deletion file/access failure → `Settings.DeleteVault`.
-- Transfer CSV open → `Transfer.PickCsv`.
-- Transfer CSV import → `Transfer.ImportCsv`.
-- Transfer plaintext export → `Transfer.ExportPlaintext`.
-- Transfer plaintext cache cleanup → `Transfer.CleanPlaintextCache`.
-- Item attachment import → `ItemEditor.AddAttachment`.
-- Item attachment plaintext export → `ItemEditor.ExportAttachment`.
-- Item attachment temp cleanup → `ItemEditor.ExportAttachment.TempCleanup`.
-- Item load/open failure → `ItemEditor.Load`.
-
-The user receives fixed actionable messages; diagnostic reporting remains privacy-safe and omits raw exception message/stack/vault data by design.
+- Settings storage/backup/restore/change/delete, Transfer CSV/import/export/cache, and Item attachment/load paths use fixed UI messages and privacy-safe reporter rather than raw exception messages.
 
 ### Attachment plaintext staging hardening
 
-- Decrypted attachment export filenames now include both the attachment ID and a fresh random GUID before the sanitized display name.
-- This prevents an unresolved previous staging file from causing reuse/overwrite of the same deterministic path on a later export attempt.
-- Cleanup now handles both `IOException` and `UnauthorizedAccessException`, reports the cleanup failure through the privacy-safe reporter, and warns the user without revealing the staging path.
-- The encrypted source attachment remains unchanged on plaintext export failure.
+- Plaintext attachment export names include attachment ID plus random GUID.
+- Cleanup handles IO/access failures and reports without leaking path.
 
 ### Added source regression coverage
 
-Added or expanded:
+- Sensitive credential lifetime
+- Lifecycle fail-closed containment
+- Clipboard fingerprint-only state
+- Sensitive error-surface redaction
+- MAUI API usage
+- CI gate requirements.
 
-- `SensitiveCredentialLifetimeSourceTests`
-- `LifecycleFailClosedSourceTests`
-- `ClipboardSecuritySourceTests`
-- `SensitiveErrorSurfaceSourceTests`
-- `MauiApiSourceTests`
-- `RepositoryUiStructureTests` CI-gate requirements
-- `ClipboardSafetyPolicyTests` fingerprint matching
+### Documentation synchronized
 
-These tests complement—not replace—the existing crypto, storage, backup, migration, parser, attachment, vault, audit, lock, trash, generator, and UI-structure suites.
-
-### Documentation synchronized in this continuation
-
-Updated or added:
-
-- `docs/verification/CI_GATES.md`
-- `docs/setup/BUILD.md`
-- `docs/NEXT_STEPS.md`
-- `docs/TEST_PLAN.md`
-- `docs/RELEASE_CHECKLIST.md`
-- `docs/security/THREAT_MODEL.md`
-- `PROJECT_STATUS.md`
-- `CHANGELOG.md`
-- `README.md`
-- this `what_changed.md` continuation ledger.
+Updated CI gates, build, roadmap, test plan, release checklist, threat model, project status, changelog, README, and this ledger.
 
 ### Commits created during this continuation
 
@@ -998,20 +728,310 @@ Updated or added:
 
 ### Final source hygiene check for this continuation
 
-Immediately before this progress update, indexed repository searches returned no matches for:
-
-- `.DisplayAlert(`
-- `BiometricManager`
-- `Debug.WriteLine`
-- combined `TODO FIXME NotImplementedException` unfinished markers
-- the old raw sensitive failure strings checked for storage, backup, restore, and plaintext-export exception interpolation.
-
-These search results are a source-review signal only; they are not a substitute for compilation or tests.
+Indexed repository searches returned no `.DisplayAlert(`, `BiometricManager`, `Debug.WriteLine`, TODO/FIXME/NotImplemented unfinished markers, or selected old raw sensitive error strings at that pass.
 
 ### Verification limits retained
 
-The connected GitHub editing environment still cannot execute the newly configured hosted workflows, install/run the required .NET MAUI workloads locally, launch target emulators/simulators, use physical biometric hardware, sign packages, or perform store review. Therefore this continuation does not claim that the new Android/Apple/Windows compile gates, CodeQL build, formatting checks, or test suite have passed the final head merely because their source is configured.
+Configured workflows/tests were not executed by the connector. Platform/device/store/signing/audit gates remain external.
 
-The immediate next execution point remains the evidence step in `docs/NEXT_STEPS.md` Priority 0: run the committed verification scripts and exact GitHub checks, fix every compiler/analyzer/test/workload issue found, then continue to device security, backup/transfer compatibility, accessibility/localization, performance, dependency/license review, signed packaging, store-policy verification, and independent security review.
+## 2026-08-10 — Continuation: session-key leases, persistence and restore validation, settings normalization, attachment metadata, parser bounds, and source hardening
+
+This continuation started from the cross-platform verification/hardening head and concentrated on integrity boundaries that are easy to miss in a local encrypted vault: settings-file corruption, malformed authenticated metadata, restore/database replacement, attachment filesystem metadata, CSV parser bounds, lock-vs-I/O races, secure-note limit consistency, memory lifetime of owned buffers, and destructive-session races. The work was intentionally divided into focused commits and continues to use `Signed-off-by: Sanskar <sanskarin@outlook.in>` on connector-created commits.
+
+### Settings normalization and write durability
+
+- Added `AppPreferencesPolicy` in the Application layer as the central normalization boundary for persisted non-secret preferences.
+- Invalid `AppThemePreference`/`AppLanguagePreference` enum values normalize to `System`.
+- Security/settings ranges are normalized consistently on load and save:
+  - lock timeout: 5–3600 seconds;
+  - clipboard clear: 5–300 seconds;
+  - trash retention: 1–365 days;
+  - periodic master check: 1–168 hours;
+  - backup reminder: 1–365 days;
+  - review lead: 0–365 days;
+  - password length: 8–256;
+  - passphrase words: 6–16.
+- Password mode cannot persist with every character group disabled; lowercase is restored as a safe valid default. Passphrase mode may leave those character-group settings off because they are not used there.
+- `JsonSettingsStore` normalizes on read and write, falls back to defaults on malformed JSON, and attempts to remove a stale `.tmp` staging file without allowing cleanup failure to mask the original write result.
+- Added policy tests plus real JSON-store round-trip, malformed-JSON fallback, out-of-range normalization, and temp-file assertions.
+
+### Vault item and attachment metadata validation
+
+- Expanded `VaultItemValidator` to be defensive against runtime-null values produced by malformed JSON despite non-nullable model declarations.
+- Item validation now rejects empty item IDs, unknown item types, null/oversized strings, missing collections, invalid tags/custom fields, and existing field/count limits without relying on callers to have produced well-formed CLR objects.
+- Attachment metadata validation now checks attachment ID, display name, media type, 100 MiB plaintext bound, encrypted storage-name presence/size, and per-item uniqueness of both attachment IDs and storage names.
+- Added focused tests for field/count limits, null runtime payloads, unknown enum values, attachment metadata bounds, and duplicate attachment metadata.
+
+### Shared secure-note storage and renderer limits
+
+- Added `SafeNoteLimits` as the single policy for 200,000-character and 5,000-line secure-note bounds.
+- `SafeNoteMarkupService` parsing, checklist append, and checklist toggle use the shared constants.
+- `VaultItemValidator` applies the same character/line limits to every item save path.
+- CSV import/programmatic saves can no longer persist a note that the secure-note renderer rejects solely because an earlier path allowed a larger note.
+- Added validation coverage for both shared character and line boundaries.
+
+### Attachment plaintext-buffer and staging cleanup hardening
+
+- `EncryptedAttachmentStore` zeroes its reusable plaintext encryption buffer after each encrypted chunk and again on exit.
+- Temporary attachment-encryption staging cleanup is best-effort for I/O/access errors so a cleanup failure does not replace the original encryption failure.
+- Existing decrypted chunk buffers remain zeroed after destination writes.
+- Added source regression coverage for plaintext-buffer zeroing and non-masking temp cleanup.
+
+### Opaque attachment storage-name policy
+
+- Added `AttachmentStorageNamePolicy`.
+- Filesystem-facing encrypted attachment names must be a GUID `N` stem plus `.cna`.
+- `/` and `\` separators, wrong extensions, malformed identifiers, and other path-like values are rejected before `Path.Combine`/file access.
+- Valid names normalize to lowercase GUID `.cna` form.
+- Added unit coverage for accepted generated names and rejected malformed/separator/wrong-extension cases.
+
+### Vault-header compatibility boundary
+
+- Explicitly defined supported vault-header range: minimum version 1, current version 2.
+- New writes use current version 2.
+- Future/unknown versions and missing master-wrapper metadata are rejected before key unwrap.
+- Added integration coverage proving a future header version cannot unlock and current headers remain unlockable.
+
+### Decrypted-record identity and metadata validation
+
+- `VaultService.DecryptItem` now validates the authenticated plaintext object before returning it from Infrastructure.
+- The payload `VaultItem.Id` must equal the SQLite row ID that was authenticated as associated data.
+- The null-safe `VaultItemValidator` must report no metadata errors.
+- Invalid authenticated JSON payloads therefore fail at the infrastructure boundary instead of reaching local search/UI code and failing later with unrelated null/path errors.
+- Serialized plaintext record bytes remain zeroed in `finally` regardless of validation outcome.
+- Added source regression coverage for row-ID binding, validator use, fixed failure text, and plaintext zeroing.
+
+### Permanent item-deletion ordering
+
+- Permanent item deletion snapshots encrypted attachment storage names, removes the authenticated database record first, and only then performs best-effort encrypted attachment cleanup.
+- This avoids a database-delete failure leaving a still-present item whose attachment files were already intentionally removed.
+- Cleanup tolerates I/O/access/invalid-storage-name failures as best effort; logical database deletion remains authoritative.
+- Added source ordering tests.
+
+### Backup-header validation before Argon2
+
+- Added `BackupFormatPolicy` with explicit current format version and untrusted metadata bounds.
+- Backup restore validates:
+  - format version 2;
+  - salt 16–64 bytes;
+  - Argon2 memory 16–512 MiB;
+  - iterations 1–10;
+  - parallelism 1–16;
+  - chunk size 64 KiB–4 MiB.
+- Header validation occurs before `_crypto.DeriveKey`, preventing hostile backup metadata from requesting excessive Argon2 work before rejection.
+- Missing salt/KDF metadata is rejected as invalid backup header data.
+- Backup export staging cleanup was also changed to non-masking best-effort cleanup.
+- Added unit tests for accepted/default header parameters and a corpus of out-of-range version/salt/KDF/chunk values plus a source-order test proving validation precedes derivation.
+
+### Database migration shape validation and rollback preservation
+
+- `DatabaseMigrator` now verifies required current table/column shapes after reaching `DatabaseSchemaVersion`:
+  - `VaultHeader(Id, HeaderJson)`;
+  - `VaultItems(Id, Envelope)`;
+  - `AppSettings(Key, Value)`;
+  - `MigrationHistory(Version, AppliedUtc)`.
+- A forged `MigrationHistory` row that merely claims the current version no longer makes an incomplete database look valid.
+- Migration rollback uses `CancellationToken.None` and catches secondary SQLite/invalid-state rollback failures so the original migration exception is preserved.
+- Added integration coverage for forged current-version history with missing required tables.
+
+### Replacement database validation before active-file mutation
+
+- `SqliteVaultStore.ReplaceDatabaseAsync` validates the candidate file before removing active WAL/SHM sidecars or moving the active database.
+- Candidate validation opens the staged DB read-only and requires:
+  - `PRAGMA quick_check;` = `ok`;
+  - exact supported database schema version;
+  - required current table/column shape.
+- Invalid staged databases leave the active database untouched.
+- Added integration coverage that writes a marker header to the active vault, supplies a structurally invalid replacement, requires rejection, and verifies the active header survives.
+- If the actual replacement copy fails after the old DB was moved to `.previous`, CipherNest attempts rollback while preserving the original copy failure even if rollback-file movement also hits an I/O/access problem.
+- Added source tests for validation-before-mutation and recovery ordering.
+
+### CSV final-field column bound and parser allocation cleanup
+
+- Fixed a parser off-by-one: the final field at newline/EOF now passes through the same `AddField` maximum-column check as comma-terminated fields.
+- A row can no longer end with a 257th field and bypass the 256-column cap.
+- Added an integration test importing a 257-column data row into a real unlocked disposable vault and requiring zero imported items.
+- Reused a single one-character buffer inside `CsvParser` rather than allocating a new array for every input character.
+
+### Per-session cancellable vault key leases
+
+- Added `VaultKeyLease` to eliminate operations retaining a reference to the same mutable `_dataKey` array that `LockAsync` zeroes.
+- A lease owns a private 32-byte DEK copy, links the caller cancellation token with the current per-unlock session token, and zeroes its key on `Dispose`.
+- Invalid key material supplied to a lease is zeroed before constructor failure.
+- `VaultService` now synchronizes access to the session key and session CTS.
+- Key-sensitive operations use leases, including record reads/writes, re-authentication, secondary-wrapper changes, master-wrapper rotation, permanent deletion, and attachment import/remove/export.
+- Record persistence checks the lease token before encryption and before the database write.
+- Record reads check session cancellation while decrypting and before returning results.
+- Locking clears/zeroes the shared session DEK and cancels/disposes the active session token, while each in-flight lease remains an independent buffer that is cancelled and then zeroed on disposal.
+- Replacing an unlocked session cancels the previous session and zeroes its shared key.
+- Added source tests requiring key copies, linked cancellation, zeroing, session cancellation, and removal of the old direct `RequireKey()` pattern.
+
+### Lock cancels in-flight plaintext attachment export
+
+- Added `VaultLockCancellationIntegrationTests`.
+- The test creates an encrypted multi-chunk attachment and exports to a destination stream that deliberately blocks when plaintext writing begins.
+- After write begins, the test locks the vault.
+- The export must terminate with cancellation and the vault must report locked.
+- This is an automated concurrency invariant for the application/session boundary; target platform share-sheet behavior still requires device validation.
+
+### Serialized vault security transitions
+
+- Master/recovery unlock, secondary unlock, public lock, creation, and full-vault deletion now coordinate through the service transition semaphore.
+- A lock cannot be overtaken by a concurrently running unlock merely because the unlock's KDF/key-unwrapping work finishes later and publishes a session afterward.
+- Shared session clearing is centralized in `ClearSessionKey`, which zeroes the DEK under synchronization and cancels/disposes the current session CTS.
+- Added source tests that require the same gate in master unlock, secondary unlock, lock, and full-vault deletion.
+
+### Live-session authorization for full-vault deletion
+
+- Full-vault deletion still requires successful current-master re-authentication.
+- It then acquires a live `VaultKeyLease` before waiting on the serialized transition gate.
+- The gate wait uses that authorization lease token and checks it again before destroying the current session.
+- If an intervening lock/unlock invalidates that session while deletion is waiting, deletion is cancelled rather than proceeding under stale re-authentication from a previous security session.
+- Added source coverage requiring the live authorization lease and session-linked gate wait.
+
+### Generator temporary-array cleanup
+
+- Password generation now clears its temporary `char[]` after constructing the returned managed string.
+- Passphrase generation clears the temporary selected-word-reference array after `string.Join` creates the returned string.
+- This reduces extra application-held copies but does not claim deterministic erasure of the returned immutable .NET string.
+- Added source regression tests for both cleanup calls.
+
+### Guarded local storage/cache enumeration
+
+- Fixed a lazy-enumeration reliability issue in `StorageMaintenanceService`: `Directory.EnumerateFiles/EnumerateDirectories` could throw while iterating outside the apparent try/catch.
+- Measurement and top-level cache cleanup now materialize the relevant enumeration inside guarded blocks.
+- Reparse-point directories remain excluded from recursive traversal.
+- Added source tests requiring guarded materialization and reparse-point handling.
+
+### Tests added/expanded in this continuation
+
+Added or expanded:
+
+- `AppPreferencesPolicyTests`
+- `JsonSettingsStoreTests`
+- `VaultItemValidatorTests`
+- `AttachmentStoreSecuritySourceTests`
+- `AttachmentStorageNamePolicyTests`
+- `VaultHeaderCompatibilityIntegrationTests`
+- `VaultDeletionOrderingSourceTests`
+- `BackupFormatPolicyTests`
+- `BackupFormatSourceTests`
+- `DatabaseMigrationTests`
+- `DatabaseReplacementSourceTests`
+- `CsvColumnLimitIntegrationTests`
+- `VaultLockCancellationIntegrationTests`
+- `VaultKeyLeaseSourceTests`
+- `DecryptedRecordValidationSourceTests`
+- `GeneratorMemorySourceTests`
+- `StorageMaintenanceSourceTests`
+- `VaultSessionTransitionSourceTests`
+- existing secure-note tests plus shared note-limit validation cases.
+
+### Documentation synchronized in this continuation
+
+Updated:
+
+- `docs/security/CRYPTOGRAPHIC_DESIGN.md`
+- `docs/security/THREAT_MODEL.md`
+- `docs/architecture/DATABASE.md`
+- `docs/TEST_PLAN.md`
+- `docs/RELEASE_CHECKLIST.md`
+- `docs/NEXT_STEPS.md`
+- `PROJECT_STATUS.md`
+- `CHANGELOG.md`
+- `README.md`
+- this `what_changed.md` continuation ledger.
+
+### Commits created during this continuation
+
+- `feat(settings): add centralized preference normalization policy`
+- `fix(settings): normalize persisted preferences and clean temp writes`
+- `test(settings): cover preference normalization bounds`
+- `test(settings): cover settings round trip corruption and normalization`
+- `test(vault): cover item validation limits and collection bounds`
+- `fix(memory): zero attachment plaintext buffers after encryption`
+- `fix(attachments): keep staging cleanup from masking encryption failures`
+- `test(attachments): enforce plaintext buffer zeroing and safe cleanup`
+- `fix(vault): reject unsupported vault header versions`
+- `fix(vault): delete records before best-effort attachment cleanup`
+- `test(vault): reject unsupported future header versions`
+- `test(vault): enforce header compatibility and deletion ordering`
+- `feat(backup): add explicit untrusted header validation policy`
+- `test(backup): cover untrusted header resource bounds`
+- `fix(backup): validate untrusted header before Argon2 work`
+- `fix(backup): reference KDF parameters from application contract`
+- `test(backup): enforce header validation before key derivation`
+- `fix(database): validate migrated schema and preserve original failures`
+- `test(database): reject forged current schema history`
+- `refactor(database): expose current schema validation within infrastructure`
+- `fix(database): validate replacement vault before active-file swap`
+- `test(database): preserve active vault on invalid replacement`
+- `feat(attachments): add opaque storage filename validation policy`
+- `fix(attachments): validate opaque storage names before file access`
+- `test(attachments): reject malformed opaque storage names`
+- `fix(import): enforce CSV column bound on final field`
+- `perf(import): reuse CSV parser character buffer`
+- `test(import): reject excessive columns in data rows`
+- `feat(security): add cancellable zeroing vault key lease`
+- `fix(security): isolate vault operations with cancellable key leases`
+- `fix(memory): zero rejected vault key lease material`
+- `test(security): verify lock cancels in-flight plaintext attachment export`
+- `test(security): enforce cancellable zeroing vault key leases`
+- `test(security): use generic completion source for lock cancellation test`
+- `fix(test): import KDF contract from application namespace`
+- `feat(validation): validate attachment metadata and uniqueness`
+- `test(validation): cover attachment metadata and uniqueness rules`
+- `fix(database): preserve replacement failure during rollback attempt`
+- `test(database): enforce replacement validation and rollback ordering`
+- `fix(memory): clear generator temporary secret arrays`
+- `test(generator): enforce temporary secret-array cleanup`
+- `fix(validation): reject null and invalid decrypted item metadata safely`
+- `test(validation): cover runtime-null and invalid-enum item payloads`
+- `feat(notes): centralize secure-note size limits`
+- `refactor(notes): use shared secure-note limits`
+- `fix(validation): align stored note limits with safe preview bounds`
+- `test(notes): align vault validation with shared note limits`
+- `fix(test): use unambiguous string separator in note limit test`
+- `fix(vault): validate decrypted record identity and metadata`
+- `test(vault): enforce decrypted record validation boundary`
+- `fix(storage): guard lazy directory enumeration failures`
+- `test(storage): enforce guarded directory enumeration`
+- `docs(testing): add settings database key-lease and validation gates`
+- `docs(security): document key leases restore validation and metadata bounds`
+- `docs(database): document schema-shape and replacement validation boundaries`
+- `docs(release): add restore key-lease settings and metadata gates`
+- `docs(roadmap): add latest persistence key-lease and validation follow-ups`
+- `docs(status): record persistence session and metadata hardening`
+- `fix(security): serialize vault lock unlock and deletion transitions`
+- `test(security): enforce serialized vault session transitions`
+- `fix(security): require live session while vault deletion waits for gate`
+- `test(security): require live-session authorization for vault deletion`
+- `docs(changelog): record persistence session and parser hardening`
+- `docs(readme): reflect key leases restore validation and settings hardening`
+- `docs(security): update cryptographic design for key leases and restore validation`
+- `docs(status): add serialized session transitions and live deletion authorization`
+- `docs(testing): add serialized session transition race gates`
+- `docs(release): add session transition and stale-authorization gates`
+- this progress-file update.
+
+### Final indexed source hygiene check
+
+Immediately before this progress update, indexed repository searches returned no matches for:
+
+- `TODO FIXME NotImplementedException`
+- raw `ex.Message`
+- legacy `.DisplayAlert(`
+- `BiometricManager`
+- the removed direct `RequireKey()` pattern.
+
+These searches are source-review signals only and do not prove compilation, execution, or platform behavior.
+
+### Verification limits retained
+
+The GitHub connector used for this work can inspect/write repository content but cannot execute the .NET 10/MAUI workloads, run the direct-push GitHub Actions jobs as a local substitute, launch Android/iOS/macOS/Windows target environments, exercise real biometric/clipboard/screenshot/lifecycle behavior, sign packages, or perform store review.
+
+Accordingly this continuation does **not** claim that the newly added settings tests, backup-header tests, schema/replacement tests, vault-header tests, key-lease cancellation tests, session-transition source tests, attachment-name/metadata tests, CSV bound tests, note-limit tests, storage source tests, or the configured CI jobs have passed the final head merely because their source is present.
+
+The immediate next execution point remains evidence collection from `docs/NEXT_STEPS.md` Priority 0 and `docs/verification/CI_GATES.md`: execute clean core/platform verification, fix every resulting compiler/analyzer/test/workload issue, then continue through transition-race/device-security validation, backup/restore/database-replacement compatibility, transfer behavior, accessibility/localization, performance, dependency/license review, signed packaging, store-policy checks, and independent security review.
 
 No signing credential, store credential, API secret, private key, vault secret, recovery material, or production analytics/crash token was added to source control during this continuation.
