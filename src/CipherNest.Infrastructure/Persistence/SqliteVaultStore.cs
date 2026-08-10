@@ -1,4 +1,5 @@
 using CipherNest.Application.Abstractions;
+using CipherNest.Shared;
 using Microsoft.Data.Sqlite;
 
 namespace CipherNest.Infrastructure.Persistence;
@@ -63,10 +64,20 @@ public sealed class SqliteVaultStore : IVaultStore
         try
         {
             await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+            await ValidateStoredItemSetBoundsAsync(connection, cancellationToken).ConfigureAwait(false);
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT Id, Envelope FROM VaultItems ORDER BY Id;";
+            command.CommandText = "SELECT Id, Envelope, length(Envelope) FROM VaultItems ORDER BY Id;";
             await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false)) items.Add(new StoredVaultItem(Guid.Parse(reader.GetString(0)), (byte[])reader[1]));
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var idText = reader.GetString(0);
+                if (!Guid.TryParse(idText, out var id) || id == Guid.Empty) throw new InvalidDataException("Stored vault item identifier is invalid.");
+                var envelopeLength = reader.GetInt64(2);
+                if (envelopeLength is < 1 or > VaultStorageLimits.MaximumStoredEnvelopeBytes) throw new InvalidDataException("Stored vault item envelope exceeds the supported size limit.");
+                var envelope = (byte[])reader[1];
+                if (envelope.LongLength != envelopeLength) throw new InvalidDataException("Stored vault item envelope length is inconsistent.");
+                items.Add(new StoredVaultItem(id, envelope));
+            }
         }
         finally { _gate.Release(); }
         return items;
@@ -185,6 +196,18 @@ public sealed class SqliteVaultStore : IVaultStore
         {
             throw new InvalidDataException("Replacement vault database is not a valid supported CipherNest database.", ex);
         }
+    }
+
+    private static async Task ValidateStoredItemSetBoundsAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*), COALESCE(SUM(length(Envelope)), 0) FROM VaultItems;";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false)) throw new InvalidDataException("Vault item storage metadata is unavailable.");
+        var count = reader.GetInt64(0);
+        var totalBytes = reader.GetInt64(1);
+        if (count < 0 || count > VaultStorageLimits.MaximumItemCount) throw new InvalidDataException("Vault contains more encrypted records than this build supports safely.");
+        if (totalBytes < 0 || totalBytes > VaultStorageLimits.MaximumStoredEnvelopeBytesTotal) throw new InvalidDataException("Vault encrypted record storage exceeds the supported aggregate size limit.");
     }
 
     private RecoveryFileSet CreateRecoveryFileSet()
