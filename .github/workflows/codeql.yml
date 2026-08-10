@@ -16,9 +16,14 @@ permissions:
 env:
   DOTNET_NOLOGO: true
 
+concurrency:
+  group: ciphernest-codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: github/codeql-action/init@v3
