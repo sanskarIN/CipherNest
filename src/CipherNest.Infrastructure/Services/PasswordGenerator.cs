@@ -55,11 +55,18 @@ public sealed class PasswordGenerator : IPasswordGenerator
         if (options.Length < sets.Count) throw new ArgumentException("Length is too short for the selected character groups.", nameof(options));
         var pool = string.Concat(sets);
         var chars = new char[options.Length];
-        var index = 0;
-        foreach (var set in sets) chars[index++] = set[RandomNumberGenerator.GetInt32(set.Length)];
-        while (index < chars.Length) chars[index++] = pool[RandomNumberGenerator.GetInt32(pool.Length)];
-        for (var i = chars.Length - 1; i > 0; i--) { var j = RandomNumberGenerator.GetInt32(i + 1); (chars[i], chars[j]) = (chars[j], chars[i]); }
-        return new string(chars);
+        try
+        {
+            var index = 0;
+            foreach (var set in sets) chars[index++] = set[RandomNumberGenerator.GetInt32(set.Length)];
+            while (index < chars.Length) chars[index++] = pool[RandomNumberGenerator.GetInt32(pool.Length)];
+            for (var i = chars.Length - 1; i > 0; i--) { var j = RandomNumberGenerator.GetInt32(i + 1); (chars[i], chars[j]) = (chars[j], chars[i]); }
+            return new string(chars);
+        }
+        finally
+        {
+            Array.Clear(chars);
+        }
     }
 
     private static string GeneratePassphrase(GeneratorOptions options)
@@ -67,8 +74,15 @@ public sealed class PasswordGenerator : IPasswordGenerator
         if (options.WordCount is < 6 or > 16) throw new ArgumentOutOfRangeException(nameof(options), "Passphrase word count must be between 6 and 16. Eight or more words are recommended for high-value vault secrets.");
         if (options.Separator.Length > 4 || options.Separator.Any(char.IsControl)) throw new ArgumentException("Passphrase separator is invalid.", nameof(options));
         var words = new string[options.WordCount];
-        for (var i = 0; i < words.Length; i++) words[i] = PassphraseWordList.Words[RandomNumberGenerator.GetInt32(PassphraseWordList.Words.Count)];
-        return string.Join(options.Separator, words);
+        try
+        {
+            for (var i = 0; i < words.Length; i++) words[i] = PassphraseWordList.Words[RandomNumberGenerator.GetInt32(PassphraseWordList.Words.Count)];
+            return string.Join(options.Separator, words);
+        }
+        finally
+        {
+            Array.Clear(words);
+        }
     }
 
     private static string Filter(string source, bool excludeAmbiguous) => excludeAmbiguous ? new string(source.Where(c => !Ambiguous.Contains(c)).ToArray()) : source;
