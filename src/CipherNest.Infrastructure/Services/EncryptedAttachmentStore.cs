@@ -57,7 +57,7 @@ public sealed class EncryptedAttachmentStore
         finally
         {
             CryptographicOperations.ZeroMemory(buffer);
-            if (File.Exists(tempPath)) File.Delete(tempPath);
+            TryDeleteFile(tempPath);
         }
     }
 
@@ -135,6 +135,20 @@ public sealed class EncryptedAttachmentStore
             var read = await stream.ReadAsync(buffer[total..], cancellationToken).ConfigureAwait(false);
             if (read == 0) throw new EndOfStreamException("Attachment ended unexpectedly.");
             total += read;
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 }
