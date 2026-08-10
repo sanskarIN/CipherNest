@@ -22,7 +22,7 @@ internal static class DatabaseMigrator
         ArgumentNullException.ThrowIfNull(connection);
         await ExecuteAsync(connection, "CREATE TABLE IF NOT EXISTS MigrationHistory (Version INTEGER PRIMARY KEY, AppliedUtc TEXT NOT NULL);", cancellationToken).ConfigureAwait(false);
 
-        var current = await GetCurrentVersionAsync(connection, cancellationToken).ConfigureAwait(false);
+        var current = await ValidateMigrationHistoryAsync(connection, cancellationToken).ConfigureAwait(false);
         if (current > AppConstants.DatabaseSchemaVersion)
             throw new InvalidDataException($"Vault database schema version {current} is newer than this CipherNest build supports ({AppConstants.DatabaseSchemaVersion}).");
 
@@ -57,7 +57,7 @@ internal static class DatabaseMigrator
             }
         }
 
-        var finalVersion = await GetCurrentVersionAsync(connection, cancellationToken).ConfigureAwait(false);
+        var finalVersion = await ValidateMigrationHistoryAsync(connection, cancellationToken).ConfigureAwait(false);
         if (finalVersion != AppConstants.DatabaseSchemaVersion)
             throw new InvalidDataException($"Vault database migration stopped at version {finalVersion}; expected {AppConstants.DatabaseSchemaVersion}.");
 
@@ -69,7 +69,7 @@ internal static class DatabaseMigrator
         ArgumentNullException.ThrowIfNull(connection);
         try
         {
-            var version = await GetCurrentVersionAsync(connection, cancellationToken).ConfigureAwait(false);
+            var version = await ValidateMigrationHistoryAsync(connection, cancellationToken).ConfigureAwait(false);
             if (version != AppConstants.DatabaseSchemaVersion)
                 throw new InvalidDataException($"Vault database schema version {version} does not match the supported version {AppConstants.DatabaseSchemaVersion}.");
 
@@ -84,12 +84,28 @@ internal static class DatabaseMigrator
         }
     }
 
-    private static async Task<int> GetCurrentVersionAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    private static async Task<int> ValidateMigrationHistoryAsync(SqliteConnection connection, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM MigrationHistory;";
-        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-        return Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
+        command.CommandText = "SELECT Version, AppliedUtc FROM MigrationHistory ORDER BY Version;";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+
+        var expectedVersion = 1;
+        var currentVersion = 0;
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var version = reader.GetInt32(0);
+            var appliedUtc = reader.GetString(1);
+            if (version != expectedVersion)
+                throw new InvalidDataException("Vault database migration history is invalid or non-contiguous.");
+            if (!DateTimeOffset.TryParse(appliedUtc, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out _))
+                throw new InvalidDataException("Vault database migration history contains an invalid timestamp.");
+
+            currentVersion = version;
+            expectedVersion = checked(expectedVersion + 1);
+        }
+
+        return currentVersion;
     }
 
     private static async Task ValidateShapeAsync(SqliteConnection connection, string sql, CancellationToken cancellationToken)
