@@ -1,3 +1,4 @@
+using System.Text;
 using CipherNest.Application.Abstractions;
 using CipherNest.Shared;
 using Microsoft.Data.Sqlite;
@@ -36,8 +37,14 @@ public sealed class SqliteVaultStore : IVaultStore
             if (!File.Exists(DatabasePath)) return null;
             await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT HeaderJson FROM VaultHeader WHERE Id = 1;";
-            return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+            command.CommandText = "SELECT length(CAST(HeaderJson AS BLOB)), HeaderJson FROM VaultHeader WHERE Id = 1;";
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false)) return null;
+            var byteLength = reader.GetInt64(0);
+            if (byteLength is < 1 or > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes) throw new InvalidDataException("Vault header exceeds the supported size limit.");
+            var headerJson = reader.GetString(1);
+            if (Encoding.UTF8.GetByteCount(headerJson) != byteLength) throw new InvalidDataException("Vault header length is inconsistent.");
+            return headerJson;
         }
         finally { _gate.Release(); }
     }
@@ -45,6 +52,8 @@ public sealed class SqliteVaultStore : IVaultStore
     public async Task WriteHeaderAsync(string headerJson, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(headerJson);
+        if (Encoding.UTF8.GetByteCount(headerJson) > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes)
+            throw new ArgumentException("Vault header exceeds the supported size limit.", nameof(headerJson));
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
