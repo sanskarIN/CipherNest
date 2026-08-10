@@ -13,6 +13,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     private readonly IClipboardSecurityService _clipboard;
     private readonly ISettingsStore _settings;
     private readonly ISafeNoteMarkupService _noteMarkup;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
     private VaultItem? _existing;
 
     public IReadOnlyList<VaultItemType> Types { get; } = Enum.GetValues<VaultItemType>();
@@ -40,12 +41,13 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty] private bool isExisting;
 
-    public ItemEditorViewModel(IVaultService vault, IClipboardSecurityService clipboard, ISettingsStore settings, ISafeNoteMarkupService noteMarkup)
+    public ItemEditorViewModel(IVaultService vault, IClipboardSecurityService clipboard, ISettingsStore settings, ISafeNoteMarkupService noteMarkup, IPrivacySafeExceptionReporter exceptions)
     {
         _vault = vault;
         _clipboard = clipboard;
         _settings = settings;
         _noteMarkup = noteMarkup;
+        _exceptions = exceptions;
     }
 
     partial void OnNotesChanged(string value) => RefreshNotePreview(value);
@@ -146,7 +148,11 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             var attachment = await _vault.AddAttachmentAsync(_existing.Id, stream, result.FileName, mediaType);
             Attachments.Add(attachment); _existing = await _vault.GetItemAsync(_existing.Id); ErrorMessage = string.Empty;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException) { ErrorMessage = $"Attachment was not added: {ex.Message}"; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException)
+        {
+            _exceptions.Report("ItemEditor.AddAttachment", ex);
+            ErrorMessage = "Attachment was not added safely. Check file access, size, and supported metadata, then try again.";
+        }
         finally { IsBusy = false; }
     }
 
@@ -161,7 +167,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         Directory.CreateDirectory(exportRoot);
         var safeName = Path.GetFileName(attachment.DisplayName);
         if (string.IsNullOrWhiteSpace(safeName)) safeName = $"attachment-{attachment.Id:N}";
-        var path = Path.Combine(exportRoot, $"{attachment.Id:N}-{safeName}");
+        var path = Path.Combine(exportRoot, $"{attachment.Id:N}-{Guid.NewGuid():N}-{safeName}");
         IsBusy = true;
         try
         {
@@ -172,12 +178,17 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException)
         {
-            ErrorMessage = $"Attachment export failed: {ex.Message}";
+            _exceptions.Report("ItemEditor.ExportAttachment", ex);
+            ErrorMessage = "Attachment export failed safely. The encrypted source attachment remains unchanged.";
         }
         finally
         {
             try { if (File.Exists(path)) File.Delete(path); }
-            catch (IOException) { ErrorMessage = "Export finished, but CipherNest could not confirm deletion of the temporary plaintext file. Clear the app cache before continuing with sensitive work."; }
+            catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+            {
+                _exceptions.Report("ItemEditor.ExportAttachment.TempCleanup", cleanupException);
+                ErrorMessage = "Export finished, but CipherNest could not confirm deletion of the temporary plaintext file. Clear the app cache before continuing with sensitive work.";
+            }
             IsBusy = false;
         }
     }
@@ -216,7 +227,11 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             }
             Populate(_existing);
         }
-        catch (Exception ex) { ErrorMessage = $"Could not open this item: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.Load", ex);
+            ErrorMessage = "Could not open this item safely. The vault remains protected; return to the vault and try again.";
+        }
     }
 
     private void Populate(VaultItem item)
