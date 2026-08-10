@@ -20,6 +20,7 @@ public sealed class VaultService : IVaultService, IDisposable
     private readonly EncryptedAttachmentStore _attachments;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly SemaphoreSlim _attachmentMutationGate = new(1, 1);
+    private readonly SemaphoreSlim _itemMutationGate = new(1, 1);
     private readonly object _keySync = new();
     private byte[]? _dataKey;
     private CancellationTokenSource? _sessionCancellation;
@@ -28,7 +29,7 @@ public sealed class VaultService : IVaultService, IDisposable
     {
         _store = store; _crypto = crypto; _clock = clock;
         var root = Path.GetDirectoryName(store.DatabasePath) ?? throw new InvalidOperationException("Vault data directory is unavailable.");
-        _attachments = new EncryptedAttachmentStore(Path.Combine(root, "attachments"), crypto);
+        _attachments = new EncryptedAttachmentStore(Path.Combine(root, AppConstants.AttachmentDirectoryName), crypto);
     }
 
     public bool IsUnlocked
@@ -181,7 +182,7 @@ public sealed class VaultService : IVaultService, IDisposable
             authorizationLease.Token.ThrowIfCancellationRequested();
             ClearSessionKey();
             sessionCleared = true;
-            var attachmentRoot = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, "attachments");
+            var attachmentRoot = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, AppConstants.AttachmentDirectoryName);
             await _store.DeleteDatabaseAsync(CancellationToken.None).ConfigureAwait(false);
             if (Directory.Exists(attachmentRoot)) Directory.Delete(attachmentRoot, recursive: true);
         }
@@ -204,34 +205,55 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task<IReadOnlyList<VaultItem>> GetItemsAsync(bool includeTrash = false, CancellationToken cancellationToken = default)
     {
         using var lease = AcquireKeyLease(cancellationToken);
-        var stored = await _store.ReadAllItemsAsync(lease.Token).ConfigureAwait(false);
-        var result = new List<VaultItem>(stored.Count);
-        foreach (var row in stored)
-        {
-            lease.Token.ThrowIfCancellationRequested();
-            var item = DecryptItem(row, lease.Key);
-            if (includeTrash || item.DeletedUtc is null) result.Add(item);
-        }
-        lease.Token.ThrowIfCancellationRequested();
-        return result.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
+        return await GetItemsWithLeaseAsync(includeTrash, lease, lease.Token).ConfigureAwait(false);
     }
 
     public async Task<VaultItem?> GetItemAsync(Guid id, CancellationToken cancellationToken = default) => (await GetItemsAsync(true, cancellationToken).ConfigureAwait(false)).FirstOrDefault(x => x.Id == id);
 
     public async Task SaveItemAsync(VaultItem item, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(item); var errors = VaultItemValidator.Validate(item); if (errors.Count > 0) throw new ArgumentException(string.Join(" ", errors), nameof(item));
-        await PersistItemAsync(item.Normalize(_clock.UtcNow), cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(item);
+        using var lease = AcquireKeyLease(cancellationToken);
+        await _itemMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+        try { await SaveItemCoreAsync(item, lease, lease.Token).ConfigureAwait(false); }
+        finally { _itemMutationGate.Release(); }
     }
 
     public async Task MarkAccessedAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var item = await GetItemRequiredAsync(id, cancellationToken).ConfigureAwait(false);
-        await PersistItemAsync(item with { LastAccessedUtc = _clock.UtcNow }, cancellationToken).ConfigureAwait(false);
+        using var lease = AcquireKeyLease(cancellationToken);
+        await _itemMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+        try
+        {
+            var item = await GetItemRequiredWithLeaseAsync(id, lease, lease.Token).ConfigureAwait(false);
+            await PersistItemWithLeaseAsync(item with { LastAccessedUtc = _clock.UtcNow }, lease, lease.Token).ConfigureAwait(false);
+        }
+        finally { _itemMutationGate.Release(); }
     }
 
-    public async Task MoveToTrashAsync(Guid id, CancellationToken cancellationToken = default) { var item = await GetItemRequiredAsync(id, cancellationToken).ConfigureAwait(false); await SaveItemAsync(item with { DeletedUtc = _clock.UtcNow }, cancellationToken).ConfigureAwait(false); }
-    public async Task RestoreFromTrashAsync(Guid id, CancellationToken cancellationToken = default) { var item = await GetItemRequiredAsync(id, cancellationToken).ConfigureAwait(false); await SaveItemAsync(item with { DeletedUtc = null }, cancellationToken).ConfigureAwait(false); }
+    public async Task MoveToTrashAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var lease = AcquireKeyLease(cancellationToken);
+        await _itemMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+        try
+        {
+            var item = await GetItemRequiredWithLeaseAsync(id, lease, lease.Token).ConfigureAwait(false);
+            await SaveItemCoreAsync(item with { DeletedUtc = _clock.UtcNow }, lease, lease.Token).ConfigureAwait(false);
+        }
+        finally { _itemMutationGate.Release(); }
+    }
+
+    public async Task RestoreFromTrashAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var lease = AcquireKeyLease(cancellationToken);
+        await _itemMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+        try
+        {
+            var item = await GetItemRequiredWithLeaseAsync(id, lease, lease.Token).ConfigureAwait(false);
+            await SaveItemCoreAsync(item with { DeletedUtc = null }, lease, lease.Token).ConfigureAwait(false);
+        }
+        finally { _itemMutationGate.Release(); }
+    }
 
     public async Task DeletePermanentlyAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -239,10 +261,15 @@ public sealed class VaultService : IVaultService, IDisposable
         await _attachmentMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
         try
         {
-            var item = await GetItemRequiredAsync(id, lease.Token).ConfigureAwait(false);
-            var attachmentFiles = item.Attachments.Select(static attachment => attachment.EncryptedFileName).ToArray();
-            await _store.DeleteItemAsync(id, lease.Token).ConfigureAwait(false);
-            foreach (var attachmentFile in attachmentFiles) TryDeleteAttachment(attachmentFile);
+            await _itemMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+            try
+            {
+                var item = await GetItemRequiredWithLeaseAsync(id, lease, lease.Token).ConfigureAwait(false);
+                var attachmentFiles = item.Attachments.Select(static attachment => attachment.EncryptedFileName).ToArray();
+                await _store.DeleteItemAsync(id, lease.Token).ConfigureAwait(false);
+                foreach (var attachmentFile in attachmentFiles) TryDeleteAttachment(attachmentFile);
+            }
+            finally { _itemMutationGate.Release(); }
         }
         finally { _attachmentMutationGate.Release(); }
     }
@@ -262,13 +289,30 @@ public sealed class VaultService : IVaultService, IDisposable
         await _attachmentMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
         try
         {
-            var items = await GetItemsAsync(true, lease.Token).ConfigureAwait(false);
-            var item = items.FirstOrDefault(candidate => candidate.Id == itemId) ?? throw new KeyNotFoundException("The requested vault item does not exist.");
-            if (items.Sum(static candidate => candidate.Attachments.Count) >= VaultStorageLimits.MaximumAttachmentCountTotal)
-                throw new InvalidOperationException("Vault has reached the supported total attachment limit.");
-            if (item.Attachments.Count >= 25) throw new InvalidOperationException("An item can have at most 25 attachments.");
-            var attachmentId = Guid.NewGuid(); var opaque = _attachments.GetOpaqueFileName(attachmentId); var length = await _attachments.EncryptAsync(itemId, attachmentId, source, opaque, lease.Key, lease.Token).ConfigureAwait(false); var reference = new AttachmentReference(attachmentId, normalizedDisplayName, normalizedMediaType, length, opaque, _clock.UtcNow);
-            try { await SaveItemAsync(item with { Attachments = item.Attachments.Append(reference).ToArray() }, lease.Token).ConfigureAwait(false); return reference; } catch { TryDeleteAttachment(opaque); throw; }
+            await _itemMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+            try
+            {
+                var items = await GetItemsWithLeaseAsync(true, lease, lease.Token).ConfigureAwait(false);
+                var item = items.FirstOrDefault(candidate => candidate.Id == itemId) ?? throw new KeyNotFoundException("The requested vault item does not exist.");
+                if (items.Sum(static candidate => candidate.Attachments.Count) >= VaultStorageLimits.MaximumAttachmentCountTotal)
+                    throw new InvalidOperationException("Vault has reached the supported total attachment limit.");
+                if (item.Attachments.Count >= 25) throw new InvalidOperationException("An item can have at most 25 attachments.");
+                var attachmentId = Guid.NewGuid();
+                var opaque = _attachments.GetOpaqueFileName(attachmentId);
+                var length = await _attachments.EncryptAsync(itemId, attachmentId, source, opaque, lease.Key, lease.Token).ConfigureAwait(false);
+                var reference = new AttachmentReference(attachmentId, normalizedDisplayName, normalizedMediaType, length, opaque, _clock.UtcNow);
+                try
+                {
+                    await SaveItemCoreAsync(item with { Attachments = item.Attachments.Append(reference).ToArray() }, lease, lease.Token).ConfigureAwait(false);
+                    return reference;
+                }
+                catch
+                {
+                    TryDeleteAttachment(opaque);
+                    throw;
+                }
+            }
+            finally { _itemMutationGate.Release(); }
         }
         finally { _attachmentMutationGate.Release(); }
     }
@@ -279,10 +323,15 @@ public sealed class VaultService : IVaultService, IDisposable
         await _attachmentMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
         try
         {
-            var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false);
-            var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist.");
-            await SaveItemAsync(item with { Attachments = item.Attachments.Where(a => a.Id != attachmentId).ToArray() }, lease.Token).ConfigureAwait(false);
-            TryDeleteAttachment(reference.EncryptedFileName);
+            await _itemMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+            try
+            {
+                var item = await GetItemRequiredWithLeaseAsync(itemId, lease, lease.Token).ConfigureAwait(false);
+                var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist.");
+                await SaveItemCoreAsync(item with { Attachments = item.Attachments.Where(a => a.Id != attachmentId).ToArray() }, lease, lease.Token).ConfigureAwait(false);
+                TryDeleteAttachment(reference.EncryptedFileName);
+            }
+            finally { _itemMutationGate.Release(); }
         }
         finally { _attachmentMutationGate.Release(); }
     }
@@ -291,12 +340,15 @@ public sealed class VaultService : IVaultService, IDisposable
     {
         ArgumentNullException.ThrowIfNull(destination); if (!destination.CanWrite) throw new ArgumentException("Destination stream must be writable.", nameof(destination));
         using var lease = AcquireKeyLease(cancellationToken);
-        var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false); var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist."); await _attachments.DecryptToAsync(itemId, attachmentId, reference.EncryptedFileName, reference.PlaintextLength, destination, lease.Key, lease.Token).ConfigureAwait(false);
+        var item = await GetItemRequiredWithLeaseAsync(itemId, lease, lease.Token).ConfigureAwait(false);
+        var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist.");
+        await _attachments.DecryptToAsync(itemId, attachmentId, reference.EncryptedFileName, reference.PlaintextLength, destination, lease.Key, lease.Token).ConfigureAwait(false);
     }
 
     public void Dispose()
     {
         ClearSessionKey();
+        _itemMutationGate.Dispose();
         _attachmentMutationGate.Dispose();
         _gate.Dispose();
     }
@@ -310,19 +362,43 @@ public sealed class VaultService : IVaultService, IDisposable
         }
     }
 
-    private async Task PersistItemAsync(VaultItem item, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<VaultItem>> GetItemsWithLeaseAsync(bool includeTrash, VaultKeyLease lease, CancellationToken cancellationToken)
     {
-        using var lease = AcquireKeyLease(cancellationToken);
+        var stored = await _store.ReadAllItemsAsync(cancellationToken).ConfigureAwait(false);
+        var result = new List<VaultItem>(stored.Count);
+        foreach (var row in stored)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var item = DecryptItem(row, lease.Key);
+            if (includeTrash || item.DeletedUtc is null) result.Add(item);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
+    }
+
+    private async Task<VaultItem> GetItemRequiredWithLeaseAsync(Guid id, VaultKeyLease lease, CancellationToken cancellationToken) =>
+        (await GetItemsWithLeaseAsync(true, lease, cancellationToken).ConfigureAwait(false)).FirstOrDefault(x => x.Id == id)
+        ?? throw new KeyNotFoundException("The requested vault item does not exist.");
+
+    private async Task SaveItemCoreAsync(VaultItem item, VaultKeyLease lease, CancellationToken cancellationToken)
+    {
+        var errors = VaultItemValidator.Validate(item);
+        if (errors.Count > 0) throw new ArgumentException(string.Join(" ", errors), nameof(item));
+        await PersistItemWithLeaseAsync(item.Normalize(_clock.UtcNow), lease, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task PersistItemWithLeaseAsync(VaultItem item, VaultKeyLease lease, CancellationToken cancellationToken)
+    {
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(item, JsonOptions);
         try
         {
             if (plaintext.Length > VaultStorageLimits.MaximumItemPlaintextJsonBytes) throw new InvalidOperationException("Vault item exceeds the supported serialized size limit.");
-            lease.Token.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
             var envelope = _crypto.Encrypt(plaintext, lease.Key, item.Id.ToByteArray());
-            lease.Token.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
             var storedEnvelope = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions);
             if (storedEnvelope.Length > VaultStorageLimits.MaximumStoredEnvelopeBytes) throw new InvalidOperationException("Encrypted vault item exceeds the supported storage size limit.");
-            await _store.UpsertItemAsync(new StoredVaultItem(item.Id, storedEnvelope), lease.Token).ConfigureAwait(false);
+            await _store.UpsertItemAsync(new StoredVaultItem(item.Id, storedEnvelope), cancellationToken).ConfigureAwait(false);
         }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
     }
@@ -347,8 +423,6 @@ public sealed class VaultService : IVaultService, IDisposable
             CryptographicOperations.ZeroMemory(plaintext);
         }
     }
-
-    private async Task<VaultItem> GetItemRequiredAsync(Guid id, CancellationToken cancellationToken) => await GetItemAsync(id, cancellationToken).ConfigureAwait(false) ?? throw new KeyNotFoundException("The requested vault item does not exist.");
 
     private async Task<VaultHeaderDocument> ReadHeaderAsync(CancellationToken cancellationToken)
     {
