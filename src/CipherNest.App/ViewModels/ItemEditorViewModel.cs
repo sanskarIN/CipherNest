@@ -66,12 +66,13 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         IsBusy = true;
         try
         {
-            if (!await _vault.ReauthenticateAsync(ReauthenticationPassphrase))
+            var authenticated = await _vault.ReauthenticateAsync(ReauthenticationPassphrase);
+            ReauthenticationPassphrase = string.Empty;
+            if (!authenticated)
             {
                 ErrorMessage = "Master-passphrase confirmation failed. Recovery keys do not satisfy per-item re-authentication.";
                 return;
             }
-            ReauthenticationPassphrase = string.Empty;
             IsReauthenticationRequired = false;
             if (_existing is not null) Populate(_existing);
             ErrorMessage = string.Empty;
