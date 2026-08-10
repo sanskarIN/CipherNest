@@ -40,6 +40,7 @@ public sealed class EncryptedAttachmentStore
             int read;
             while ((read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
             {
+                AttachmentFormatPolicy.ValidateChunkIndex(chunkIndex);
                 total += read;
                 if (total > MaximumPlaintextBytes) throw new InvalidDataException("Attachment exceeds the 100 MB safety limit.");
                 var aad = BuildAad(itemId, attachmentId, chunkIndex);
@@ -76,6 +77,7 @@ public sealed class EncryptedAttachmentStore
         {
             var plainLength = await ReadInt32Async(input, cancellationToken).ConfigureAwait(false);
             if (plainLength == -1) break;
+            AttachmentFormatPolicy.ValidateChunkIndex(chunkIndex);
             if (plainLength is < 1 or > ChunkSize) throw new InvalidDataException("Attachment chunk is invalid.");
             var nonce = new byte[12];
             var tag = new byte[16];
