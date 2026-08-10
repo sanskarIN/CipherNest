@@ -53,7 +53,7 @@ public sealed class BackupPathPolicyTests : IDisposable
 
         Assert.Equal(Path.GetDirectoryName(Path.GetFullPath(destination)), Path.GetDirectoryName(first));
         Assert.NotEqual(first, second);
-        Assert.EndsWith(".tmp", first, StringComparison.OrdinalIgnoreCase);
+        Assert.True(first.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase));
     }
 
     public void Dispose()
