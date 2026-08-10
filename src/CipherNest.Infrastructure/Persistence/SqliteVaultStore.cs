@@ -288,15 +288,19 @@ public sealed class SqliteVaultStore : IVaultStore
     {
         try
         {
-            TryDeleteFile(DatabasePath + "-wal");
-            TryDeleteFile(DatabasePath + "-shm");
-            TryDeleteFile(DatabasePath);
-            MoveIfExists(recovery.DatabasePath, DatabasePath, overwrite: true);
-            MoveIfExists(recovery.WalPath, DatabasePath + "-wal", overwrite: true);
-            MoveIfExists(recovery.ShmPath, DatabasePath + "-shm", overwrite: true);
+            RestoreRecoveryComponent(recovery.DatabasePath, DatabasePath);
+            RestoreRecoveryComponent(recovery.WalPath, DatabasePath + "-wal");
+            RestoreRecoveryComponent(recovery.ShmPath, DatabasePath + "-shm");
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
+    }
+
+    private static void RestoreRecoveryComponent(string recoveryPath, string activePath)
+    {
+        if (!File.Exists(recoveryPath)) return;
+        TryDeleteFile(activePath);
+        File.Move(recoveryPath, activePath, overwrite: true);
     }
 
     private static void TryDeleteRecoveryFileSet(RecoveryFileSet recovery)
