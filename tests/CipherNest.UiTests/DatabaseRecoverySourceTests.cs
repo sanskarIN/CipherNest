@@ -16,6 +16,19 @@ public sealed class DatabaseRecoverySourceTests
         Assert.Contains("ValidateStoredVaultResourceBoundsAsync", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SnapshotCreation_ProtectsActiveSqliteAndRecoveryDestinations()
+    {
+        var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Persistence", "SqliteVaultStore.cs"));
+
+        Assert.Contains("ValidateSnapshotDestination(destinationPath)", source, StringComparison.Ordinal);
+        Assert.Contains("DatabasePath + \"-wal\"", source, StringComparison.Ordinal);
+        Assert.Contains("DatabasePath + \"-shm\"", source, StringComparison.Ordinal);
+        Assert.Contains("Path.GetFileName(DatabasePath) + \".previous\"", source, StringComparison.Ordinal);
+        Assert.Contains("Snapshot destination already exists.", source, StringComparison.Ordinal);
+        Assert.Contains("TryDeleteFile(destinationPath)", source, StringComparison.Ordinal);
+    }
+
     private static string PathAt(params string[] segments)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
