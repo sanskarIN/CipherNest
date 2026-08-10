@@ -125,6 +125,7 @@ public sealed class SqliteVaultStore : IVaultStore
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            await ValidateReplacementDatabaseAsync(sourceDatabasePath, cancellationToken).ConfigureAwait(false);
             DeleteSidecars();
             var backupPath = DatabasePath + ".previous";
             if (File.Exists(backupPath)) File.Delete(backupPath);
@@ -147,6 +148,35 @@ public sealed class SqliteVaultStore : IVaultStore
             if (File.Exists(previous)) File.Delete(previous);
         }
         finally { _gate.Release(); }
+    }
+
+    private static async Task ValidateReplacementDatabaseAsync(string sourceDatabasePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = sourceDatabasePath,
+                Mode = SqliteOpenMode.ReadOnly,
+                Cache = SqliteCacheMode.Private
+            }.ToString();
+            await using var connection = new SqliteConnection(connectionString);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+            await using (var quickCheck = connection.CreateCommand())
+            {
+                quickCheck.CommandText = "PRAGMA quick_check;";
+                var result = await quickCheck.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+                if (!string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Replacement vault database failed SQLite integrity validation.");
+            }
+
+            await DatabaseMigrator.ValidateCurrentSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
+        }
+        catch (SqliteException ex)
+        {
+            throw new InvalidDataException("Replacement vault database is not a valid supported CipherNest database.", ex);
+        }
     }
 
     private void DeleteSidecars()
