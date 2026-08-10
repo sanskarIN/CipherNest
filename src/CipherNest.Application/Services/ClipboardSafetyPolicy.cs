@@ -15,12 +15,6 @@ public static class ClipboardSafetyPolicy
         return requested < minimum ? minimum : requested > maximum ? maximum : requested;
     }
 
-    public static bool ShouldClear(string expectedValue, string? currentValue)
-    {
-        ArgumentNullException.ThrowIfNull(expectedValue);
-        return string.Equals(expectedValue, currentValue, StringComparison.Ordinal);
-    }
-
     public static byte[] CreateFingerprint(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
