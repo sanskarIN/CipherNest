@@ -8,7 +8,8 @@ namespace CipherNest.Infrastructure.Services;
 public sealed class EncryptedAttachmentStore
 {
     private const int ChunkSize = 256 * 1024;
-    private const long MaxPlaintextBytes = 100L * 1024 * 1024;
+    public const long MaximumPlaintextBytes = 100L * 1024 * 1024;
+    public const long MaximumContainerBytes = MaximumPlaintextBytes + (((MaximumPlaintextBytes + ChunkSize - 1) / ChunkSize) * 32) + 8 + 4;
     private static readonly byte[] Magic = "CNAT0001"u8.ToArray();
     private readonly string _directory;
     private readonly ICryptoService _crypto;
@@ -27,19 +28,19 @@ public sealed class EncryptedAttachmentStore
         ArgumentNullException.ThrowIfNull(source);
         Directory.CreateDirectory(_directory);
         var finalPath = GetPath(opaqueFileName);
-        var tempPath = finalPath + ".tmp";
+        var tempPath = Path.Combine(_directory, $".{Path.GetFileName(finalPath)}.{Guid.NewGuid():N}.tmp");
         var buffer = new byte[ChunkSize];
         long total = 0;
         try
         {
-            await using var output = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
+            await using var output = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
             await output.WriteAsync(Magic, cancellationToken).ConfigureAwait(false);
             var chunkIndex = 0;
             int read;
             while ((read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
             {
                 total += read;
-                if (total > MaxPlaintextBytes) throw new InvalidDataException("Attachment exceeds the 100 MB safety limit.");
+                if (total > MaximumPlaintextBytes) throw new InvalidDataException("Attachment exceeds the 100 MB safety limit.");
                 var aad = BuildAad(itemId, attachmentId, chunkIndex);
                 var envelope = _crypto.Encrypt(buffer.AsSpan(0, read), dataKey.Span, aad);
                 await WriteInt32Async(output, read, cancellationToken).ConfigureAwait(false);
@@ -51,7 +52,7 @@ public sealed class EncryptedAttachmentStore
             }
             await WriteInt32Async(output, -1, cancellationToken).ConfigureAwait(false);
             await output.FlushAsync(cancellationToken).ConfigureAwait(false);
-            File.Move(tempPath, finalPath, overwrite: true);
+            File.Move(tempPath, finalPath, overwrite: false);
             return total;
         }
         finally
@@ -63,7 +64,7 @@ public sealed class EncryptedAttachmentStore
 
     public async Task DecryptToAsync(Guid itemId, Guid attachmentId, string opaqueFileName, long expectedPlaintextLength, Stream destination, ReadOnlyMemory<byte> dataKey, CancellationToken cancellationToken)
     {
-        if (expectedPlaintextLength is < 0 or > MaxPlaintextBytes) throw new InvalidDataException("Attachment length is outside the supported range.");
+        if (expectedPlaintextLength is < 0 or > MaximumPlaintextBytes) throw new InvalidDataException("Attachment length is outside the supported range.");
         await using var input = new FileStream(GetPath(opaqueFileName), FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
         var magic = new byte[Magic.Length];
         await ReadExactlyAsync(input, magic, cancellationToken).ConfigureAwait(false);
