@@ -14,6 +14,8 @@ public sealed class CryptoService : ICryptoService
     public const int MaximumKdfMemoryKiB = 512 * 1024;
     public const int MaximumKdfIterations = 10;
     public const int MaximumKdfParallelism = 16;
+    public const int MinimumPassphraseCharacters = 12;
+    public const int MaximumPassphraseCharacters = 4_096;
     private const int KeySize = 32;
     private const int SaltSize = 16;
     private const int MaximumSaltSize = 64;
@@ -146,7 +148,8 @@ public sealed class CryptoService : ICryptoService
 
     private static void ValidatePassphrase(ReadOnlySpan<char> passphrase)
     {
-        if (passphrase.Length < 12) throw new ArgumentException("A passphrase or recovery key must contain at least 12 characters.", nameof(passphrase));
+        if (passphrase.Length is < MinimumPassphraseCharacters or > MaximumPassphraseCharacters)
+            throw new ArgumentException($"A passphrase or recovery key must contain between {MinimumPassphraseCharacters:N0} and {MaximumPassphraseCharacters:N0} characters.", nameof(passphrase));
     }
 
     private static void ValidateKdfParameters(ReadOnlySpan<byte> salt, KdfParameters parameters)
