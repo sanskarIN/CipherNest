@@ -40,7 +40,7 @@ public sealed class EncryptedBackupService : IBackupService
             var salt = RandomNumberGenerator.GetBytes(16);
             var kdf = CryptoService.DefaultKdf;
             key = _crypto.DeriveKey(backupPassphrase.AsSpan(), salt, kdf);
-            var header = new BackupHeader(2, salt, kdf, ChunkSize, DateTimeOffset.UtcNow);
+            var header = new BackupHeader(BackupFormatPolicy.CurrentVersion, salt, kdf, ChunkSize, DateTimeOffset.UtcNow);
             var headerJson = JsonSerializer.SerializeToUtf8Bytes(header);
             await using var output = new FileStream(tempOutput, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
             await output.WriteAsync(Magic, cancellationToken).ConfigureAwait(false);
@@ -67,7 +67,7 @@ public sealed class EncryptedBackupService : IBackupService
         finally
         {
             if (key is not null) CryptographicOperations.ZeroMemory(key);
-            if (File.Exists(tempOutput)) File.Delete(tempOutput);
+            TryDeleteFile(tempOutput);
             TryDeleteDirectory(working);
         }
     }
@@ -94,7 +94,8 @@ public sealed class EncryptedBackupService : IBackupService
                 var headerJson = new byte[headerLength];
                 await ReadExactlyAsync(input, headerJson, cancellationToken).ConfigureAwait(false);
                 var header = JsonSerializer.Deserialize<BackupHeader>(headerJson) ?? throw new InvalidDataException("Invalid backup header.");
-                if (header.Version != 2 || header.ChunkSize is < 64 * 1024 or > 4 * 1024 * 1024) throw new InvalidDataException("Unsupported backup format.");
+                if (header.Salt is null || header.Kdf is null) throw new InvalidDataException("Invalid backup header.");
+                BackupFormatPolicy.ValidateHeader(header.Version, header.Salt.Length, header.Kdf, header.ChunkSize);
                 key = _crypto.DeriveKey(backupPassphrase.AsSpan(), header.Salt, header.Kdf);
                 await DecryptArchiveAsync(input, archive, header, headerJson, key, cancellationToken).ConfigureAwait(false);
             }
@@ -272,6 +273,13 @@ public sealed class EncryptedBackupService : IBackupService
             if (read == 0) throw new EndOfStreamException("Backup ended unexpectedly.");
             total += read;
         }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private static void TryDeleteDirectory(string path)
