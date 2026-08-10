@@ -19,6 +19,7 @@ public sealed class VaultService : IVaultService, IDisposable
     private readonly IClock _clock;
     private readonly EncryptedAttachmentStore _attachments;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly SemaphoreSlim _attachmentMutationGate = new(1, 1);
     private readonly object _keySync = new();
     private byte[]? _dataKey;
     private CancellationTokenSource? _sessionCancellation;
@@ -235,10 +236,15 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task DeletePermanentlyAsync(Guid id, CancellationToken cancellationToken = default)
     {
         using var lease = AcquireKeyLease(cancellationToken);
-        var item = await GetItemRequiredAsync(id, lease.Token).ConfigureAwait(false);
-        var attachmentFiles = item.Attachments.Select(static attachment => attachment.EncryptedFileName).ToArray();
-        await _store.DeleteItemAsync(id, lease.Token).ConfigureAwait(false);
-        foreach (var attachmentFile in attachmentFiles) TryDeleteAttachment(attachmentFile);
+        await _attachmentMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+        try
+        {
+            var item = await GetItemRequiredAsync(id, lease.Token).ConfigureAwait(false);
+            var attachmentFiles = item.Attachments.Select(static attachment => attachment.EncryptedFileName).ToArray();
+            await _store.DeleteItemAsync(id, lease.Token).ConfigureAwait(false);
+            foreach (var attachmentFile in attachmentFiles) TryDeleteAttachment(attachmentFile);
+        }
+        finally { _attachmentMutationGate.Release(); }
     }
 
     public async Task<IReadOnlyList<VaultItem>> SearchAsync(string query, CancellationToken cancellationToken = default)
@@ -253,16 +259,32 @@ public sealed class VaultService : IVaultService, IDisposable
         var normalizedDisplayName = AttachmentImportPolicy.NormalizeDisplayName(displayName);
         var normalizedMediaType = AttachmentImportPolicy.NormalizeMediaType(mediaType);
         using var lease = AcquireKeyLease(cancellationToken);
-        var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false);
-        if (item.Attachments.Count >= 25) throw new InvalidOperationException("An item can have at most 25 attachments.");
-        var attachmentId = Guid.NewGuid(); var opaque = _attachments.GetOpaqueFileName(attachmentId); var length = await _attachments.EncryptAsync(itemId, attachmentId, source, opaque, lease.Key, lease.Token).ConfigureAwait(false); var reference = new AttachmentReference(attachmentId, normalizedDisplayName, normalizedMediaType, length, opaque, _clock.UtcNow);
-        try { await SaveItemAsync(item with { Attachments = item.Attachments.Append(reference).ToArray() }, lease.Token).ConfigureAwait(false); return reference; } catch { TryDeleteAttachment(opaque); throw; }
+        await _attachmentMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+        try
+        {
+            var items = await GetItemsAsync(true, lease.Token).ConfigureAwait(false);
+            var item = items.FirstOrDefault(candidate => candidate.Id == itemId) ?? throw new KeyNotFoundException("The requested vault item does not exist.");
+            if (items.Sum(static candidate => candidate.Attachments.Count) >= VaultStorageLimits.MaximumAttachmentCountTotal)
+                throw new InvalidOperationException("Vault has reached the supported total attachment limit.");
+            if (item.Attachments.Count >= 25) throw new InvalidOperationException("An item can have at most 25 attachments.");
+            var attachmentId = Guid.NewGuid(); var opaque = _attachments.GetOpaqueFileName(attachmentId); var length = await _attachments.EncryptAsync(itemId, attachmentId, source, opaque, lease.Key, lease.Token).ConfigureAwait(false); var reference = new AttachmentReference(attachmentId, normalizedDisplayName, normalizedMediaType, length, opaque, _clock.UtcNow);
+            try { await SaveItemAsync(item with { Attachments = item.Attachments.Append(reference).ToArray() }, lease.Token).ConfigureAwait(false); return reference; } catch { TryDeleteAttachment(opaque); throw; }
+        }
+        finally { _attachmentMutationGate.Release(); }
     }
 
     public async Task RemoveAttachmentAsync(Guid itemId, Guid attachmentId, CancellationToken cancellationToken = default)
     {
         using var lease = AcquireKeyLease(cancellationToken);
-        var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false); var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist."); await SaveItemAsync(item with { Attachments = item.Attachments.Where(a => a.Id != attachmentId).ToArray() }, lease.Token).ConfigureAwait(false); TryDeleteAttachment(reference.EncryptedFileName);
+        await _attachmentMutationGate.WaitAsync(lease.Token).ConfigureAwait(false);
+        try
+        {
+            var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false);
+            var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist.");
+            await SaveItemAsync(item with { Attachments = item.Attachments.Where(a => a.Id != attachmentId).ToArray() }, lease.Token).ConfigureAwait(false);
+            TryDeleteAttachment(reference.EncryptedFileName);
+        }
+        finally { _attachmentMutationGate.Release(); }
     }
 
     public async Task ExportAttachmentAsync(Guid itemId, Guid attachmentId, Stream destination, CancellationToken cancellationToken = default)
@@ -275,6 +297,7 @@ public sealed class VaultService : IVaultService, IDisposable
     public void Dispose()
     {
         ClearSessionKey();
+        _attachmentMutationGate.Dispose();
         _gate.Dispose();
     }
 
