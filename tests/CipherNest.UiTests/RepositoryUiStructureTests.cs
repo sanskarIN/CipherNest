@@ -172,6 +172,40 @@ public sealed class RepositoryUiStructureTests
         Assert.Contains("voluntary", about, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void ContinuousIntegration_CompilesAllTargetFamiliesAndRunsReproducibleCoreGates()
+    {
+        var ci = File.ReadAllText(PathAt(".github", "workflows", "dotnet-desktop.yml"));
+        var codeql = File.ReadAllText(PathAt(".github", "workflows", "codeql.yml"));
+        var dependencyReview = File.ReadAllText(PathAt(".github", "workflows", "dependency-review.yml"));
+
+        Assert.Contains("build-windows:", ci, StringComparison.Ordinal);
+        Assert.Contains("build-android:", ci, StringComparison.Ordinal);
+        Assert.Contains("build-apple:", ci, StringComparison.Ordinal);
+        Assert.Contains("net10.0-android", ci, StringComparison.Ordinal);
+        Assert.Contains("net10.0-ios", ci, StringComparison.Ordinal);
+        Assert.Contains("net10.0-maccatalyst", ci, StringComparison.Ordinal);
+        Assert.Contains("CipherNestEnableFundingLink=false", ci, StringComparison.Ordinal);
+        Assert.Contains("dotnet format", ci, StringComparison.Ordinal);
+        Assert.Contains("cancel-in-progress: true", ci, StringComparison.Ordinal);
+        Assert.Contains("timeout-minutes:", ci, StringComparison.Ordinal);
+
+        Assert.Contains("maui-android", codeql, StringComparison.Ordinal);
+        Assert.Contains("src/CipherNest.App/CipherNest.App.csproj", codeql, StringComparison.Ordinal);
+        Assert.Contains("cancel-in-progress: true", codeql, StringComparison.Ordinal);
+        Assert.Contains("timeout-minutes:", codeql, StringComparison.Ordinal);
+
+        Assert.Contains("fail-on-severity: high", dependencyReview, StringComparison.Ordinal);
+        Assert.Contains("cancel-in-progress: true", dependencyReview, StringComparison.Ordinal);
+        Assert.Contains("timeout-minutes:", dependencyReview, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(PathAt("scripts", "verify-core.ps1")));
+        Assert.True(File.Exists(PathAt("scripts", "verify-core.sh")));
+        Assert.True(File.Exists(PathAt("scripts", "verify-windows.ps1")));
+        Assert.True(File.Exists(PathAt("scripts", "verify-android.sh")));
+        Assert.True(File.Exists(PathAt("scripts", "verify-apple.sh")));
+    }
+
     private static string PathAt(params string[] segments)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
