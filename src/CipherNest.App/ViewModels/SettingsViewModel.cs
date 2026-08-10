@@ -242,49 +242,79 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
         if (BackupPassphrase.Length < 12) { StatusMessage = "Use a backup passphrase of at least 12 characters."; return; }
-        var confirm = await Shell.Current.DisplayAlertAsync("Create a consistent encrypted backup?", "CipherNest will lock the vault before taking the database and attachment snapshot so edits cannot race with the backup. You will unlock again afterward.", "Lock and back up", "Cancel");
-        if (!confirm) return;
-        IsBusy = true;
+
+        var backupPassphrase = BackupPassphrase;
+        BackupPassphrase = string.Empty;
         try
         {
-            await _vault.LockAsync();
-            var directory = Path.Combine(FileSystem.Current.AppDataDirectory, "Backups"); Directory.CreateDirectory(directory);
-            var path = Path.Combine(directory, $"CipherNest-{DateTimeOffset.Now:yyyyMMdd-HHmmss}{AppConstants.BackupExtension}");
-            await _backup.ExportEncryptedAsync(path, BackupPassphrase);
-            BackupPassphrase = string.Empty;
-            _loadedPreferences = (await _settings.LoadAsync()) with { LastSuccessfulBackupUtc = DateTimeOffset.UtcNow };
-            await _settings.SaveAsync(_loadedPreferences);
-            StatusMessage = "Authenticated encrypted backup created, including encrypted attachments. The vault remains locked. Keep the backup passphrase separately and periodically test restore using disposable data.";
-            await Share.Default.RequestAsync(new ShareFileRequest("CipherNest encrypted backup", new ShareFile(path)));
-            await Shell.Current.GoToAsync("//unlock");
+            var confirm = await Shell.Current.DisplayAlertAsync("Create a consistent encrypted backup?", "CipherNest will lock the vault before taking the database and attachment snapshot so edits cannot race with the backup. You will unlock again afterward.", "Lock and back up", "Cancel");
+            if (!confirm) return;
+
+            IsBusy = true;
+            try
+            {
+                await _vault.LockAsync();
+                var directory = Path.Combine(FileSystem.Current.AppDataDirectory, "Backups"); Directory.CreateDirectory(directory);
+                var path = Path.Combine(directory, $"CipherNest-{DateTimeOffset.Now:yyyyMMdd-HHmmss}{AppConstants.BackupExtension}");
+                await _backup.ExportEncryptedAsync(path, backupPassphrase);
+                _loadedPreferences = (await _settings.LoadAsync()) with { LastSuccessfulBackupUtc = DateTimeOffset.UtcNow };
+                await _settings.SaveAsync(_loadedPreferences);
+                StatusMessage = "Authenticated encrypted backup created, including encrypted attachments. The vault remains locked. Keep the backup passphrase separately and periodically test restore using disposable data.";
+                await Share.Default.RequestAsync(new ShareFileRequest("CipherNest encrypted backup", new ShareFile(path)));
+                await Shell.Current.GoToAsync("//unlock");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException) { StatusMessage = $"Backup failed: {ex.Message}"; }
+            finally { IsBusy = false; }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException) { StatusMessage = $"Backup failed: {ex.Message}"; }
-        finally { IsBusy = false; }
+        finally
+        {
+            backupPassphrase = string.Empty;
+        }
     }
 
     [RelayCommand]
     private async Task RestoreBackupAsync()
     {
         if (BackupPassphrase.Length < 12) { StatusMessage = "Enter the backup passphrase before restoring."; return; }
-        var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CipherNest encrypted backup" }); if (file is null) return;
-        var confirm = await Shell.Current.DisplayAlertAsync("Restore backup?", "The current vault database and attachment set will be replaced only after the backup container is authenticated and staged. Keep a separate backup before replacing important data.", "Restore", "Cancel"); if (!confirm) return;
-        IsBusy = true;
-        var tempPath = Path.Combine(FileSystem.Current.CacheDirectory, $"restore-{Guid.NewGuid():N}{AppConstants.BackupExtension}");
+
+        var backupPassphrase = BackupPassphrase;
+        BackupPassphrase = string.Empty;
+        string? tempPath = null;
         try
         {
-            await _vault.LockAsync();
-            await using (var source = await file.OpenReadAsync())
-            await using (var destination = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true)) await source.CopyToAsync(destination);
-            await _backup.RestoreEncryptedAsync(tempPath, BackupPassphrase);
-            await _biometrics.ClearSecondarySecretAsync();
-            _sessionSecurity.Clear();
-            _loadedPreferences = (await _settings.LoadAsync()) with { BiometricUnlockEnabled = false };
-            await _settings.SaveAsync(_loadedPreferences);
-            BiometricUnlockEnabled = false;
-            BackupPassphrase = string.Empty; StatusMessage = "Backup restored. Unlock the restored vault with its master passphrase or recovery key. Biometric unlock was disabled locally because restored vault metadata may not match this device's secure-storage entry."; await Shell.Current.GoToAsync("//unlock");
+            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CipherNest encrypted backup" });
+            if (file is null) return;
+            var confirm = await Shell.Current.DisplayAlertAsync("Restore backup?", "The current vault database and attachment set will be replaced only after the backup container is authenticated and staged. Keep a separate backup before replacing important data.", "Restore", "Cancel");
+            if (!confirm) return;
+
+            IsBusy = true;
+            tempPath = Path.Combine(FileSystem.Current.CacheDirectory, $"restore-{Guid.NewGuid():N}{AppConstants.BackupExtension}");
+            try
+            {
+                await _vault.LockAsync();
+                await using (var source = await file.OpenReadAsync())
+                await using (var destination = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true)) await source.CopyToAsync(destination);
+                await _backup.RestoreEncryptedAsync(tempPath, backupPassphrase);
+                await _biometrics.ClearSecondarySecretAsync();
+                _sessionSecurity.Clear();
+                _loadedPreferences = (await _settings.LoadAsync()) with { BiometricUnlockEnabled = false };
+                await _settings.SaveAsync(_loadedPreferences);
+                BiometricUnlockEnabled = false;
+                StatusMessage = "Backup restored. Unlock the restored vault with its master passphrase or recovery key. Biometric unlock was disabled locally because restored vault metadata may not match this device's secure-storage entry.";
+                await Shell.Current.GoToAsync("//unlock");
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { StatusMessage = $"Restore failed safely: {ex.Message}"; }
+            finally { IsBusy = false; }
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { StatusMessage = $"Restore failed safely: {ex.Message}"; }
-        finally { try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (IOException) { } IsBusy = false; }
+        finally
+        {
+            if (tempPath is not null)
+            {
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); }
+                catch (IOException) { }
+            }
+            backupPassphrase = string.Empty;
+        }
     }
 
     [RelayCommand]
