@@ -22,7 +22,7 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
             var loaded = await JsonSerializer.DeserializeAsync<AppPreferences>(stream, Options, cancellationToken).ConfigureAwait(false);
             return AppPreferencesPolicy.Normalize(loaded ?? new AppPreferences());
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             return new AppPreferences();
         }
