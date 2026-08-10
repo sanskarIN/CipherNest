@@ -1,4 +1,5 @@
 using CipherNest.Infrastructure.Services;
+using CipherNest.Shared;
 
 namespace CipherNest.UnitTests;
 
@@ -7,6 +8,7 @@ public sealed class BackupArchivePolicyTests
     [Fact]
     public void EntryCount_AcceptsSupportedMaximumAndRejectsOverflow()
     {
+        Assert.Equal(VaultStorageLimits.MaximumAttachmentCountTotal + 1, BackupArchivePolicy.MaximumEntryCount);
         BackupArchivePolicy.ValidateEntryCount(0);
         BackupArchivePolicy.ValidateEntryCount(BackupArchivePolicy.MaximumEntryCount);
 
