@@ -130,8 +130,15 @@ public sealed class SqliteVaultStore : IVaultStore
             var backupPath = DatabasePath + ".previous";
             if (File.Exists(backupPath)) File.Delete(backupPath);
             if (File.Exists(DatabasePath)) File.Move(DatabasePath, backupPath);
-            try { File.Copy(sourceDatabasePath, DatabasePath, overwrite: true); }
-            catch { if (File.Exists(backupPath)) File.Move(backupPath, DatabasePath, overwrite: true); throw; }
+            try
+            {
+                File.Copy(sourceDatabasePath, DatabasePath, overwrite: true);
+            }
+            catch
+            {
+                TryRestorePreviousDatabase(backupPath);
+                throw;
+            }
             if (File.Exists(backupPath)) File.Delete(backupPath);
         }
         finally { _gate.Release(); }
@@ -176,6 +183,20 @@ public sealed class SqliteVaultStore : IVaultStore
         catch (SqliteException ex)
         {
             throw new InvalidDataException("Replacement vault database is not a valid supported CipherNest database.", ex);
+        }
+    }
+
+    private void TryRestorePreviousDatabase(string backupPath)
+    {
+        try
+        {
+            if (File.Exists(backupPath)) File.Move(backupPath, DatabasePath, overwrite: true);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 
