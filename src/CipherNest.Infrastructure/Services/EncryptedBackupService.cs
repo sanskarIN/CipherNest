@@ -52,6 +52,7 @@ public sealed class EncryptedBackupService : IBackupService
             int read;
             while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
             {
+                BackupFormatPolicy.ValidateChunkIndex(index);
                 var isFinal = input.Position == input.Length;
                 var envelope = _crypto.Encrypt(buffer.AsSpan(0, read), key, BuildChunkAad(headerJson, index, isFinal));
                 await WriteInt32Async(output, read, cancellationToken).ConfigureAwait(false);
@@ -169,6 +170,7 @@ public sealed class EncryptedBackupService : IBackupService
         {
             var plainLength = await ReadInt32Async(input, cancellationToken).ConfigureAwait(false);
             if (plainLength == -1) break;
+            BackupFormatPolicy.ValidateChunkIndex(index);
             if (plainLength is < 1 || plainLength > header.ChunkSize) throw new InvalidDataException("Invalid backup chunk size.");
             total = BackupArchivePolicy.AddEntryLength(total, plainLength);
             var nonce = new byte[12];
