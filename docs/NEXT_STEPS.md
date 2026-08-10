@@ -4,7 +4,7 @@ This roadmap starts from the current local-first CipherNest source tree. It deli
 
 ## Priority 0 — prove the current source on real build environments
 
-Repository source now contains repeatable verification scripts and configured CI compile gates for core tests/formatting, Windows, Android, iOS, Mac Catalyst, the funding-disabled Windows variant, CodeQL application analysis, and dependency review. The latest source-hardening pass also added settings persistence normalization/round-trip tests, vault-header compatibility checks, pre-Argon2 backup-header validation, pre-swap SQLite/schema validation, forged-migration-history rejection, attachment storage-name/metadata validation, CSV final-column enforcement, per-session cancellable DEK leases, lock-cancelled attachment-export coverage, secure-note limit unification, guarded cache enumeration, and decrypted-record validation. These gates still need passing evidence from the exact candidate commit.
+Repository source now contains repeatable verification scripts and configured CI compile gates for core tests/formatting, Windows, Android, iOS, Mac Catalyst, the funding-disabled Windows variant, CodeQL application analysis, and dependency review. The latest source-hardening pass added cancellation-safe backup rollback, protected backup export destinations, duplicate/pathological backup entry bounds, collision-resistant encrypted attachment/settings staging, SQLite DB/WAL/SHM recovery sets, 64 KiB vault-header limits, encrypted-record count/per-record/aggregate budgets, 16 MiB serialized item limits, 2,000,000-character aggregate item-text limits, and pre-swap resource validation. These gates still need passing evidence from the exact candidate commit.
 
 1. Run `scripts/verify-core.ps1` or `scripts/verify-core.sh` from a clean checkout with the selected .NET 10 SDK.
 2. Run the platform script on each appropriate host: `scripts/verify-windows.ps1`, `scripts/verify-android.sh`, and `scripts/verify-apple.sh`.
@@ -12,7 +12,7 @@ Repository source now contains repeatable verification scripts and configured CI
 4. Review CodeQL after it builds both analyzable core code and the Android MAUI application target.
 5. Review dependency-review, secret-scanning, and vulnerability results for the exact candidate commit.
 6. Record exact SDK/workload/platform-toolchain versions used for every successful candidate.
-7. Treat any build warning, failed test, migration/restore failure, crypto-vector failure, unbounded parser/resource condition, malformed stored metadata escaping validation, raw secret/path disclosure, or unexpected platform analyzer warning as release-blocking until resolved.
+7. Treat any build warning, failed test, migration/restore failure, crypto-vector failure, unbounded parser/storage/resource condition, malformed stored metadata escaping validation, raw secret/path disclosure, or unexpected platform analyzer warning as release-blocking until resolved.
 8. Preserve the immutable candidate commit/tag and verification evidence. See `docs/verification/CI_GATES.md`.
 
 ## Priority 1 — device security validation
@@ -65,10 +65,11 @@ Repository source now contains repeatable verification scripts and configured CI
 - Verify manual permanent deletion requires current-master re-authentication.
 - Verify database record deletion occurs before best-effort attachment cleanup and does not leave a surviving record pointing to intentionally removed files.
 - Verify destructive passphrase state is cleared after success, failure, cancellation, and screen exit.
-- Verify full local-vault deletion removes CipherNest-managed database/attachment files and clearly documents physical-remnant limitations.
-- Verify current vault headers remain readable while an unsupported future header version is rejected before unwrap.
-- Inject disposable malformed programmatic item models (null runtime values, unknown type, empty ID, bad attachment metadata, duplicate attachment IDs/storage names) and confirm validation rejects them without unhandled null dereferences.
+- Verify full local-vault deletion removes CipherNest-managed database/attachment/recovery artifacts and clearly documents physical-remnant limitations.
+- Verify current vault headers remain readable while an unsupported future header or >64 KiB UTF-8 header is rejected before unwrap/deserialization.
+- Inject disposable malformed programmatic item models (null runtime values, unknown type, empty ID, bad attachment metadata, duplicate attachment IDs/storage names, excessive aggregate text) and confirm validation rejects them without unhandled null dereferences.
 - Verify decrypted record ID mismatch/invalid metadata is rejected before reaching search/UI code.
+- Exercise the 16 MiB serialized item, 24 MiB stored-envelope, 100,000-item, and 256 MiB aggregate encrypted-record safety budgets using synthetic disposable data where practical without exhausting the test host.
 
 ## Priority 3 — backup and transfer confidence
 
@@ -78,11 +79,17 @@ Repository source now contains repeatable verification scripts and configured CI
 - Test a wrong backup passphrase.
 - Test corrupted/truncated containers.
 - Test unsupported backup version, too-short/too-long salt, hostile KDF parameters, and invalid chunk-size metadata; rejection must happen before Argon2 key derivation.
+- Verify backup export refuses a destination equal to the active `vault.db`, its WAL/SHM/recovery names, or any path inside the encrypted attachment store.
+- Verify backup encrypted staging is collision-resistant and opened with create-new semantics.
+- Test duplicate normalized ZIP entry names, unexpected/nested paths, excessive entry count/aggregate size, and encrypted attachment entries smaller/larger than the implemented `.cna` container envelope.
 - Test a backup created on one supported platform and restored on another where file/container compatibility is expected.
 - Confirm failed restore does not replace the active vault.
-- Confirm a staged database with a valid SQLite signature but missing/wrong CipherNest schema is rejected before active database/WAL mutation.
-- Confirm replacement runs SQLite `quick_check`, exact schema-version validation, and required table/column shape validation.
+- Confirm a staged database with a valid SQLite signature but missing/wrong CipherNest schema, missing/oversized vault header, non-canonical item IDs, or over-budget encrypted records is rejected before active DB/WAL/SHM mutation.
+- Confirm replacement runs SQLite `quick_check`, exact schema-version validation, required table/column validation, and storage-resource validation.
 - Confirm forged current `MigrationHistory` without required schema objects is rejected.
+- Force cancellation after the first active database replacement attempt and confirm rollback is invoked with an uncancelled recovery token.
+- Inject partial DB/WAL/SHM staging failures and confirm rollback restores only components that actually moved; an unstaged sidecar must not be deleted.
+- Confirm unique recovery naming prevents a stale previous-recovery directory/file from blocking a later restore.
 - Confirm restored biometric metadata is deliberately invalidated locally.
 - Verify backup passphrase UI state is cleared before file-picker/share work and restore staging cleanup failures remain redacted.
 - Periodically test restore using disposable data instead of assuming backups are valid.
@@ -103,6 +110,7 @@ Repository source now contains repeatable verification scripts and configured CI
 - Test safe in-memory text preview at zero length, normal size, maximum allowed size, invalid UTF-8, unsupported media type, and display truncation boundary.
 - Test encrypted attachment streaming at multiple sizes including multi-megabyte inputs.
 - Verify encryption zeroes the reusable plaintext chunk buffer after each chunk and on exit where practical.
+- Verify encrypted attachment staging uses a unique `CreateNew` sibling path and final installation refuses overwrite; a forced destination collision must fail without replacing the existing `.cna` file.
 - Verify opaque storage names accept only GUID `.cna` names without separators before app-data file access.
 - Test explicit plaintext export warning and unique temporary-file naming.
 - Verify temporary plaintext cleanup reports failure without exposing the path and does not overwrite a previous unresolved staging file.
@@ -113,7 +121,8 @@ Repository source now contains repeatable verification scripts and configured CI
 - Round-trip the complete current `AppPreferences` model.
 - Persist malformed/out-of-range enum/numeric values in a disposable settings file and verify normalization/fallback behavior.
 - Verify password mode cannot persist with every character group disabled; passphrase mode may keep those groups irrelevant/off.
-- Verify malformed JSON falls back to defaults and successful saves leave no stale `.tmp` file.
+- Verify malformed/unreadable settings files fall back to defaults while cancellation is still propagated.
+- Verify successful settings saves use unique sibling staging and leave no `.*.tmp` artifact.
 - Exercise inaccessible/unreadable cache subdirectories and reparse-point directories; usage/cleanup should fail softly without recursing through links.
 
 ## Priority 4 — accessibility, localization, and responsive UI
@@ -131,12 +140,13 @@ Repository source now contains repeatable verification scripts and configured CI
 
 ## Priority 5 — performance and scale
 
-- Populate disposable vaults with 1,000, 5,000, and 10,000 synthetic entries.
+- Populate disposable vaults with 1,000, 5,000, and 10,000 synthetic entries while remaining comfortably below the 100,000-item/256 MiB encrypted-record safety ceilings.
 - Measure unlock time, search latency, audit latency, memory usage, and incremental list rendering.
 - Verify the 50-item visual paging path keeps scrolling/rendering responsive.
 - Measure encrypted attachment import/export throughput for representative file sizes.
 - Measure backup creation/restore time for large disposable vaults.
 - Measure large valid CSV import after the parser's reusable character-buffer change; verify no new per-character allocation regression.
+- Profile valid records near—but not at—the aggregate item-text/serialized-record budgets to confirm rejection paths are cheap and ordinary records remain unaffected.
 - Do not introduce plaintext searchable indexes merely to improve speed; any encrypted indexing/search redesign needs a privacy review first.
 
 ## Priority 6 — release engineering
@@ -158,10 +168,11 @@ Repository source now contains repeatable verification scripts and configured CI
 
 - Obtain an independent review of the cryptographic envelope, KDF bounds, nonce strategy, associated data, recovery flow, secondary biometric wrapper, attachment format, backup format, and migration strategy.
 - Review the per-session `VaultKeyLease` design: synchronized shared-key replacement/zeroing, copied 32-byte leases, linked session/caller cancellation, lock cancellation ordering, nested leases, and failure/Dispose zeroing.
+- Review the new storage budgets and where checks occur before materialization/serialization; verify alternate store implementations cannot bypass service-level bounds.
+- Review backup destination canonicalization, duplicate ZIP handling, attachment-container size derivation, rollback cancellation semantics, and DB/WAL/SHM partial recovery.
 - Review memory-lifetime assumptions around managed strings and decrypted ViewModels; source clears bound credential properties earlier and zeroes several owned arrays, but managed string copies cannot be deterministically erased.
 - Review the SHA-256 clipboard-fingerprint approach, OS clipboard/history behavior, and plaintext export/share-sheet data remnants.
 - Review parser fuzzing opportunities for CSV, backup archives/header metadata, attachment metadata/storage names, settings JSON, vault records, and vault-header deserialization.
-- Review restore/database replacement validation and rollback behavior, including failures after active database movement and cleanup of `.previous`/WAL/SHM artifacts.
 - Review rollback/downgrade behavior for future crypto/database/vault-header format versions.
 - Review dependency/supply-chain pinning and release provenance.
 - Keep the product wording at “not independently audited” until an actual audit is completed and its scope is known.
@@ -195,14 +206,15 @@ Each one changes the attack surface materially and should receive its own archit
 
 1. Run the committed core/platform verification scripts and inspect the exact GitHub CI/CodeQL/dependency-review results.
 2. Fix every compiler/analyzer/test/workload problem found; do not waive a security-sensitive failure just to package a candidate.
-3. Android + Windows smoke tests.
-4. Apple builds/smoke tests on an appropriate host.
-5. Real-device biometric, lifecycle, screenshot, clipboard, secure-storage, and lock-cancellation validation.
-6. Backup/restore/database-replacement and transfer compatibility matrix.
-7. Accessibility/localization/responsive-layout pass.
-8. Performance/large-vault measurements.
-9. Dependency/license/security review.
-10. Store-policy decision for the optional funding CTA and record the build setting.
-11. Signed release-candidate packaging.
-12. Independent security review before stronger marketing claims.
-13. Tag/release only after every applicable release-checklist gate has evidence.
+3. Execute the new backup rollback/path/archive, SQLite resource/recovery, header/storage-budget, attachment staging, and settings staging tests on the exact candidate.
+4. Android + Windows smoke tests.
+5. Apple builds/smoke tests on an appropriate host.
+6. Real-device biometric, lifecycle, screenshot, clipboard, secure-storage, and lock-cancellation validation.
+7. Backup/restore/database-replacement and transfer compatibility/recovery matrix.
+8. Accessibility/localization/responsive-layout pass.
+9. Performance/large-vault measurements.
+10. Dependency/license/security review.
+11. Store-policy decision for the optional funding CTA and record the build setting.
+12. Signed release-candidate packaging.
+13. Independent security review before stronger marketing claims.
+14. Tag/release only after every applicable release-checklist gate has evidence.
