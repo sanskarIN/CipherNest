@@ -40,7 +40,7 @@ public static class VaultItemValidator
                 attachment.MediaType.Length > AttachmentImportPolicy.MaximumMediaTypeCharacters ||
                 attachment.MediaType.Any(char.IsControl) ||
                 attachment.PlaintextLength is < 0 or > MaximumAttachmentBytes ||
-                string.IsNullOrWhiteSpace(attachment.EncryptedFileName) || attachment.EncryptedFileName.Length > 64))
+                !HasCanonicalAttachmentStorageName(attachment.Id, attachment.EncryptedFileName)))
         {
             errors.Add("An attachment contains invalid metadata.");
         }
@@ -54,6 +54,13 @@ public static class VaultItemValidator
         if (nonNullAttachments.Select(static attachment => attachment.EncryptedFileName).Where(static name => name is not null).Distinct(StringComparer.OrdinalIgnoreCase).Count() != nonNullAttachments.Count(static attachment => attachment.EncryptedFileName is not null))
             errors.Add("Encrypted attachment storage names must be unique within an item.");
         return errors;
+    }
+
+    private static bool HasCanonicalAttachmentStorageName(Guid attachmentId, string? encryptedFileName)
+    {
+        if (attachmentId == Guid.Empty || string.IsNullOrWhiteSpace(encryptedFileName)) return false;
+        if (encryptedFileName.Contains('/') || encryptedFileName.Contains('\\')) return false;
+        return string.Equals(encryptedFileName, $"{attachmentId:N}.cna", StringComparison.OrdinalIgnoreCase);
     }
 
     private static long CalculateAggregateTextCharacters(
