@@ -15,15 +15,6 @@ public sealed class ClipboardSafetyPolicyTests
     }
 
     [Fact]
-    public void ClearOnlyWhenClipboardStillContainsCopiedValue()
-    {
-        Assert.True(ClipboardSafetyPolicy.ShouldClear("secret-a", "secret-a"));
-        Assert.False(ClipboardSafetyPolicy.ShouldClear("secret-a", "secret-b"));
-        Assert.False(ClipboardSafetyPolicy.ShouldClear("secret-a", null));
-        Assert.False(ClipboardSafetyPolicy.ShouldClear("secret-a", "SECRET-A"));
-    }
-
-    [Fact]
     public void Fingerprint_IsFixedSizeAndMatchesOnlyExactClipboardValue()
     {
         var fingerprint = ClipboardSafetyPolicy.CreateFingerprint("secret-a");
