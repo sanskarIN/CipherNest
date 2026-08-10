@@ -1,20 +1,18 @@
 using CipherNest.Application.Abstractions;
 using CipherNest.Application.Models;
+using CipherNest.Application.Validation;
 
 namespace CipherNest.Application.Services;
 
 public sealed class SafeNoteMarkupService : ISafeNoteMarkupService
 {
-    private const int MaxCharacters = 200_000;
-    private const int MaxLines = 5_000;
-
     public SafeNotePreview Parse(string? markdown)
     {
         if (string.IsNullOrEmpty(markdown)) return SafeNotePreview.Empty;
         ValidateLength(markdown);
 
         var lines = SplitLines(markdown);
-        if (lines.Length > MaxLines) throw new ArgumentException($"Secure note exceeds the {MaxLines:N0}-line safety limit.", nameof(markdown));
+        if (lines.Length > SafeNoteLimits.MaximumLines) throw new ArgumentException($"Secure note exceeds the {SafeNoteLimits.MaximumLines:N0}-line safety limit.", nameof(markdown));
 
         var output = new List<SafeNotePreviewLine>(lines.Length);
         var inCodeFence = false;
@@ -77,6 +75,7 @@ public sealed class SafeNoteMarkupService : ISafeNoteMarkupService
         var separator = current.Length == 0 || current.EndsWith('\n') ? string.Empty : Environment.NewLine;
         var updated = $"{current}{separator}- [ ] {cleanText}";
         ValidateLength(updated);
+        if (SafeNoteLimits.ExceedsLineLimit(updated)) throw new ArgumentException($"Secure note exceeds the {SafeNoteLimits.MaximumLines:N0}-line safety limit.", nameof(markdown));
         return updated;
     }
 
@@ -87,6 +86,7 @@ public sealed class SafeNoteMarkupService : ISafeNoteMarkupService
         ValidateLength(markdown);
 
         var lines = SplitLines(markdown);
+        if (lines.Length > SafeNoteLimits.MaximumLines) throw new ArgumentException($"Secure note exceeds the {SafeNoteLimits.MaximumLines:N0}-line safety limit.", nameof(markdown));
         var found = 0;
         for (var index = 0; index < lines.Length; index++)
         {
@@ -117,6 +117,6 @@ public sealed class SafeNoteMarkupService : ISafeNoteMarkupService
 
     private static void ValidateLength(string value)
     {
-        if (value.Length > MaxCharacters) throw new ArgumentException($"Secure note exceeds the {MaxCharacters:N0}-character safety limit.");
+        if (value.Length > SafeNoteLimits.MaximumCharacters) throw new ArgumentException($"Secure note exceeds the {SafeNoteLimits.MaximumCharacters:N0}-character safety limit.");
     }
 }
