@@ -149,7 +149,8 @@ public partial class SettingsViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            StorageUsageMessage = $"Storage usage could not be measured: {ex.Message}";
+            _exceptions.Report("Settings.StorageUsage", ex);
+            StorageUsageMessage = "Storage usage could not be measured safely.";
         }
     }
 
@@ -191,8 +192,16 @@ public partial class SettingsViewModel : ObservableObject
             try
             {
                 await _biometrics.StoreSecondarySecretAsync(secret);
-                try { await _vault.EnableSecondaryUnlockAsync(masterPassphrase, secret); }
-                catch { await _biometrics.ClearSecondarySecretAsync(); throw; }
+                try
+                {
+                    await _vault.EnableSecondaryUnlockAsync(masterPassphrase, secret);
+                }
+                catch
+                {
+                    try { await _biometrics.ClearSecondarySecretAsync(); }
+                    catch (Exception rollbackException) { _exceptions.Report("Settings.BiometricEnable.Rollback", rollbackException); }
+                    throw;
+                }
                 BiometricUnlockEnabled = true;
                 _sessionSecurity.RecordMasterAuthentication(DateTimeOffset.UtcNow);
                 _loadedPreferences = _loadedPreferences with { BiometricUnlockEnabled = true };
@@ -202,8 +211,9 @@ public partial class SettingsViewModel : ObservableObject
             }
             catch (Exception ex) when (ex is InvalidOperationException or CryptographicException or CipherNest.Application.Exceptions.VaultAuthenticationException)
             {
+                _exceptions.Report("Settings.BiometricEnable", ex);
                 BiometricUnlockEnabled = false;
-                StatusMessage = $"Biometric unlock could not be enabled: {ex.Message}";
+                StatusMessage = "Biometric unlock could not be enabled safely. Use the master passphrase and try again after checking device biometric availability.";
             }
             finally { secret = string.Empty; IsBusy = false; }
         }
@@ -263,7 +273,11 @@ public partial class SettingsViewModel : ObservableObject
                 await Share.Default.RequestAsync(new ShareFileRequest("CipherNest encrypted backup", new ShareFile(path)));
                 await Shell.Current.GoToAsync("//unlock");
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException) { StatusMessage = $"Backup failed: {ex.Message}"; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+            {
+                _exceptions.Report("Settings.BackupExport", ex);
+                StatusMessage = "Encrypted backup could not be completed safely. The vault remains protected; review storage access and try again.";
+            }
             finally { IsBusy = false; }
         }
         finally
@@ -303,7 +317,11 @@ public partial class SettingsViewModel : ObservableObject
                 StatusMessage = "Backup restored. Unlock the restored vault with its master passphrase or recovery key. Biometric unlock was disabled locally because restored vault metadata may not match this device's secure-storage entry.";
                 await Shell.Current.GoToAsync("//unlock");
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { StatusMessage = $"Restore failed safely: {ex.Message}"; }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
+            {
+                _exceptions.Report("Settings.BackupRestore", ex);
+                StatusMessage = "Backup restore was rejected or could not be staged safely. The active vault was not intentionally replaced by this failed restore attempt.";
+            }
             finally { IsBusy = false; }
         }
         finally
@@ -338,7 +356,15 @@ public partial class SettingsViewModel : ObservableObject
             StatusMessage = "Master passphrase changed. CipherNest ended the current security session; unlock again with the new master passphrase before biometric convenience unlock can resume. Create a fresh encrypted backup after security-sensitive changes.";
             await Shell.Current.GoToAsync("//unlock");
         }
-        catch (Exception ex) when (ex is CipherNest.Application.Exceptions.VaultAuthenticationException or ArgumentException) { StatusMessage = $"Master passphrase was not changed: {ex.Message}"; }
+        catch (CipherNest.Application.Exceptions.VaultAuthenticationException)
+        {
+            StatusMessage = "Master passphrase was not changed because current-master authentication failed.";
+        }
+        catch (ArgumentException ex)
+        {
+            _exceptions.Report("Settings.ChangeMasterPassphrase", ex);
+            StatusMessage = "Master passphrase was not changed because the requested passphrase could not be accepted safely.";
+        }
         finally
         {
             currentMasterPassphrase = string.Empty;
@@ -370,7 +396,11 @@ public partial class SettingsViewModel : ObservableObject
                 await Shell.Current.GoToAsync("//onboarding");
             }
             catch (CipherNest.Application.Exceptions.VaultAuthenticationException) { StatusMessage = "Vault deletion was cancelled because master-passphrase confirmation failed."; }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { StatusMessage = $"Vault deletion could not finish: {ex.Message}"; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _exceptions.Report("Settings.DeleteVault", ex);
+                StatusMessage = "Vault deletion could not finish safely. CipherNest did not report the operation as complete.";
+            }
             finally { IsBusy = false; }
         }
         finally
