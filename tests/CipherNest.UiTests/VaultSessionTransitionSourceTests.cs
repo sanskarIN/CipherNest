@@ -10,9 +10,21 @@ public sealed class VaultSessionTransitionSourceTests
         AssertMethodContains(source, "public async Task UnlockAsync", "await _gate.WaitAsync(cancellationToken)", "ReplaceDataKey(key)");
         AssertMethodContains(source, "public async Task UnlockWithSecondarySecretAsync", "await _gate.WaitAsync(cancellationToken)", "ReplaceDataKey(key)");
         AssertMethodContains(source, "public async Task LockAsync", "await _gate.WaitAsync(cancellationToken)", "ClearSessionKey()");
-        AssertMethodContains(source, "public async Task DeleteVaultAsync", "using var authorizationLease = AcquireKeyLease(cancellationToken)", "await _gate.WaitAsync(authorizationLease.Token)", "authorizationLease.Token.ThrowIfCancellationRequested()", "ClearSessionKey()");
+        AssertMethodContains(
+            source,
+            "public async Task DeleteVaultAsync",
+            "using var authorizationLease = AcquireKeyLease(cancellationToken)",
+            "await _gate.WaitAsync(authorizationLease.Token)",
+            "authorizationLease.Token.ThrowIfCancellationRequested()",
+            "var sessionCleared = false",
+            "ClearSessionKey()",
+            "sessionCleared = true",
+            "DeleteDatabaseAsync(CancellationToken.None)",
+            "if (sessionCleared) LockStateChanged?.Invoke(this, false)");
         Assert.Contains("private void ClearSessionKey()", source, StringComparison.Ordinal);
-        Assert.Contains("session?.Cancel()", source, StringComparison.Ordinal);
+        Assert.Contains("CancelAndDisposeSession(session)", source, StringComparison.Ordinal);
+        Assert.Contains("CancelAndDisposeSession(previousSession)", source, StringComparison.Ordinal);
+        Assert.Contains("catch (AggregateException)", source, StringComparison.Ordinal);
         Assert.Contains("CryptographicOperations.ZeroMemory(_dataKey)", source, StringComparison.Ordinal);
     }
 
