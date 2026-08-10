@@ -27,12 +27,12 @@ public sealed class StorageMaintenanceService : IStorageMaintenanceService
         {
             cancellationToken.ThrowIfCancellationRequested();
             var directory = pending.Pop();
-            IEnumerable<string> files;
-            IEnumerable<string> directories;
+            string[] files;
+            string[] directories;
             try
             {
-                files = Directory.EnumerateFiles(directory);
-                directories = Directory.EnumerateDirectories(directory);
+                files = Directory.EnumerateFiles(directory).ToArray();
+                directories = Directory.EnumerateDirectories(directory).ToArray();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
 
@@ -60,8 +60,20 @@ public sealed class StorageMaintenanceService : IStorageMaintenanceService
     private static long ClearDirectory(string root, CancellationToken cancellationToken)
     {
         if (!Directory.Exists(root)) return 0;
+        string[] files;
+        string[] directories;
+        try
+        {
+            files = Directory.EnumerateFiles(root, "*", SearchOption.TopDirectoryOnly).ToArray();
+            directories = Directory.EnumerateDirectories(root, "*", SearchOption.TopDirectoryOnly).ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return 0;
+        }
+
         long deletedBytes = 0;
-        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.TopDirectoryOnly))
+        foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
@@ -74,7 +86,7 @@ public sealed class StorageMaintenanceService : IStorageMaintenanceService
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OverflowException) { }
         }
 
-        foreach (var child in Directory.EnumerateDirectories(root, "*", SearchOption.TopDirectoryOnly))
+        foreach (var child in directories)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
