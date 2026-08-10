@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CipherNest.Application.Abstractions;
 using CipherNest.Application.Exceptions;
@@ -331,6 +332,7 @@ public sealed class VaultService : IVaultService, IDisposable
     private async Task<VaultHeaderDocument> ReadHeaderUnlockedAsync(CancellationToken cancellationToken)
     {
         var headerJson = await _store.ReadHeaderAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("No local vault exists yet.");
+        if (Encoding.UTF8.GetByteCount(headerJson) is < 1 or > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes) throw new VaultAuthenticationException();
         var header = JsonSerializer.Deserialize<VaultHeaderDocument>(headerJson, JsonOptions) ?? throw new VaultAuthenticationException();
         if (header.Version is < MinimumSupportedHeaderVersion or > CurrentHeaderVersion || header.Master is null) throw new VaultAuthenticationException();
         return header;
