@@ -46,6 +46,28 @@ public sealed class CsvParserRobustnessTests : IDisposable
         await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
     }
 
+    [Fact]
+    public async Task ReadHeaders_RejectsAggregateRowBeyondSafetyBudget()
+    {
+        var service = CreateService();
+        var first = new string('a', 1_000_000);
+        var second = new string('b', 1_000_000);
+        var header = $"{first},{second},x";
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(header), writable: false);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
+    }
+
+    [Fact]
+    public async Task ReadHeaders_RejectsUnreadableStream()
+    {
+        var service = CreateService();
+        await using var stream = new MemoryStream();
+        stream.Close();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ReadHeadersAsync(stream));
+    }
+
     private CsvTransferService CreateService()
     {
         var store = new SqliteVaultStore(Path.Combine(_directory, $"{Guid.NewGuid():N}.db"));
