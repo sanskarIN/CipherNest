@@ -73,13 +73,20 @@ public sealed class VaultItemValidatorTests
     [Fact]
     public void RejectsCollectionCountsAndEntryBounds()
     {
+        var attachments = Enumerable.Range(0, 26)
+            .Select(i =>
+            {
+                var id = Guid.NewGuid();
+                return new AttachmentReference(id, $"file-{i}.txt", "text/plain", 1, $"{id:N}.cna", DateTimeOffset.UtcNow);
+            })
+            .ToArray();
         var item = new VaultItem
         {
             Id = Guid.NewGuid(),
             Title = "Bounds",
             Tags = Enumerable.Repeat("tag", 101).ToArray(),
             CustomFields = Enumerable.Range(0, 101).Select(i => new CustomField($"field-{i}", "value", false)).ToArray(),
-            Attachments = Enumerable.Range(0, 26).Select(i => new AttachmentReference(Guid.NewGuid(), $"file-{i}.txt", "text/plain", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow)).ToArray()
+            Attachments = attachments
         };
 
         var errors = VaultItemValidator.Validate(item);
@@ -97,7 +104,7 @@ public sealed class VaultItemValidatorTests
     public void RejectsInvalidAndDuplicateAttachmentMetadata()
     {
         var id = Guid.NewGuid();
-        var storage = $"{Guid.NewGuid():N}.cna";
+        var storage = $"{id:N}.cna";
         var valid = new VaultItem
         {
             Id = Guid.NewGuid(),
@@ -112,28 +119,36 @@ public sealed class VaultItemValidatorTests
         };
         Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(invalidMetadata));
 
+        var controlId = Guid.NewGuid();
         var controlCharacters = valid with
         {
-            Attachments = [new AttachmentReference(Guid.NewGuid(), "bad\nname.txt", "text/plain\r\ninvalid", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow)]
+            Attachments = [new AttachmentReference(controlId, "bad\nname.txt", "text/plain\r\ninvalid", 1, $"{controlId:N}.cna", DateTimeOffset.UtcNow)]
         };
         Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(controlCharacters));
+
+        var mismatchedStorage = valid with
+        {
+            Attachments = [new AttachmentReference(id, "file.txt", "text/plain", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow)]
+        };
+        Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(mismatchedStorage));
 
         var duplicateIds = valid with
         {
             Attachments =
             [
-                new AttachmentReference(id, "one.txt", "text/plain", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow),
-                new AttachmentReference(id, "two.txt", "text/plain", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow)
+                new AttachmentReference(id, "one.txt", "text/plain", 1, storage, DateTimeOffset.UtcNow),
+                new AttachmentReference(id, "two.txt", "text/plain", 1, storage, DateTimeOffset.UtcNow)
             ]
         };
         Assert.Contains("Attachment identifiers must be unique within an item.", VaultItemValidator.Validate(duplicateIds));
 
+        var otherId = Guid.NewGuid();
         var duplicateStorage = valid with
         {
             Attachments =
             [
-                new AttachmentReference(Guid.NewGuid(), "one.txt", "text/plain", 1, storage, DateTimeOffset.UtcNow),
-                new AttachmentReference(Guid.NewGuid(), "two.txt", "text/plain", 1, storage.ToUpperInvariant(), DateTimeOffset.UtcNow)
+                new AttachmentReference(id, "one.txt", "text/plain", 1, storage, DateTimeOffset.UtcNow),
+                new AttachmentReference(otherId, "two.txt", "text/plain", 1, storage.ToUpperInvariant(), DateTimeOffset.UtcNow)
             ]
         };
         Assert.Contains("Encrypted attachment storage names must be unique within an item.", VaultItemValidator.Validate(duplicateStorage));
