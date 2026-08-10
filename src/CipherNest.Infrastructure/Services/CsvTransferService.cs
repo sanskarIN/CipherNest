@@ -14,12 +14,14 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
     public CsvTransferService(IVaultService vault, IClock clock)
     {
-        _vault = vault;
-        _clock = clock;
+        _vault = vault ?? throw new ArgumentNullException(nameof(vault));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
     public async Task<IReadOnlyList<string>> ReadHeadersAsync(Stream source, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        if (!source.CanRead) throw new ArgumentException("CSV source stream must be readable.", nameof(source));
         var parser = new CsvParser(source);
         var row = await parser.ReadRowAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
         ValidateHeader(row);
@@ -28,6 +30,8 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
     public async Task<CsvImportResult> ImportCsvAsync(Stream source, CsvImportMapping mapping, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        if (!source.CanRead) throw new ArgumentException("CSV source stream must be readable.", nameof(source));
         ArgumentNullException.ThrowIfNull(mapping);
         if (!_vault.IsUnlocked) throw new InvalidOperationException("Unlock the vault before importing.");
         var parser = new CsvParser(source);
@@ -68,6 +72,8 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
     public async Task ExportCsvAsync(Stream destination, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(destination);
+        if (!destination.CanWrite) throw new ArgumentException("CSV destination stream must be writable.", nameof(destination));
         if (!_vault.IsUnlocked) throw new InvalidOperationException("Unlock the vault before exporting.");
         var items = await _vault.GetItemsAsync(includeTrash: false, cancellationToken).ConfigureAwait(false);
         await using var writer = new StreamWriter(destination, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), 64 * 1024, leaveOpen: true);
