@@ -102,6 +102,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
     private sealed class CsvParser
     {
         private readonly StreamReader _reader;
+        private readonly char[] _charBuffer = new char[1];
         private bool _finished;
 
         public CsvParser(Stream source) => _reader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, 64 * 1024, leaveOpen: true);
@@ -177,9 +178,8 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
         private async Task<int> ReadCharAsync(CancellationToken cancellationToken)
         {
-            var chars = new char[1];
-            var count = await _reader.ReadAsync(chars.AsMemory(0, 1), cancellationToken).ConfigureAwait(false);
-            return count == 0 ? -1 : chars[0];
+            var count = await _reader.ReadAsync(_charBuffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false);
+            return count == 0 ? -1 : _charBuffer[0];
         }
     }
 }
