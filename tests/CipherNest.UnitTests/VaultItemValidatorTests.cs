@@ -58,6 +58,19 @@ public sealed class VaultItemValidatorTests
     }
 
     [Fact]
+    public void RejectsAggregateTextBeyondItemBudget()
+    {
+        var fields = Enumerable.Range(0, 21)
+            .Select(index => new CustomField($"field-{index}", new string('x', 100_000), false))
+            .ToArray();
+        var item = new VaultItem { Id = Guid.NewGuid(), Title = "Aggregate bound", CustomFields = fields };
+
+        var errors = VaultItemValidator.Validate(item);
+
+        Assert.Contains($"Combined vault item text exceeds the {VaultItemValidator.MaximumAggregateTextCharacters:N0}-character safety limit.", errors);
+    }
+
+    [Fact]
     public void RejectsCollectionCountsAndEntryBounds()
     {
         var item = new VaultItem
