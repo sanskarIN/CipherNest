@@ -41,12 +41,11 @@ public sealed class VaultItemValidatorTests
         var errors = VaultItemValidator.Validate(item);
 
         Assert.Contains("Title cannot exceed 256 characters.", errors);
-        Assert.Contains("Username or identifier is too long.", errors);
-        Assert.Contains("Secret is too large for an item field.", errors);
-        Assert.Contains("URL is too long.", errors);
-        Assert.Contains("Notes are too large for an item.", errors);
-        Assert.Contains("Collection name cannot exceed 128 characters.", errors);
-
+        Assert.Contains("Username or identifier is invalid or too long.", errors);
+        Assert.Contains("Secret is invalid or too large for an item field.", errors);
+        Assert.Contains("URL is invalid or too long.", errors);
+        Assert.Contains("Notes are invalid or too large for an item.", errors);
+        Assert.Contains("Collection name is invalid or exceeds 128 characters.", errors);
         Assert.Contains("Title is required.", VaultItemValidator.Validate(item with { Title = " " }));
     }
 
@@ -64,9 +63,9 @@ public sealed class VaultItemValidatorTests
 
         var errors = VaultItemValidator.Validate(item);
 
-        Assert.Contains("An item can have at most 100 tags.", errors);
-        Assert.Contains("An item can have at most 100 custom fields.", errors);
-        Assert.Contains("An item can have at most 25 attachments.", errors);
+        Assert.Contains("An item can have at most 100 tags and the tag collection must be present.", errors);
+        Assert.Contains("An item can have at most 100 custom fields and the custom-field collection must be present.", errors);
+        Assert.Contains("An item can have at most 25 attachments and the attachment collection must be present.", errors);
         Assert.Contains("Tags cannot be empty and cannot exceed 128 characters.", VaultItemValidator.Validate(item with { Tags = [new string('x', 129)], CustomFields = [], Attachments = [] }));
         Assert.Contains("Tags cannot be empty and cannot exceed 128 characters.", VaultItemValidator.Validate(item with { Tags = [" "], CustomFields = [], Attachments = [] }));
         Assert.Contains("A custom field name or value is invalid.", VaultItemValidator.Validate(item with { Tags = [], CustomFields = [new CustomField(" ", "value", false)], Attachments = [] }));
@@ -111,5 +110,38 @@ public sealed class VaultItemValidatorTests
             ]
         };
         Assert.Contains("Encrypted attachment storage names must be unique within an item.", VaultItemValidator.Validate(duplicateStorage));
+    }
+
+    [Fact]
+    public void RejectsRuntimeNullsEmptyIdentifierAndUnknownTypeWithoutThrowing()
+    {
+        var malformed = new VaultItem
+        {
+            Id = Guid.Empty,
+            Type = (VaultItemType)999,
+            Title = null!,
+            Username = null!,
+            Secret = null!,
+            Url = null!,
+            Notes = null!,
+            Collection = null!,
+            Tags = null!,
+            CustomFields = null!,
+            Attachments = null!
+        };
+
+        var errors = VaultItemValidator.Validate(malformed);
+
+        Assert.Contains("Item identifier is invalid.", errors);
+        Assert.Contains("Item type is invalid.", errors);
+        Assert.Contains("Title is required.", errors);
+        Assert.Contains("Username or identifier is invalid or too long.", errors);
+        Assert.Contains("Secret is invalid or too large for an item field.", errors);
+        Assert.Contains("URL is invalid or too long.", errors);
+        Assert.Contains("Notes are invalid or too large for an item.", errors);
+        Assert.Contains("Collection name is invalid or exceeds 128 characters.", errors);
+        Assert.Contains("An item can have at most 100 tags and the tag collection must be present.", errors);
+        Assert.Contains("An item can have at most 100 custom fields and the custom-field collection must be present.", errors);
+        Assert.Contains("An item can have at most 25 attachments and the attachment collection must be present.", errors);
     }
 }
