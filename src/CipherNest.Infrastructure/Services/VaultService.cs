@@ -293,8 +293,20 @@ public sealed class VaultService : IVaultService, IDisposable
 
     private VaultItem DecryptItem(StoredVaultItem row, byte[] key)
     {
-        var envelope = JsonSerializer.Deserialize<EncryptedEnvelope>(row.Envelope, JsonOptions) ?? throw new CryptographicException("Stored record envelope is invalid."); var plaintext = _crypto.Decrypt(envelope, key, row.Id.ToByteArray());
-        try { return JsonSerializer.Deserialize<VaultItem>(plaintext, JsonOptions) ?? throw new CryptographicException("Stored record payload is invalid."); } finally { CryptographicOperations.ZeroMemory(plaintext); }
+        var envelope = JsonSerializer.Deserialize<EncryptedEnvelope>(row.Envelope, JsonOptions) ?? throw new CryptographicException("Stored record envelope is invalid.");
+        var plaintext = _crypto.Decrypt(envelope, key, row.Id.ToByteArray());
+        try
+        {
+            var item = JsonSerializer.Deserialize<VaultItem>(plaintext, JsonOptions) ?? throw new CryptographicException("Stored record payload is invalid.");
+            if (item.Id != row.Id) throw new CryptographicException("Stored record identifier does not match its authenticated database key.");
+            var errors = VaultItemValidator.Validate(item);
+            if (errors.Count > 0) throw new CryptographicException("Stored record payload contains invalid metadata.");
+            return item;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+        }
     }
 
     private async Task<VaultItem> GetItemRequiredAsync(Guid id, CancellationToken cancellationToken) => await GetItemAsync(id, cancellationToken).ConfigureAwait(false) ?? throw new KeyNotFoundException("The requested vault item does not exist.");
