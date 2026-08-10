@@ -323,11 +323,14 @@ public partial class SettingsViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(CurrentMasterPassphrase)) { StatusMessage = "Enter the current master passphrase."; return; }
         if (!string.Equals(NewMasterPassphrase, ConfirmNewMasterPassphrase, StringComparison.Ordinal)) { StatusMessage = "The new passphrase confirmation does not match."; return; }
         var strength = _passwordGenerator.Evaluate(NewMasterPassphrase); if (NewMasterPassphrase.Length < 12 || strength.Score < 3) { StatusMessage = $"Choose a stronger new master passphrase. Current estimate: {strength.Label}."; return; }
+
+        var currentMasterPassphrase = CurrentMasterPassphrase;
+        var newMasterPassphrase = NewMasterPassphrase;
+        CurrentMasterPassphrase = NewMasterPassphrase = ConfirmNewMasterPassphrase = string.Empty;
         IsBusy = true;
         try
         {
-            await _vault.ChangeMasterPassphraseAsync(CurrentMasterPassphrase, NewMasterPassphrase);
-            CurrentMasterPassphrase = NewMasterPassphrase = ConfirmNewMasterPassphrase = string.Empty;
+            await _vault.ChangeMasterPassphraseAsync(currentMasterPassphrase, newMasterPassphrase);
             _sessionSecurity.Clear();
             await _vault.LockAsync();
             try { await _clipboard.ClearAsync(); }
@@ -336,7 +339,12 @@ public partial class SettingsViewModel : ObservableObject
             await Shell.Current.GoToAsync("//unlock");
         }
         catch (Exception ex) when (ex is CipherNest.Application.Exceptions.VaultAuthenticationException or ArgumentException) { StatusMessage = $"Master passphrase was not changed: {ex.Message}"; }
-        finally { IsBusy = false; }
+        finally
+        {
+            currentMasterPassphrase = string.Empty;
+            newMasterPassphrase = string.Empty;
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -344,12 +352,31 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!string.Equals(DeletionConfirmationPhrase.Trim(), DeletePhrase, StringComparison.Ordinal)) { StatusMessage = $"Type exactly {DeletePhrase} before deleting the vault."; return; }
         if (string.IsNullOrWhiteSpace(DeletionMasterPassphrase)) { StatusMessage = "Confirm the current master passphrase. Recovery keys are not accepted for vault deletion."; return; }
-        var confirm = await Shell.Current.DisplayAlertAsync("Permanently delete this local vault?", "This removes CipherNest's local encrypted database and attachment files. Flash storage, filesystem snapshots, operating-system backups, shared exports, and forensic remnants can remain outside CipherNest's control. This action cannot be undone from the app.", "Delete local vault", "Cancel"); if (!confirm) return;
-        IsBusy = true;
-        try { await _vault.DeleteVaultAsync(DeletionMasterPassphrase); await _biometrics.ClearSecondarySecretAsync(); _sessionSecurity.Clear(); DeletionMasterPassphrase = DeletionConfirmationPhrase = string.Empty; StatusMessage = string.Empty; await Shell.Current.GoToAsync("//onboarding"); }
-        catch (CipherNest.Application.Exceptions.VaultAuthenticationException) { StatusMessage = "Vault deletion was cancelled because master-passphrase confirmation failed."; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { StatusMessage = $"Vault deletion could not finish: {ex.Message}"; }
-        finally { IsBusy = false; }
+
+        var deletionMasterPassphrase = DeletionMasterPassphrase;
+        DeletionMasterPassphrase = DeletionConfirmationPhrase = string.Empty;
+        try
+        {
+            var confirm = await Shell.Current.DisplayAlertAsync("Permanently delete this local vault?", "This removes CipherNest's local encrypted database and attachment files. Flash storage, filesystem snapshots, operating-system backups, shared exports, and forensic remnants can remain outside CipherNest's control. This action cannot be undone from the app.", "Delete local vault", "Cancel");
+            if (!confirm) return;
+
+            IsBusy = true;
+            try
+            {
+                await _vault.DeleteVaultAsync(deletionMasterPassphrase);
+                await _biometrics.ClearSecondarySecretAsync();
+                _sessionSecurity.Clear();
+                StatusMessage = string.Empty;
+                await Shell.Current.GoToAsync("//onboarding");
+            }
+            catch (CipherNest.Application.Exceptions.VaultAuthenticationException) { StatusMessage = "Vault deletion was cancelled because master-passphrase confirmation failed."; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { StatusMessage = $"Vault deletion could not finish: {ex.Message}"; }
+            finally { IsBusy = false; }
+        }
+        finally
+        {
+            deletionMasterPassphrase = string.Empty;
+        }
     }
 
     [RelayCommand] private async Task TransferAsync() => await Shell.Current.GoToAsync("//transfer");
