@@ -124,7 +124,7 @@ public sealed class EncryptedBackupService : IBackupService
         using var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true);
         long totalBytes = 0;
         var entryCount = 0;
-        await AddBoundedFileAsync(zip, snapshot, "vault.db", ref totalBytes, ref entryCount, cancellationToken).ConfigureAwait(false);
+        (totalBytes, entryCount) = await AddBoundedFileAsync(zip, snapshot, "vault.db", totalBytes, entryCount, cancellationToken).ConfigureAwait(false);
 
         var attachmentDirectory = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, AppConstants.AttachmentDirectoryName);
         if (!Directory.Exists(attachmentDirectory)) return;
@@ -138,17 +138,18 @@ public sealed class EncryptedBackupService : IBackupService
             cancellationToken.ThrowIfCancellationRequested();
             var name = Path.GetFileName(file);
             if (!Guid.TryParseExact(Path.GetFileNameWithoutExtension(name), "N", out _)) continue;
-            await AddBoundedFileAsync(zip, file, $"attachments/{name}", ref totalBytes, ref entryCount, cancellationToken).ConfigureAwait(false);
+            (totalBytes, entryCount) = await AddBoundedFileAsync(zip, file, $"attachments/{name}", totalBytes, entryCount, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private static async Task AddBoundedFileAsync(ZipArchive zip, string sourcePath, string entryName, ref long totalBytes, ref int entryCount, CancellationToken cancellationToken)
+    private static async Task<(long TotalBytes, int EntryCount)> AddBoundedFileAsync(ZipArchive zip, string sourcePath, string entryName, long totalBytes, int entryCount, CancellationToken cancellationToken)
     {
         var length = new FileInfo(sourcePath).Length;
-        totalBytes = BackupArchivePolicy.AddEntryLength(totalBytes, length);
-        entryCount++;
-        BackupArchivePolicy.ValidateEntryCount(entryCount);
+        var nextTotal = BackupArchivePolicy.AddEntryLength(totalBytes, length);
+        var nextCount = checked(entryCount + 1);
+        BackupArchivePolicy.ValidateEntryCount(nextCount);
         await AddFileAsync(zip, sourcePath, entryName, cancellationToken).ConfigureAwait(false);
+        return (nextTotal, nextCount);
     }
 
     private static async Task AddFileAsync(ZipArchive zip, string sourcePath, string entryName, CancellationToken cancellationToken)
