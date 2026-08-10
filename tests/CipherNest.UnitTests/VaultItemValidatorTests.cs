@@ -67,8 +67,49 @@ public sealed class VaultItemValidatorTests
         Assert.Contains("An item can have at most 100 tags.", errors);
         Assert.Contains("An item can have at most 100 custom fields.", errors);
         Assert.Contains("An item can have at most 25 attachments.", errors);
-        Assert.Contains("Tags cannot exceed 128 characters.", VaultItemValidator.Validate(item with { Tags = [new string('x', 129)], CustomFields = [], Attachments = [] }));
+        Assert.Contains("Tags cannot be empty and cannot exceed 128 characters.", VaultItemValidator.Validate(item with { Tags = [new string('x', 129)], CustomFields = [], Attachments = [] }));
+        Assert.Contains("Tags cannot be empty and cannot exceed 128 characters.", VaultItemValidator.Validate(item with { Tags = [" "], CustomFields = [], Attachments = [] }));
         Assert.Contains("A custom field name or value is invalid.", VaultItemValidator.Validate(item with { Tags = [], CustomFields = [new CustomField(" ", "value", false)], Attachments = [] }));
         Assert.Contains("A custom field name or value is invalid.", VaultItemValidator.Validate(item with { Tags = [], CustomFields = [new CustomField("name", new string('x', 100_001), false)], Attachments = [] }));
+    }
+
+    [Fact]
+    public void RejectsInvalidAndDuplicateAttachmentMetadata()
+    {
+        var id = Guid.NewGuid();
+        var storage = $"{Guid.NewGuid():N}.cna";
+        var valid = new VaultItem
+        {
+            Id = Guid.NewGuid(),
+            Title = "Attachment metadata",
+            Attachments = [new AttachmentReference(id, "file.txt", "text/plain", 100, storage, DateTimeOffset.UtcNow)]
+        };
+        Assert.Empty(VaultItemValidator.Validate(valid));
+
+        var invalidMetadata = valid with
+        {
+            Attachments = [new AttachmentReference(Guid.Empty, " ", new string('m', 257), 100L * 1024 * 1024 + 1, " ", DateTimeOffset.UtcNow)]
+        };
+        Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(invalidMetadata));
+
+        var duplicateIds = valid with
+        {
+            Attachments =
+            [
+                new AttachmentReference(id, "one.txt", "text/plain", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow),
+                new AttachmentReference(id, "two.txt", "text/plain", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow)
+            ]
+        };
+        Assert.Contains("Attachment identifiers must be unique within an item.", VaultItemValidator.Validate(duplicateIds));
+
+        var duplicateStorage = valid with
+        {
+            Attachments =
+            [
+                new AttachmentReference(Guid.NewGuid(), "one.txt", "text/plain", 1, storage, DateTimeOffset.UtcNow),
+                new AttachmentReference(Guid.NewGuid(), "two.txt", "text/plain", 1, storage.ToUpperInvariant(), DateTimeOffset.UtcNow)
+            ]
+        };
+        Assert.Contains("Encrypted attachment storage names must be unique within an item.", VaultItemValidator.Validate(duplicateStorage));
     }
 }
