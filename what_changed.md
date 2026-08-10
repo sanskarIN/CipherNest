@@ -1035,3 +1035,261 @@ Accordingly this continuation does **not** claim that the newly added settings t
 The immediate next execution point remains evidence collection from `docs/NEXT_STEPS.md` Priority 0 and `docs/verification/CI_GATES.md`: execute clean core/platform verification, fix every resulting compiler/analyzer/test/workload issue, then continue through transition-race/device-security validation, backup/restore/database-replacement compatibility, transfer behavior, accessibility/localization, performance, dependency/license review, signed packaging, store-policy checks, and independent security review.
 
 No signing credential, store credential, API secret, private key, vault secret, recovery material, or production analytics/crash token was added to source control during this continuation.
+
+## 2026-08-10 — Continuation: cancellation-safe backup recovery, bounded encrypted storage, fail-closed staging, SQLite file-set recovery, and snapshot protection
+
+This continuation followed the persistence/session-hardening head and deliberately concentrated on local file-system and storage-resource boundaries that remain important even when every vault payload is encrypted. The changes were split into small commits so backup framing, path policy, SQLite recovery, encrypted attachment staging, settings persistence, record-size controls, application validation, tests, and documentation can be reviewed independently. Connector-created commits continue to include `Signed-off-by: Sanskar <sanskarin@outlook.in>`.
+
+### Cancellation-safe encrypted-backup rollback
+
+- Found a restore-recovery weakness after active-state mutation: rollback database replacement still used the original caller cancellation token.
+- If cancellation was the event that caused restore failure, the rollback itself could therefore be cancelled before restoring the prior database.
+- `EncryptedBackupService` now invokes rollback database replacement with `CancellationToken.None` once the active replacement phase has begun.
+- The normal forward restore path remains cancellable. Only recovery after mutation deliberately ignores caller cancellation.
+- Attachment rollback staging no longer uses a fixed `attachments.previous` directory. Each restore creates a collision-resistant `attachments.previous.<guid>` recovery location.
+- Added `BackupRollbackCancellationIntegrationTests`, which creates a real encrypted backup, injects a store that cancels during the first replacement, and requires the second rollback replacement call to receive an uncancelled token.
+- Secondary rollback errors remain best-effort and do not intentionally replace the original restore exception.
+
+### Protected encrypted-backup export destinations
+
+- Added `BackupPathPolicy` as a canonical path boundary for encrypted backup export.
+- Export refuses destinations equal to the live vault database, SQLite `-wal`, SQLite `-shm`, or the `vault.db.previous...` recovery naming family.
+- Export also refuses any destination inside the encrypted attachment store.
+- Windows/macOS comparisons use case-insensitive path comparison; other targets use ordinal comparison.
+- The normal app-private `Backups` directory remains allowed because it is a sibling storage area rather than an active-vault file.
+- Encrypted backup staging now uses a unique sibling `.<filename>.<guid>.tmp` path and opens it with `FileMode.CreateNew`.
+- Added `BackupPathPolicyTests` for valid backup locations, active DB/WAL/SHM/recovery collisions, attachment-store rejection, and unique sibling staging.
+- A follow-up test change removed dependence on a potentially version-sensitive xUnit `Assert.EndsWith` overload by using `string.EndsWith(..., StringComparison)` directly.
+
+### Collision-resistant fail-closed encrypted attachment staging
+
+- `EncryptedAttachmentStore` no longer uses a deterministic `<final>.tmp` encryption staging path.
+- Staging is now `.<final-file>.<guid>.tmp` under the encrypted attachment directory and uses `FileMode.CreateNew`.
+- Final installation uses `File.Move(..., overwrite: false)`.
+- If an opaque attachment filename collision somehow occurs, CipherNest fails rather than replacing an existing encrypted attachment container.
+- Existing reusable plaintext-buffer zeroing after each chunk and on exit remains in place.
+- Exposed `MaximumPlaintextBytes`, `MinimumContainerBytes`, and calculated `MaximumContainerBytes` from the encrypted attachment format so other infrastructure layers can validate `.cna` resource envelopes without duplicating guessed constants.
+- Added `AttachmentStagingSourceTests` to require unique `CreateNew` staging, final non-overwrite behavior, container bounds, and plaintext buffer zeroing.
+
+### Backup ZIP duplicate-path and attachment-container bounds
+
+- Backup restore now tracks normalized ZIP entry paths in a case-insensitive set and rejects duplicates before staging files.
+- This closes ambiguity where multiple archive entries could target the same normalized path.
+- Existing allowlisting remains limited to `vault.db` plus one-level GUID `.cna` entries beneath `attachments/`.
+- Encrypted attachment ZIP entries must additionally fall between `EncryptedAttachmentStore.MinimumContainerBytes` and `MaximumContainerBytes`.
+- A single `.cna` entry can no longer consume the entire generic one-gigabyte archive budget merely because the global archive cap allowed it.
+- Existing total archive size, entry count, path allowlist, authentication, and trailing-data checks remain in place.
+- `BackupRestoreHardeningSourceTests` requires duplicate-path rejection, actual attachment-container bounds, protected export paths, unique recovery naming, and uncancelled rollback semantics.
+
+### SQLite replacement now stages the complete active file set
+
+- Reworked `SqliteVaultStore.ReplaceDatabaseAsync` so the active database, WAL, and SHM are treated as one recovery file set rather than deleting sidecars before the active database has been safely staged.
+- Replacement source equal to the active database is rejected before any mutation.
+- Candidate validation still executes before staging.
+- The active SQLite file set is moved into unique `vault.db.previous.<guid>`, `...-wal`, and `...-shm` recovery paths.
+- The replacement database is copied only after staging succeeds.
+- Successful replacement removes recovery artifacts best-effort.
+- `DeleteDatabaseAsync` also sweeps the unique `.previous.*` recovery naming pattern during full local-vault deletion.
+- Added `DatabaseReplacementRecoveryIntegrationTests` for self-replacement rejection, successful validated replacement, recovery-artifact cleanup, and later protected snapshot behavior.
+
+### Component-aware SQLite rollback for partial staging
+
+- Found a partial-staging edge in the new file-set recovery path: if the database moved successfully but moving WAL or SHM failed, an unconditional rollback cleanup could delete a sidecar that never actually moved.
+- Recovery now uses `RestoreRecoveryComponent` for database, WAL, and SHM independently.
+- A component is replaced only if its corresponding recovery file exists.
+- An unstaged active sidecar is therefore preserved during partial recovery.
+- Added `DatabaseRecoverySourceTests` requiring component-aware DB/WAL/SHM restoration and validating that replacement resource checks run before installation.
+
+### Protected consistent SQLite snapshot destinations
+
+- Found a separate self-clobber hazard in `CreateConsistentSnapshotAsync`: a caller-supplied destination equal to the active database could previously be deleted before the SQLite backup operation started.
+- Snapshot destinations are now canonicalized and validated before acquiring the destructive path.
+- Snapshot creation refuses the active database, its WAL/SHM sidecars, and the `.previous...` recovery naming family.
+- A pre-existing snapshot destination is refused instead of overwritten.
+- If a newly created snapshot fails partway through SQLite backup, CipherNest attempts best-effort deletion of that partial output and rethrows the original failure.
+- Added integration coverage for active DB/WAL/SHM/recovery snapshot destinations and verifies the active header remains intact after each rejected call.
+- Extended `DatabaseRecoverySourceTests` to require `ValidateSnapshotDestination`, pre-existing-destination refusal, and partial-output cleanup.
+
+### Settings persistence uses unique staging and safe fallback
+
+- `JsonSettingsStore.SaveAsync` now stages to `.<settings-file>.<guid>.tmp` with `FileMode.CreateNew` instead of a shared deterministic `.tmp` name.
+- Multiple failed/old staging artifacts can no longer collide with a later save merely because they use one fixed path.
+- Settings load falls back to default `AppPreferences` on malformed JSON, I/O failure, or access failure because this file stores non-secret preferences, not vault secrets.
+- Cancellation is not included in that fallback catch, so explicit cancellation still propagates.
+- Existing `AppPreferencesPolicy` normalization continues to run on load and save.
+- `JsonSettingsStoreTests` now verifies successful save/load leaves no `.*.tmp` staging artifacts.
+
+### Explicit encrypted vault storage-resource budgets
+
+- Added `VaultStorageLimits` in Shared so storage/service layers use one source for bounded encrypted-record resources.
+- Current limits are:
+  - vault-header JSON: 64 KiB UTF-8;
+  - serialized/decrypted item JSON: 16 MiB;
+  - stored encrypted envelope: 24 MiB per row;
+  - encrypted item rows: 100,000;
+  - aggregate stored encrypted-envelope bytes: 256 MiB.
+- These are resource-safety ceilings, not recommended target sizes for ordinary vaults.
+- Raising them requires memory/performance/security review rather than only changing a UI constant.
+
+### SQLite length/count checks before BLOB/text materialization
+
+- `ReadAllItemsAsync` now queries `COUNT(*)` and `SUM(length(Envelope))` before reading item rows.
+- Vaults above the 100,000-row or 256 MiB aggregate encrypted-envelope budgets are rejected before the full row set is materialized.
+- The row query also selects `length(Envelope)` and checks the 24 MiB per-envelope bound before casting the BLOB value.
+- Stored item IDs must parse as a non-empty canonical lower-case GUID `D` string; alternate/non-canonical stored representations are rejected.
+- Upserts enforce the same per-record/count/aggregate budgets, excluding the currently updated item from the aggregate calculation so replacing an existing item is counted correctly.
+- `VaultService` independently enforces 16 MiB serialized/decrypted item JSON and 24 MiB stored-envelope limits so an alternate `IVaultStore` implementation cannot bypass the SQLite-specific bounds.
+- Decrypted plaintext record buffers remain zeroed in `finally`.
+
+### Aggregate application-level item-text budget
+
+- Individual custom-field values were already bounded, but a pathological item could still combine many maximum-sized fields into a very large serialization allocation.
+- Added `VaultItemValidator.MaximumAggregateTextCharacters = 2_000_000`.
+- The aggregate includes core item strings, tags, custom-field names/values, and attachment display/media/storage metadata.
+- Validation rejects over-budget items before persistence serialization.
+- Added a focused validator test that creates multiple individually valid 100,000-character custom-field values whose combined text crosses the aggregate budget.
+
+### Vault-header size boundary before deserialization
+
+- Added `MaximumVaultHeaderUtf8Bytes = 64 KiB` to the shared storage limits.
+- `SqliteVaultStore.ReadHeaderAsync` queries `length(CAST(HeaderJson AS BLOB))` before materializing header text.
+- Oversized/missing-length-inconsistent header text is rejected before the service sees it.
+- Header writes use `Encoding.UTF8.GetByteCount` and reject data above the budget.
+- `VaultService` repeats the 64 KiB UTF-8 check before deserialization so custom store implementations cannot bypass the SQLite boundary.
+- Existing supported header-version range and KDF/wrapper authentication checks remain in place.
+- Added `VaultStorageBoundsIntegrationTests` for oversized header write/read behavior, invalid stored identifiers, and invalid empty-envelope upserts.
+- Added `VaultStorageBoundsSourceTests` requiring the header/envelope/count/aggregate and service-level size checks.
+
+### Restore validation now checks resource safety before active swap
+
+- A candidate replacement database can be SQLite-valid and schema-valid while still containing resource-hostile metadata.
+- `ValidateReplacementDatabaseAsync` now also requires:
+  - a present vault header;
+  - bounded vault-header UTF-8 length;
+  - bounded item count;
+  - bounded aggregate encrypted envelope bytes;
+  - bounded per-record encrypted envelope size;
+  - canonical non-empty stored item IDs.
+- These checks run before staging the active DB/WAL/SHM.
+- A current-schema replacement with no vault header is now rejected while the active database remains untouched.
+- `DatabaseReplacementRecoveryIntegrationTests` contains this headerless-candidate preservation case.
+
+### Tests added or expanded in this continuation
+
+Added or expanded:
+
+- `BackupRollbackCancellationIntegrationTests`
+- `BackupPathPolicyTests`
+- `BackupRestoreHardeningSourceTests`
+- `AttachmentStagingSourceTests`
+- `DatabaseReplacementRecoveryIntegrationTests`
+- `DatabaseRecoverySourceTests`
+- `VaultStorageBoundsIntegrationTests`
+- `VaultStorageBoundsSourceTests`
+- `JsonSettingsStoreTests`
+- `VaultItemValidatorTests`
+- existing backup corruption/wrong-passphrase tests remain in place.
+
+The new tests cover cancellation-safe recovery, canonical backup destinations, unique staging, duplicate archive paths, encrypted attachment container sizes, SQLite file-set replacement/recovery, protected snapshot destinations, header/envelope storage budgets, canonical identifiers, aggregate item text, and settings staging cleanup.
+
+### Documentation synchronized in this continuation
+
+Updated:
+
+- `docs/TEST_PLAN.md`
+- `docs/RELEASE_CHECKLIST.md`
+- `docs/architecture/DATABASE.md`
+- `docs/security/THREAT_MODEL.md`
+- `docs/security/CRYPTOGRAPHIC_DESIGN.md`
+- `docs/NEXT_STEPS.md`
+- `PROJECT_STATUS.md`
+- `CHANGELOG.md`
+- `README.md`
+- this `what_changed.md` continuation ledger.
+
+The release/test/database/security documents now distinguish a database that is merely SQLite/schema-valid from one that also satisfies CipherNest's current bounded storage/resource policy.
+
+### Commits created during this continuation
+
+- `fix(backup): make restore rollback cancellation-safe`
+- `test(backup): require uncancelled restore rollback`
+- `feat(backup): add protected export destination policy`
+- `fix(backup): protect live vault paths during export`
+- `test(backup): cover protected export paths`
+- `fix(attachments): use unique fail-closed encryption staging`
+- `refactor(attachments): expose encrypted container size bounds`
+- `fix(backup): bound attachment entries and reject duplicate paths`
+- `fix(database): stage SQLite file set before replacement`
+- `test(database): cover staged SQLite replacement lifecycle`
+- `fix(settings): use unique staging files for preference saves`
+- `fix(settings): fail safely on unreadable preference files`
+- `test(settings): require unique staging cleanup`
+- `test(backup): enforce restore hardening source invariants`
+- `test(attachments): enforce fail-closed encrypted staging`
+- `feat(storage): add bounded encrypted record limits`
+- `fix(database): bound encrypted records before BLOB materialization`
+- `fix(database): enforce encrypted record bounds on writes`
+- `fix(validation): bound aggregate vault item text`
+- `test(validation): cover aggregate item text budget`
+- `fix(vault): enforce serialized record size bounds`
+- `feat(storage): bound vault header metadata size`
+- `fix(database): bound vault header reads and writes`
+- `fix(vault): bound header metadata before deserialization`
+- `test(storage): cover header and encrypted record bounds`
+- `test(storage): enforce bounded vault record source paths`
+- `fix(restore): validate resource bounds before database swap`
+- `test(restore): reject headerless replacement database`
+- `fix(database): preserve unstaged SQLite sidecars during rollback`
+- `test(database): enforce component-aware SQLite recovery`
+- `docs(testing): add storage and restore resource hardening gates`
+- `docs(database): document bounded records and file-set recovery`
+- `docs(security): document restore and storage resource hardening`
+- `docs(security): add bounded record and backup staging design`
+- `docs(release): add bounded storage and rollback verification gates`
+- `docs(status): record bounded storage and recovery hardening`
+- `docs(changelog): record storage and restore hardening`
+- `docs(roadmap): add storage budget and rollback validation work`
+- `test(backup): avoid assertion overload compatibility risk`
+- `docs(readme): reflect bounded storage and restore recovery`
+- `fix(database): prevent snapshot destination clobbering`
+- `test(database): reject active snapshot destinations`
+- `test(database): enforce protected snapshot destinations`
+- `docs(database): document protected snapshot destinations`
+- `docs(testing): add protected snapshot destination gate`
+- `docs(release): add protected snapshot destination verification`
+- this `what_changed.md` update.
+
+### Final indexed source hygiene check for this continuation
+
+Immediately before this progress-file update, indexed repository searches returned no matches for:
+
+- `TODO FIXME NotImplementedException`
+- raw `ex.Message`
+- legacy `.DisplayAlert(`
+- `Debug.WriteLine`
+- `BiometricManager`.
+
+As in earlier passes, the GitHub code-search index is not treated as authoritative for generic patterns; direct review of the modified persistence/backup/settings/attachment files and focused source-regression tests were used for the actual invariants. These searches are only an additional source-hygiene signal.
+
+### Verification limits retained
+
+The connected GitHub environment cannot execute the current .NET 10/MAUI solution, run the direct-push hosted Actions jobs as a local substitute, launch Android/iOS/macOS/Windows emulators or physical devices, exercise real biometric/clipboard/screenshot/lifecycle/share-sheet/filesystem behavior, sign store packages, or perform an independent security audit.
+
+Therefore this continuation does **not** claim that the newly added backup rollback/path tests, attachment staging tests, SQLite recovery/snapshot tests, header/envelope storage-bound tests, settings staging tests, aggregate validation tests, or the configured CI jobs have passed merely because their source is committed.
+
+The immediate execution point remains `docs/NEXT_STEPS.md` Priority 0 and `docs/verification/CI_GATES.md`: run the committed core/platform verification scripts and exact hosted checks, fix every compiler/analyzer/test/workload failure, then stress restore cancellation, SQLite partial recovery, lock/session transition races, and target-device security behavior before packaging.
+
+Signing keys, certificates, store credentials, API secrets, private keys, vault secrets, recovery material, and production analytics/crash tokens remain intentionally absent from source control.
+
+### Deliberately deferred scope remains unchanged
+
+The following remain separate future reviewed projects rather than being represented as complete current features:
+
+- cloud synchronization, accounts, collaboration, server storage, device enrollment, and conflict resolution;
+- browser/app autofill;
+- TOTP seed storage/generation;
+- Windows Hello convenience unlock;
+- rich binary/PDF preview and document scanning;
+- pronounceable-password generation pending dedicated design review;
+- destructive automatic wipe after failed attempts;
+- complete Hindi/additional translation catalogs beyond the current English-first architecture.
