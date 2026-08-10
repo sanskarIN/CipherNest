@@ -27,11 +27,12 @@ public sealed class EncryptedBackupService : IBackupService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupPassphrase);
+        var destination = BackupPathPolicy.ValidateExportDestination(destinationPath, _store.DatabasePath);
         var working = Path.Combine(Path.GetTempPath(), $"ciphernest-backup-{Guid.NewGuid():N}");
         Directory.CreateDirectory(working);
         var snapshot = Path.Combine(working, "vault.db");
         var archive = Path.Combine(working, "payload.zip");
-        var tempOutput = destinationPath + ".tmp";
+        var tempOutput = BackupPathPolicy.CreateTemporarySiblingPath(destination);
         byte[]? key = null;
         try
         {
@@ -42,7 +43,7 @@ public sealed class EncryptedBackupService : IBackupService
             key = _crypto.DeriveKey(backupPassphrase.AsSpan(), salt, kdf);
             var header = new BackupHeader(BackupFormatPolicy.CurrentVersion, salt, kdf, ChunkSize, DateTimeOffset.UtcNow);
             var headerJson = JsonSerializer.SerializeToUtf8Bytes(header);
-            await using var output = new FileStream(tempOutput, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
+            await using var output = new FileStream(tempOutput, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
             await output.WriteAsync(Magic, cancellationToken).ConfigureAwait(false);
             await WriteInt32Async(output, headerJson.Length, cancellationToken).ConfigureAwait(false);
             await output.WriteAsync(headerJson, cancellationToken).ConfigureAwait(false);
@@ -62,7 +63,7 @@ public sealed class EncryptedBackupService : IBackupService
             }
             await WriteInt32Async(output, -1, cancellationToken).ConfigureAwait(false);
             await output.FlushAsync(cancellationToken).ConfigureAwait(false);
-            File.Move(tempOutput, destinationPath, overwrite: true);
+            File.Move(tempOutput, destination, overwrite: true);
         }
         finally
         {
