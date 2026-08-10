@@ -156,7 +156,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task ClearCacheAsync()
     {
-        var confirm = await Shell.Current.DisplayAlert("Clear temporary cache?", "This removes CipherNest-managed temporary cache files such as completed plaintext export/share staging files when the operating system still allows access. It does not delete the encrypted vault, encrypted attachments, or backups stored in app data.", "Clear cache", "Cancel");
+        var confirm = await Shell.Current.DisplayAlertAsync("Clear temporary cache?", "This removes CipherNest-managed temporary cache files such as completed plaintext export/share staging files when the operating system still allows access. It does not delete the encrypted vault, encrypted attachments, or backups stored in app data.", "Clear cache", "Cancel");
         if (!confirm) return;
         IsBusy = true;
         try
@@ -231,7 +231,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
         if (BackupPassphrase.Length < 12) { StatusMessage = "Use a backup passphrase of at least 12 characters."; return; }
-        var confirm = await Shell.Current.DisplayAlert("Create a consistent encrypted backup?", "CipherNest will lock the vault before taking the database and attachment snapshot so edits cannot race with the backup. You will unlock again afterward.", "Lock and back up", "Cancel");
+        var confirm = await Shell.Current.DisplayAlertAsync("Create a consistent encrypted backup?", "CipherNest will lock the vault before taking the database and attachment snapshot so edits cannot race with the backup. You will unlock again afterward.", "Lock and back up", "Cancel");
         if (!confirm) return;
         IsBusy = true;
         try
@@ -256,7 +256,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (BackupPassphrase.Length < 12) { StatusMessage = "Enter the backup passphrase before restoring."; return; }
         var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CipherNest encrypted backup" }); if (file is null) return;
-        var confirm = await Shell.Current.DisplayAlert("Restore backup?", "The current vault database and attachment set will be replaced only after the backup container is authenticated and staged. Keep a separate backup before replacing important data.", "Restore", "Cancel"); if (!confirm) return;
+        var confirm = await Shell.Current.DisplayAlertAsync("Restore backup?", "The current vault database and attachment set will be replaced only after the backup container is authenticated and staged. Keep a separate backup before replacing important data.", "Restore", "Cancel"); if (!confirm) return;
         IsBusy = true;
         var tempPath = Path.Combine(FileSystem.Current.CacheDirectory, $"restore-{Guid.NewGuid():N}{AppConstants.BackupExtension}");
         try
@@ -303,7 +303,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!string.Equals(DeletionConfirmationPhrase.Trim(), DeletePhrase, StringComparison.Ordinal)) { StatusMessage = $"Type exactly {DeletePhrase} before deleting the vault."; return; }
         if (string.IsNullOrWhiteSpace(DeletionMasterPassphrase)) { StatusMessage = "Confirm the current master passphrase. Recovery keys are not accepted for vault deletion."; return; }
-        var confirm = await Shell.Current.DisplayAlert("Permanently delete this local vault?", "This removes CipherNest's local encrypted database and attachment files. Flash storage, filesystem snapshots, operating-system backups, shared exports, and forensic remnants can remain outside CipherNest's control. This action cannot be undone from the app.", "Delete local vault", "Cancel"); if (!confirm) return;
+        var confirm = await Shell.Current.DisplayAlertAsync("Permanently delete this local vault?", "This removes CipherNest's local encrypted database and attachment files. Flash storage, filesystem snapshots, operating-system backups, shared exports, and forensic remnants can remain outside CipherNest's control. This action cannot be undone from the app.", "Delete local vault", "Cancel"); if (!confirm) return;
         IsBusy = true;
         try { await _vault.DeleteVaultAsync(DeletionMasterPassphrase); await _biometrics.ClearSecondarySecretAsync(); _sessionSecurity.Clear(); DeletionMasterPassphrase = DeletionConfirmationPhrase = string.Empty; StatusMessage = string.Empty; await Shell.Current.GoToAsync("//onboarding"); }
         catch (CipherNest.Application.Exceptions.VaultAuthenticationException) { StatusMessage = "Vault deletion was cancelled because master-passphrase confirmation failed."; }
