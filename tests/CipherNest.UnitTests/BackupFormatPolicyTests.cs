@@ -1,0 +1,40 @@
+using CipherNest.Infrastructure.Crypto;
+using CipherNest.Infrastructure.Services;
+using CipherNest.Shared;
+
+namespace CipherNest.UnitTests;
+
+public sealed class BackupFormatPolicyTests
+{
+    [Fact]
+    public void CurrentHeaderWithinBounds_IsAccepted()
+    {
+        BackupFormatPolicy.ValidateHeader(
+            BackupFormatPolicy.CurrentVersion,
+            saltLength: 16,
+            CryptoService.DefaultKdf,
+            chunkSize: 1024 * 1024);
+    }
+
+    [Theory]
+    [InlineData(1, 16, 65536, 3, 1, 1048576)]
+    [InlineData(3, 16, 65536, 3, 1, 1048576)]
+    [InlineData(2, 15, 65536, 3, 1, 1048576)]
+    [InlineData(2, 65, 65536, 3, 1, 1048576)]
+    [InlineData(2, 16, 16383, 3, 1, 1048576)]
+    [InlineData(2, 16, 524289, 3, 1, 1048576)]
+    [InlineData(2, 16, 65536, 0, 1, 1048576)]
+    [InlineData(2, 16, 65536, 11, 1, 1048576)]
+    [InlineData(2, 16, 65536, 3, 0, 1048576)]
+    [InlineData(2, 16, 65536, 3, 17, 1048576)]
+    [InlineData(2, 16, 65536, 3, 1, 65535)]
+    [InlineData(2, 16, 65536, 3, 1, 4194305)]
+    public void OutOfBoundsHeader_IsRejectedAsInvalidData(int version, int saltLength, int memoryKiB, int iterations, int parallelism, int chunkSize)
+    {
+        Assert.Throws<InvalidDataException>(() => BackupFormatPolicy.ValidateHeader(
+            version,
+            saltLength,
+            new KdfParameters(memoryKiB, iterations, parallelism),
+            chunkSize));
+    }
+}
