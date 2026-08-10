@@ -173,35 +173,44 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
         if (string.IsNullOrWhiteSpace(CurrentMasterPassphrase)) { StatusMessage = "Enter the current master passphrase before enabling biometric unlock."; return; }
-        if (!_biometrics.IsSupported || !await _biometrics.IsAvailableAsync()) { StatusMessage = "Biometric authentication is not available on this platform or device."; return; }
-        if (!await _vault.ReauthenticateAsync(CurrentMasterPassphrase)) { StatusMessage = "Master-passphrase confirmation failed."; return; }
-        if (!await _biometrics.AuthenticateAsync("Confirm your identity to enable biometric vault unlock.")) { StatusMessage = "Biometric authentication was cancelled or failed."; return; }
 
-        var bytes = RandomNumberGenerator.GetBytes(48);
-        string secret;
-        try { secret = Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_'); }
-        finally { CryptographicOperations.ZeroMemory(bytes); }
-
-        IsBusy = true;
+        var masterPassphrase = CurrentMasterPassphrase;
+        CurrentMasterPassphrase = string.Empty;
         try
         {
-            await _biometrics.StoreSecondarySecretAsync(secret);
-            try { await _vault.EnableSecondaryUnlockAsync(CurrentMasterPassphrase, secret); }
-            catch { await _biometrics.ClearSecondarySecretAsync(); throw; }
-            BiometricUnlockEnabled = true;
-            _sessionSecurity.RecordMasterAuthentication(DateTimeOffset.UtcNow);
-            _loadedPreferences = _loadedPreferences with { BiometricUnlockEnabled = true };
-            await _settings.SaveAsync(_loadedPreferences);
-            CurrentMasterPassphrase = string.Empty;
-            BiometricSupportMessage = "Biometric unlock is configured. CipherNest stores an independent random secondary secret in OS secure storage; it does not store the master passphrase.";
-            StatusMessage = "Biometric unlock enabled.";
+            if (!_biometrics.IsSupported || !await _biometrics.IsAvailableAsync()) { StatusMessage = "Biometric authentication is not available on this platform or device."; return; }
+            if (!await _vault.ReauthenticateAsync(masterPassphrase)) { StatusMessage = "Master-passphrase confirmation failed."; return; }
+            if (!await _biometrics.AuthenticateAsync("Confirm your identity to enable biometric vault unlock.")) { StatusMessage = "Biometric authentication was cancelled or failed."; return; }
+
+            var bytes = RandomNumberGenerator.GetBytes(48);
+            string secret;
+            try { secret = Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_'); }
+            finally { CryptographicOperations.ZeroMemory(bytes); }
+
+            IsBusy = true;
+            try
+            {
+                await _biometrics.StoreSecondarySecretAsync(secret);
+                try { await _vault.EnableSecondaryUnlockAsync(masterPassphrase, secret); }
+                catch { await _biometrics.ClearSecondarySecretAsync(); throw; }
+                BiometricUnlockEnabled = true;
+                _sessionSecurity.RecordMasterAuthentication(DateTimeOffset.UtcNow);
+                _loadedPreferences = _loadedPreferences with { BiometricUnlockEnabled = true };
+                await _settings.SaveAsync(_loadedPreferences);
+                BiometricSupportMessage = "Biometric unlock is configured. CipherNest stores an independent random secondary secret in OS secure storage; it does not store the master passphrase.";
+                StatusMessage = "Biometric unlock enabled.";
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or CryptographicException or CipherNest.Application.Exceptions.VaultAuthenticationException)
+            {
+                BiometricUnlockEnabled = false;
+                StatusMessage = $"Biometric unlock could not be enabled: {ex.Message}";
+            }
+            finally { secret = string.Empty; IsBusy = false; }
         }
-        catch (Exception ex) when (ex is InvalidOperationException or CryptographicException or CipherNest.Application.Exceptions.VaultAuthenticationException)
+        finally
         {
-            BiometricUnlockEnabled = false;
-            StatusMessage = $"Biometric unlock could not be enabled: {ex.Message}";
+            masterPassphrase = string.Empty;
         }
-        finally { secret = string.Empty; IsBusy = false; }
     }
 
     [RelayCommand]
@@ -209,21 +218,23 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
         if (string.IsNullOrWhiteSpace(CurrentMasterPassphrase)) { StatusMessage = "Enter the current master passphrase before disabling biometric unlock."; return; }
+
+        var masterPassphrase = CurrentMasterPassphrase;
+        CurrentMasterPassphrase = string.Empty;
         IsBusy = true;
         try
         {
-            await _vault.DisableSecondaryUnlockAsync(CurrentMasterPassphrase);
+            await _vault.DisableSecondaryUnlockAsync(masterPassphrase);
             await _biometrics.ClearSecondarySecretAsync();
             BiometricUnlockEnabled = false;
             _sessionSecurity.RecordMasterAuthentication(DateTimeOffset.UtcNow);
             _loadedPreferences = _loadedPreferences with { BiometricUnlockEnabled = false };
             await _settings.SaveAsync(_loadedPreferences);
-            CurrentMasterPassphrase = string.Empty;
             BiometricSupportMessage = "Biometric unlock is disabled.";
             StatusMessage = "Biometric unlock disabled.";
         }
         catch (CipherNest.Application.Exceptions.VaultAuthenticationException) { StatusMessage = "Master-passphrase confirmation failed."; }
-        finally { IsBusy = false; }
+        finally { masterPassphrase = string.Empty; IsBusy = false; }
     }
 
     [RelayCommand]
