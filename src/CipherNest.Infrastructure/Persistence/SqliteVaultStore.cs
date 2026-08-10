@@ -122,24 +122,24 @@ public sealed class SqliteVaultStore : IVaultStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceDatabasePath);
         if (!File.Exists(sourceDatabasePath)) throw new FileNotFoundException("Restore database was not found.", sourceDatabasePath);
+        if (PathsEqual(sourceDatabasePath, DatabasePath)) throw new InvalidOperationException("Replacement database must be staged separately from the active vault database.");
+
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             await ValidateReplacementDatabaseAsync(sourceDatabasePath, cancellationToken).ConfigureAwait(false);
-            DeleteSidecars();
-            var backupPath = DatabasePath + ".previous";
-            if (File.Exists(backupPath)) File.Delete(backupPath);
-            if (File.Exists(DatabasePath)) File.Move(DatabasePath, backupPath);
+            var recovery = CreateRecoveryFileSet();
             try
             {
-                File.Copy(sourceDatabasePath, DatabasePath, overwrite: true);
+                StageCurrentFileSet(recovery);
+                File.Copy(sourceDatabasePath, DatabasePath, overwrite: false);
             }
             catch
             {
-                TryRestorePreviousDatabase(backupPath);
+                TryRestoreRecoveryFileSet(recovery);
                 throw;
             }
-            if (File.Exists(backupPath)) File.Delete(backupPath);
+            TryDeleteRecoveryFileSet(recovery);
         }
         finally { _gate.Release(); }
     }
@@ -149,10 +149,11 @@ public sealed class SqliteVaultStore : IVaultStore
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            DeleteSidecars();
-            if (File.Exists(DatabasePath)) File.Delete(DatabasePath);
-            var previous = DatabasePath + ".previous";
-            if (File.Exists(previous)) File.Delete(previous);
+            DeleteIfExists(DatabasePath + "-wal");
+            DeleteIfExists(DatabasePath + "-shm");
+            DeleteIfExists(DatabasePath);
+            DeleteIfExists(DatabasePath + ".previous");
+            DeleteRecoveryArtifacts();
         }
         finally { _gate.Release(); }
     }
@@ -186,27 +187,76 @@ public sealed class SqliteVaultStore : IVaultStore
         }
     }
 
-    private void TryRestorePreviousDatabase(string backupPath)
+    private RecoveryFileSet CreateRecoveryFileSet()
+    {
+        var basePath = DatabasePath + $".previous.{Guid.NewGuid():N}";
+        return new RecoveryFileSet(basePath, basePath + "-wal", basePath + "-shm");
+    }
+
+    private void StageCurrentFileSet(RecoveryFileSet recovery)
+    {
+        MoveIfExists(DatabasePath, recovery.DatabasePath);
+        MoveIfExists(DatabasePath + "-wal", recovery.WalPath);
+        MoveIfExists(DatabasePath + "-shm", recovery.ShmPath);
+    }
+
+    private void TryRestoreRecoveryFileSet(RecoveryFileSet recovery)
     {
         try
         {
-            if (File.Exists(backupPath)) File.Move(backupPath, DatabasePath, overwrite: true);
+            TryDeleteFile(DatabasePath + "-wal");
+            TryDeleteFile(DatabasePath + "-shm");
+            TryDeleteFile(DatabasePath);
+            MoveIfExists(recovery.DatabasePath, DatabasePath, overwrite: true);
+            MoveIfExists(recovery.WalPath, DatabasePath + "-wal", overwrite: true);
+            MoveIfExists(recovery.ShmPath, DatabasePath + "-shm", overwrite: true);
         }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
-    private void DeleteSidecars()
+    private static void TryDeleteRecoveryFileSet(RecoveryFileSet recovery)
     {
-        foreach (var suffix in new[] { "-wal", "-shm" })
-        {
-            var sidecar = DatabasePath + suffix;
-            if (File.Exists(sidecar)) File.Delete(sidecar);
-        }
+        TryDeleteFile(recovery.DatabasePath);
+        TryDeleteFile(recovery.WalPath);
+        TryDeleteFile(recovery.ShmPath);
+    }
+
+    private void DeleteRecoveryArtifacts()
+    {
+        var directory = Path.GetDirectoryName(DatabasePath);
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) return;
+        var pattern = Path.GetFileName(DatabasePath) + ".previous.*";
+        string[] files;
+        try { files = Directory.GetFiles(directory, pattern, SearchOption.TopDirectoryOnly); }
+        catch (IOException) { return; }
+        catch (UnauthorizedAccessException) { return; }
+        foreach (var file in files) TryDeleteFile(file);
+    }
+
+    private static void MoveIfExists(string source, string destination, bool overwrite = false)
+    {
+        if (File.Exists(source)) File.Move(source, destination, overwrite);
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path)) File.Delete(path);
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try { DeleteIfExists(path); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), comparison);
     }
 
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
@@ -220,4 +270,6 @@ public sealed class SqliteVaultStore : IVaultStore
     {
         await using var command = connection.CreateCommand(); command.CommandText = sql; await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    private sealed record RecoveryFileSet(string DatabasePath, string WalPath, string ShmPath);
 }
