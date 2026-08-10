@@ -170,9 +170,11 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task DeleteVaultAsync(string masterPassphrase, CancellationToken cancellationToken = default)
     {
         if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var authorizationLease = AcquireKeyLease(cancellationToken);
+        await _gate.WaitAsync(authorizationLease.Token).ConfigureAwait(false);
         try
         {
+            authorizationLease.Token.ThrowIfCancellationRequested();
             ClearSessionKey();
             var attachmentRoot = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, "attachments");
             await _store.DeleteDatabaseAsync(cancellationToken).ConfigureAwait(false);
