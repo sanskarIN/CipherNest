@@ -50,7 +50,7 @@ public sealed class EncryptedBackupService : IBackupService
             var buffer = new byte[ChunkSize];
             var index = 0;
             int read;
-            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
+            while ((read = await ReadChunkAsync(input, buffer, cancellationToken).ConfigureAwait(false)) > 0)
             {
                 BackupFormatPolicy.ValidateChunkIndex(index);
                 var isFinal = input.Position == input.Length;
@@ -282,6 +282,18 @@ public sealed class EncryptedBackupService : IBackupService
         var bytes = new byte[4];
         await ReadExactlyAsync(stream, bytes, cancellationToken).ConfigureAwait(false);
         return BinaryPrimitives.ReadInt32BigEndian(bytes);
+    }
+
+    private static async Task<int> ReadChunkAsync(Stream stream, Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        var total = 0;
+        while (total < buffer.Length)
+        {
+            var read = await stream.ReadAsync(buffer[total..], cancellationToken).ConfigureAwait(false);
+            if (read == 0) break;
+            total += read;
+        }
+        return total;
     }
 
     private static async Task ReadExactlyAsync(Stream stream, Memory<byte> buffer, CancellationToken cancellationToken)
