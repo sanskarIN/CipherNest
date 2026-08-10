@@ -789,3 +789,229 @@ The connected GitHub environment still cannot execute the repository's .NET 10/M
 The immediate next execution point is Priority 0 in `docs/NEXT_STEPS.md`: clean restore/build/tests/format/analyzers, then Android/Windows smoke tests, Apple-host builds, real-device security behavior, backup/transfer compatibility, accessibility/localization, performance, dependency/license review, signed packaging, and independent security review before stronger security claims.
 
 No signing credential, store credential, API secret, private key, vault secret, recovery material, or production analytics/crash token was added to source control during this continuation.
+
+## 2026-08-10 — Continuation: cross-platform verification, transient-secret lifetime, clipboard fingerprinting, and platform compile hardening
+
+This continuation followed the committed `docs/NEXT_STEPS.md` Priority 0 and security-hardening work. It expanded configured build proof across every current MAUI target family, added reproducible local verification entry points, hardened native biometric source against an Android API-level mismatch, contained lifecycle fallback failures, redesigned delayed clipboard cleanup to avoid retaining plaintext secrets, migrated the MAUI application away from legacy alert APIs, shortened bound credential lifetime across sensitive workflows, and removed path/context-bearing raw exception messages from high-risk UI surfaces. Changes were intentionally split into small commits and continue to carry `Signed-off-by: Sanskar <sanskarin@outlook.in>`.
+
+### Cross-platform CI expansion
+
+- Extended `.github/workflows/dotnet-desktop.yml` with an Android Release compile job on Ubuntu using the .NET MAUI Android workload and `net10.0-android`.
+- Added a macOS Apple compile job that installs the iOS and Mac Catalyst workloads and builds both `net10.0-ios` and `net10.0-maccatalyst`.
+- Retained the Windows Release compile gate and added a second Windows compile using `-p:CipherNestEnableFundingLink=false` so the documented store-policy build variant is continuously compiled.
+- Added `dotnet format --verify-no-changes` gates for Domain, Application, Infrastructure, Shared, UnitTests, IntegrationTests, and UiTests after the existing core restore/build/test sequence.
+- Added workflow concurrency groups with `cancel-in-progress: true` so superseded main/PR runs stop consuming hosted runner time.
+- Added explicit timeouts for core, Windows, Android, and Apple jobs so stuck workload/toolchain failures are bounded and visible.
+- Expanded CodeQL from the core/integration build path to also install the Android MAUI workload and build the MAUI application target before analysis.
+- Added timeout and superseded-run cancellation to CodeQL.
+- Added timeout and superseded-run cancellation to dependency review while retaining `fail-on-severity: high`.
+- Added repository source tests that require Windows/Android/Apple jobs, target framework strings, the funding-disabled build, formatting, timeouts/cancellation, CodeQL MAUI coverage, dependency-review severity policy, and verification-script presence.
+
+### Reproducible local verification scripts
+
+Added committed verification entry points rather than leaving release commands only in prose:
+
+- `scripts/verify-core.ps1`
+- `scripts/verify-core.sh`
+- `scripts/verify-windows.ps1`
+- `scripts/verify-android.sh`
+- `scripts/verify-apple.sh`
+
+The core scripts restore/build/test UnitTests, IntegrationTests, and UiTests and verify formatting across the host-independent source/test projects. The Windows script restores/builds the Windows target in both normal and funding-disabled variants. Android and Apple scripts restore/build their target families on appropriate hosts.
+
+Added `docs/verification/CI_GATES.md` to document the exact configured jobs, local equivalents, evidence that must be recorded for a release, and the important distinction between a configured compile gate and real device/simulator/security/store validation.
+
+### Native biometric source hardening
+
+- Found an Android API-level mismatch: the app supported `BiometricPrompt` from API 28 but its availability preflight queried `BiometricManager`, an API surface introduced later.
+- Removed that newer manager dependency from the API-28 path.
+- Android availability now checks the API-28 `BiometricPrompt` baseline and current activity; enrollment, lockout, hardware availability, and related failures are left to the native prompt/fallback path.
+- Apple biometric request cancellation now invalidates `LAContext` through the request cancellation token and checks cancellation after native evaluation.
+- Added roadmap/test/status/threat-model requirements for physical-device validation of these native paths rather than treating source compilation as behavior proof.
+
+### Lifecycle fail-closed containment
+
+- Identified that the existing `async void` Window lifecycle handlers had a second-failure risk: their catch blocks attempted another vault lock and clipboard clear, either of which could itself throw out of the native event callback.
+- Added `FailClosedLockAndClearClipboardAsync`.
+- Primary lifecycle failures are privacy-safe reported.
+- Fallback vault lock and clipboard cleanup are then attempted separately, and each secondary failure is independently caught and privacy-safe reported as `<operation>.Lock` or `<operation>.Clipboard`.
+- Added `LifecycleFailClosedSourceTests` to require the contained/reporting structure and reject raw debug/console output in that path.
+
+### Clipboard fingerprint-only delayed cleanup
+
+- Replaced delayed plaintext-secret retention with a fixed-size SHA-256 fingerprint.
+- `ClipboardSafetyPolicy.CreateFingerprint` encodes the value to UTF-8, hashes it with SHA-256, and zeroes the owned UTF-8 byte buffer afterward.
+- `ClipboardSafetyPolicy.MatchesFingerprint` validates fingerprint length, hashes the current clipboard value, performs `CryptographicOperations.FixedTimeEquals`, and zeroes the temporary actual hash.
+- Removed the old direct plaintext comparison policy.
+- `ClipboardSecurityService` now serializes clipboard state with a semaphore and tracks `_lastCopiedFingerprint` instead of a copied plaintext string.
+- The tracked fingerprint is zeroed when replaced, cleared, or disposed.
+- The delayed timer uses its own cancellation token source after a successful copy; cancellation of the initiating caller can no longer silently disable the configured security timer after the clipboard write succeeded.
+- Timer and lock-triggered cleanup clear the clipboard only if the current clipboard still hashes to CipherNest's tracked value, preserving unrelated content copied afterward.
+- Scheduled cleanup errors use the privacy-safe reporter with `Clipboard.ScheduledClear`.
+- Added unit coverage for fingerprint size/exact matching/bounds and source regression tests that require fingerprint-only delayed state, zeroing, reporting, and absence of the old linked caller-token/plaintext signature.
+- Documentation explicitly notes that the fingerprint reduces raw-secret lifetime but is not intended as password storage and does not make compromised process memory safe.
+
+### MAUI warnings-as-errors API cleanup
+
+- Converted legacy `Shell.Current.DisplayAlert(...)` calls to `DisplayAlertAsync(...)` in:
+  - `TransferViewModel`
+  - `SettingsViewModel`
+  - `TrashViewModel`
+  - `ItemEditorViewModel`
+- Added `MauiApiSourceTests` which enumerates all MAUI app C# source files and rejects `.DisplayAlert(` so the legacy API cannot silently return while warnings are treated as errors.
+- Final indexed source search returned no `.DisplayAlert(` matches at the time of this pass.
+
+### Shortened credential binding lifetime
+
+Beyond the existing page-disappearance cleanup, bound passphrase fields are now cleared before longer-running/authenticated operations where practical:
+
+- Unlock copies the entered passphrase to a local variable and clears `MasterPassphrase` before vault authentication/reauthentication; the local reference is cleared in `finally`.
+- Onboarding copies the new master passphrase locally and clears both master/confirmation bound properties before vault creation; the local reference is cleared in `finally`.
+- Plaintext CSV export clears `ExportMasterPassphrase` immediately after the re-authentication decision and clears the confirmation phrase on cancellation/success.
+- Trash clears `DeletionPassphrase` immediately after re-authentication and before displaying the final destructive confirmation.
+- Per-item re-authentication clears `ReauthenticationPassphrase` immediately after the authentication decision, including failure.
+- Biometric enable/disable copies the current master passphrase locally, clears the Settings bound field immediately, and clears the local reference in `finally`.
+- Backup export/restore copies the backup passphrase locally, clears the Settings bound field before confirmation/file-picker/share work, and clears the local reference in `finally`.
+- Master-passphrase rotation copies validated current/new passphrases locally, clears current/new/confirmation bound properties before the rotation service call, and clears local references in `finally`.
+- Full-vault deletion copies the current master passphrase locally and clears both deletion-passphrase and destructive-confirmation bound properties before the final destructive alert, then clears the local reference in `finally`.
+- Added `SensitiveCredentialLifetimeSourceTests` to enforce ordering of these field-clearing operations relative to longer security/file operations.
+- These changes reduce application-held reference lifetime but do not claim deterministic erasure of managed strings or GC copies.
+
+### Backup/restore cleanup and biometric rollback reporting
+
+- Restore staging cleanup no longer silently swallows an `IOException`; it reports a redacted `Settings.RestoreBackup.TempCleanup` event.
+- Biometric enable rollback now catches failure of secure-storage cleanup separately and privacy-safe reports `Settings.BiometricEnable.Rollback` without masking the original vault-wrapper failure.
+- Biometric enable failure itself now uses fixed user-facing text plus `Settings.BiometricEnable` redacted reporting.
+
+### Redacted sensitive UI error surfaces
+
+Removed direct rendering of raw exception messages from high-risk file/security paths where those messages can expose filesystem paths or other environment context:
+
+- Settings storage measurement → `Settings.StorageUsage`.
+- Settings encrypted backup export → `Settings.BackupExport`.
+- Settings encrypted backup restore → `Settings.BackupRestore`.
+- Settings backup staging cleanup → `Settings.RestoreBackup.TempCleanup`.
+- Settings master-passphrase argument rejection → `Settings.ChangeMasterPassphrase`.
+- Settings vault deletion file/access failure → `Settings.DeleteVault`.
+- Transfer CSV open → `Transfer.PickCsv`.
+- Transfer CSV import → `Transfer.ImportCsv`.
+- Transfer plaintext export → `Transfer.ExportPlaintext`.
+- Transfer plaintext cache cleanup → `Transfer.CleanPlaintextCache`.
+- Item attachment import → `ItemEditor.AddAttachment`.
+- Item attachment plaintext export → `ItemEditor.ExportAttachment`.
+- Item attachment temp cleanup → `ItemEditor.ExportAttachment.TempCleanup`.
+- Item load/open failure → `ItemEditor.Load`.
+
+The user receives fixed actionable messages; diagnostic reporting remains privacy-safe and omits raw exception message/stack/vault data by design.
+
+### Attachment plaintext staging hardening
+
+- Decrypted attachment export filenames now include both the attachment ID and a fresh random GUID before the sanitized display name.
+- This prevents an unresolved previous staging file from causing reuse/overwrite of the same deterministic path on a later export attempt.
+- Cleanup now handles both `IOException` and `UnauthorizedAccessException`, reports the cleanup failure through the privacy-safe reporter, and warns the user without revealing the staging path.
+- The encrypted source attachment remains unchanged on plaintext export failure.
+
+### Added source regression coverage
+
+Added or expanded:
+
+- `SensitiveCredentialLifetimeSourceTests`
+- `LifecycleFailClosedSourceTests`
+- `ClipboardSecuritySourceTests`
+- `SensitiveErrorSurfaceSourceTests`
+- `MauiApiSourceTests`
+- `RepositoryUiStructureTests` CI-gate requirements
+- `ClipboardSafetyPolicyTests` fingerprint matching
+
+These tests complement—not replace—the existing crypto, storage, backup, migration, parser, attachment, vault, audit, lock, trash, generator, and UI-structure suites.
+
+### Documentation synchronized in this continuation
+
+Updated or added:
+
+- `docs/verification/CI_GATES.md`
+- `docs/setup/BUILD.md`
+- `docs/NEXT_STEPS.md`
+- `docs/TEST_PLAN.md`
+- `docs/RELEASE_CHECKLIST.md`
+- `docs/security/THREAT_MODEL.md`
+- `PROJECT_STATUS.md`
+- `CHANGELOG.md`
+- `README.md`
+- this `what_changed.md` continuation ledger.
+
+### Commits created during this continuation
+
+- `ci: add Android MAUI compile gate`
+- `ci: add Apple MAUI compile gates`
+- `ci: compile funding-disabled Windows variant`
+- `ci: verify core formatting`
+- `ci: bound workflow runtime and cancel superseded runs`
+- `ci(codeql): analyze Android MAUI application code`
+- `ci(codeql): bound analysis runtime and cancel superseded runs`
+- `ci(deps): bound dependency review runtime`
+- `chore(verify): add PowerShell core verification script`
+- `chore(verify): add POSIX core verification script`
+- `chore(verify): add Windows MAUI verification script`
+- `chore(verify): add Android MAUI verification script`
+- `chore(verify): add Apple MAUI verification script`
+- `test(ci): require cross-platform build and verification gates`
+- `fix(android): avoid BiometricManager API-level mismatch`
+- `fix(apple): cancel native biometric prompt with request token`
+- `fix(lifecycle): keep fail-closed cleanup exceptions contained`
+- `feat(clipboard): add fixed-time secret fingerprint matching`
+- `test(clipboard): cover fingerprint matching and bounds`
+- `refactor(clipboard): retain only secret fingerprints for cleanup`
+- `test(clipboard): use fingerprint policy for clear decisions`
+- `refactor(clipboard): remove plaintext comparison policy`
+- `test(clipboard): require fingerprint-only delayed cleanup source`
+- `fix(maui): use async alerts in transfer workflow`
+- `fix(memory): clear plaintext export passphrase after authentication`
+- `fix(maui): use async alerts in settings workflows`
+- `fix(maui): use async alerts in trash workflows`
+- `fix(memory): clear trash passphrase before destructive prompt`
+- `fix(maui): use async alerts in item editor workflows`
+- `test(maui): reject legacy DisplayAlert calls repository-wide`
+- `fix(memory): clear item reauthentication passphrase after use`
+- `fix(memory): clear unlock passphrase before authentication work`
+- `fix(memory): clear onboarding passphrase before vault creation`
+- `fix(memory): shorten biometric settings passphrase lifetime`
+- `fix(memory): clear backup passphrase before file and share flows`
+- `fix(diagnostics): report restore staging cleanup failures`
+- `fix(memory): shorten rotation and vault-deletion credential lifetime`
+- `test(security): enforce short-lived credential bindings`
+- `test(lifecycle): enforce contained fail-closed cleanup`
+- `fix(privacy): redact sensitive settings failure messages`
+- `fix(privacy): redact plaintext transfer failure messages`
+- `fix(privacy): redact attachment and item-open failures`
+- `test(privacy): enforce redacted sensitive error surfaces`
+- `docs(verification): document reproducible CI and local gates`
+- `docs(build): add reproducible verification scripts and CI gates`
+- `docs(roadmap): advance source verification and privacy hardening`
+- `docs(testing): add cross-platform CI credential lifetime and privacy gates`
+- `docs(security): document fingerprint clipboard and redacted UI failures`
+- `docs(status): record cross-platform CI and transient-secret hardening`
+- `docs(changelog): record CI credential clipboard and privacy hardening`
+- `docs(readme): reflect cross-platform verification and transient-secret hardening`
+- `docs(release): add cross-platform CI and privacy hardening gates`
+- this progress-file update.
+
+### Final source hygiene check for this continuation
+
+Immediately before this progress update, indexed repository searches returned no matches for:
+
+- `.DisplayAlert(`
+- `BiometricManager`
+- `Debug.WriteLine`
+- combined `TODO FIXME NotImplementedException` unfinished markers
+- the old raw sensitive failure strings checked for storage, backup, restore, and plaintext-export exception interpolation.
+
+These search results are a source-review signal only; they are not a substitute for compilation or tests.
+
+### Verification limits retained
+
+The connected GitHub editing environment still cannot execute the newly configured hosted workflows, install/run the required .NET MAUI workloads locally, launch target emulators/simulators, use physical biometric hardware, sign packages, or perform store review. Therefore this continuation does not claim that the new Android/Apple/Windows compile gates, CodeQL build, formatting checks, or test suite have passed the final head merely because their source is configured.
+
+The immediate next execution point remains the evidence step in `docs/NEXT_STEPS.md` Priority 0: run the committed verification scripts and exact GitHub checks, fix every compiler/analyzer/test/workload issue found, then continue to device security, backup/transfer compatibility, accessibility/localization, performance, dependency/license review, signed packaging, store-policy verification, and independent security review.
+
+No signing credential, store credential, API secret, private key, vault secret, recovery material, or production analytics/crash token was added to source control during this continuation.
