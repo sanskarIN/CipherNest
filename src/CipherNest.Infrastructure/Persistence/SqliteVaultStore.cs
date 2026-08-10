@@ -130,16 +130,27 @@ public sealed class SqliteVaultStore : IVaultStore
     public async Task CreateConsistentSnapshotAsync(string destinationDatabasePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationDatabasePath);
+        var destinationPath = Path.GetFullPath(destinationDatabasePath);
+        ValidateSnapshotDestination(destinationPath);
+
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             if (!File.Exists(DatabasePath)) throw new InvalidOperationException("No vault database exists.");
-            if (File.Exists(destinationDatabasePath)) File.Delete(destinationDatabasePath);
-            await using var source = await OpenAsync(cancellationToken).ConfigureAwait(false);
-            await ExecuteAsync(source, "PRAGMA wal_checkpoint(FULL);", cancellationToken).ConfigureAwait(false);
-            await using var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = destinationDatabasePath, Mode = SqliteOpenMode.ReadWriteCreate, Cache = SqliteCacheMode.Private }.ToString());
-            await destination.OpenAsync(cancellationToken).ConfigureAwait(false);
-            await Task.Run(() => source.BackupDatabase(destination), cancellationToken).ConfigureAwait(false);
+            if (File.Exists(destinationPath)) throw new IOException("Snapshot destination already exists.");
+            try
+            {
+                await using var source = await OpenAsync(cancellationToken).ConfigureAwait(false);
+                await ExecuteAsync(source, "PRAGMA wal_checkpoint(FULL);", cancellationToken).ConfigureAwait(false);
+                await using var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = destinationPath, Mode = SqliteOpenMode.ReadWriteCreate, Cache = SqliteCacheMode.Private }.ToString());
+                await destination.OpenAsync(cancellationToken).ConfigureAwait(false);
+                await Task.Run(() => source.BackupDatabase(destination), cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                TryDeleteFile(destinationPath);
+                throw;
+            }
         }
         finally { _gate.Release(); }
     }
@@ -182,6 +193,21 @@ public sealed class SqliteVaultStore : IVaultStore
             DeleteRecoveryArtifacts();
         }
         finally { _gate.Release(); }
+    }
+
+    private void ValidateSnapshotDestination(string destinationPath)
+    {
+        if (PathsEqual(destinationPath, DatabasePath) ||
+            PathsEqual(destinationPath, DatabasePath + "-wal") ||
+            PathsEqual(destinationPath, DatabasePath + "-shm"))
+            throw new InvalidOperationException("Snapshot destination cannot replace the active SQLite file set.");
+
+        var databaseDirectory = Path.GetDirectoryName(Path.GetFullPath(DatabasePath)) ?? throw new InvalidOperationException("Database directory is missing.");
+        var destinationDirectory = Path.GetDirectoryName(destinationPath) ?? throw new InvalidOperationException("Snapshot destination directory is missing.");
+        var comparison = GetPathComparison();
+        if (string.Equals(databaseDirectory, destinationDirectory, comparison) &&
+            Path.GetFileName(destinationPath).StartsWith(Path.GetFileName(DatabasePath) + ".previous", comparison))
+            throw new InvalidOperationException("Snapshot destination cannot replace CipherNest database recovery files.");
     }
 
     private static async Task ValidateReplacementDatabaseAsync(string sourceDatabasePath, CancellationToken cancellationToken)
@@ -339,13 +365,13 @@ public sealed class SqliteVaultStore : IVaultStore
         catch (UnauthorizedAccessException) { }
     }
 
-    private static bool PathsEqual(string left, string right)
-    {
-        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), GetPathComparison());
+
+    private static StringComparison GetPathComparison() =>
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
-        return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), comparison);
-    }
 
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
     {
