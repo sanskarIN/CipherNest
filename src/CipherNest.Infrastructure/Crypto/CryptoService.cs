@@ -95,7 +95,13 @@ public sealed class CryptoService : ICryptoService
     public byte[] Decrypt(EncryptedEnvelope envelope, ReadOnlySpan<byte> key, ReadOnlySpan<byte> associatedData)
     {
         ValidateKey(key);
-        if (envelope.Version != AppConstants.CryptoFormatVersion || envelope.Nonce.Length != NonceSize || envelope.Tag.Length != TagSize)
+        if (envelope is null ||
+            envelope.Nonce is null ||
+            envelope.Ciphertext is null ||
+            envelope.Tag is null ||
+            envelope.Version != AppConstants.CryptoFormatVersion ||
+            envelope.Nonce.Length != NonceSize ||
+            envelope.Tag.Length != TagSize)
         {
             throw new CryptographicException("Unsupported or invalid encrypted envelope.");
         }
@@ -154,7 +160,8 @@ public sealed class CryptoService : ICryptoService
 
     private static void ValidateKdfParameters(ReadOnlySpan<byte> salt, KdfParameters parameters)
     {
-        if (salt.Length is < SaltSize or > MaximumSaltSize ||
+        if (parameters is null ||
+            salt.Length is < SaltSize or > MaximumSaltSize ||
             parameters.MemoryKiB is < MinimumKdfMemoryKiB or > MaximumKdfMemoryKiB ||
             parameters.Iterations is < 1 or > MaximumKdfIterations ||
             parameters.Parallelism is < 1 or > MaximumKdfParallelism)
@@ -165,7 +172,17 @@ public sealed class CryptoService : ICryptoService
 
     private static void ValidateWrappedKey(WrappedKeyEnvelope envelope)
     {
-        if (envelope.Version != AppConstants.CryptoFormatVersion || envelope.Salt.Length is < SaltSize or > MaximumSaltSize || envelope.Nonce.Length != NonceSize || envelope.Tag.Length != TagSize)
+        if (envelope is null ||
+            envelope.Salt is null ||
+            envelope.Kdf is null ||
+            envelope.Nonce is null ||
+            envelope.Ciphertext is null ||
+            envelope.Tag is null ||
+            envelope.Version != AppConstants.CryptoFormatVersion ||
+            envelope.Salt.Length is < SaltSize or > MaximumSaltSize ||
+            envelope.Nonce.Length != NonceSize ||
+            envelope.Ciphertext.Length != KeySize ||
+            envelope.Tag.Length != TagSize)
         {
             throw new VaultAuthenticationException();
         }
