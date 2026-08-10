@@ -65,7 +65,9 @@ public sealed class BiometricUnlockService : IBiometricUnlockService
 #elif IOS || MACCATALYST
         using var context = new LocalAuthentication.LAContext();
         if (!context.CanEvaluatePolicy(LocalAuthentication.LAPolicy.DeviceOwnerAuthenticationWithBiometrics, out _)) return false;
+        using var registration = cancellationToken.Register(context.Invalidate);
         var result = await context.EvaluatePolicyAsync(LocalAuthentication.LAPolicy.DeviceOwnerAuthenticationWithBiometrics, reason).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
         return result.Item1;
 #else
         await Task.CompletedTask;
