@@ -19,6 +19,21 @@ public sealed class DatabaseReplacementRecoveryIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task ReplaceDatabase_RejectsCurrentSchemaWithoutVaultHeader()
+    {
+        var active = new SqliteVaultStore(DatabasePath);
+        await active.InitializeAsync();
+        await active.WriteHeaderAsync("{\"marker\":\"active\"}");
+
+        var replacementPath = Path.Combine(_directory, "headerless.db");
+        var replacement = new SqliteVaultStore(replacementPath);
+        await replacement.InitializeAsync();
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => active.ReplaceDatabaseAsync(replacementPath));
+        Assert.Equal("{\"marker\":\"active\"}", await active.ReadHeaderAsync());
+    }
+
+    [Fact]
     public async Task ReplaceDatabase_InstallsValidatedDatabaseAndCleansRecoveryArtifacts()
     {
         var active = new SqliteVaultStore(DatabasePath);
