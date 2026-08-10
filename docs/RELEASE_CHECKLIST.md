@@ -8,6 +8,8 @@
 - [ ] Android and Windows smoke tests pass; iOS/MacCatalyst build and smoke tests pass on an appropriate Apple environment.
 - [ ] Manual lifecycle tests cover background, sleep/resume, timeout, manual lock, clock rollback, and fail-closed behavior, including a simulated cleanup failure that does not escape the native lifecycle callback.
 - [ ] Locking an unlocked vault cancels current per-session key leases; an in-flight decrypted attachment export stops through cancellation and no key-using operation intentionally continues with a stale session after lock.
+- [ ] Master/recovery unlock, secondary unlock, public lock, and full-vault deletion remain serialized through the service transition gate; stress a delayed unlock racing a lock and verify the final state follows the serialized transition order rather than a late derivation publishing an unexpected session.
+- [ ] Full-vault deletion requires a live authorization key lease while waiting for the transition gate; an intervening lock/unlock invalidates the destructive authorization and cancels deletion instead of allowing stale re-authentication to survive a new session.
 - [ ] Owned DEK lease copies, attachment plaintext chunk buffers, clipboard fingerprint buffers, and generator temporary arrays are zeroed where implemented; release notes/docs still state that managed strings cannot be deterministically erased.
 - [ ] Master-passphrase change is verified to clear bound credential fields, lock the vault, clear the remembered master-authentication session, and require the new passphrase before biometric convenience unlock returns.
 - [ ] Failed interactive unlocks match the documented bounded backoff schedule and successful unlock resets client-side throttling.
