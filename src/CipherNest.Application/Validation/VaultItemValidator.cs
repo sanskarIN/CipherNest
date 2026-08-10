@@ -33,8 +33,12 @@ public static class VaultItemValidator
         if (attachments.Any(static attachment =>
                 attachment is null ||
                 attachment.Id == Guid.Empty ||
-                string.IsNullOrWhiteSpace(attachment.DisplayName) || attachment.DisplayName.Length > 240 ||
-                string.IsNullOrWhiteSpace(attachment.MediaType) || attachment.MediaType.Length > 256 ||
+                string.IsNullOrWhiteSpace(attachment.DisplayName) ||
+                attachment.DisplayName.Length > AttachmentImportPolicy.MaximumDisplayNameCharacters ||
+                attachment.DisplayName.Any(char.IsControl) ||
+                string.IsNullOrWhiteSpace(attachment.MediaType) ||
+                attachment.MediaType.Length > AttachmentImportPolicy.MaximumMediaTypeCharacters ||
+                attachment.MediaType.Any(char.IsControl) ||
                 attachment.PlaintextLength is < 0 or > MaximumAttachmentBytes ||
                 string.IsNullOrWhiteSpace(attachment.EncryptedFileName) || attachment.EncryptedFileName.Length > 64))
         {
