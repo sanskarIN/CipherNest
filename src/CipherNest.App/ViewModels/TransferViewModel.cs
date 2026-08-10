@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CipherNest.Application.Abstractions;
+using CipherNest.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -10,6 +11,7 @@ public partial class TransferViewModel : ObservableObject
     private const string ExportPhrase = "EXPORT PLAINTEXT";
     private readonly IPlaintextTransferService _transfer;
     private readonly IVaultService _vault;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
     private FileResult? _selectedCsv;
 
     public ObservableCollection<string> Headers { get; } = [];
@@ -27,10 +29,11 @@ public partial class TransferViewModel : ObservableObject
     [ObservableProperty] private string statusMessage = string.Empty;
     [ObservableProperty] private bool isBusy;
 
-    public TransferViewModel(IPlaintextTransferService transfer, IVaultService vault)
+    public TransferViewModel(IPlaintextTransferService transfer, IVaultService vault, IPrivacySafeExceptionReporter exceptions)
     {
         _transfer = transfer;
         _vault = vault;
+        _exceptions = exceptions;
     }
 
     [RelayCommand]
@@ -59,7 +62,8 @@ public partial class TransferViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            StatusMessage = $"CSV could not be opened safely: {ex.Message}";
+            _exceptions.Report("Transfer.PickCsv", ex);
+            StatusMessage = "CSV could not be opened safely. Check file access and format, then try again.";
             _selectedCsv = null;
         }
         finally { IsBusy = false; }
@@ -84,7 +88,8 @@ public partial class TransferViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
         {
-            StatusMessage = $"Import stopped safely: {ex.Message}";
+            _exceptions.Report("Transfer.ImportCsv", ex);
+            StatusMessage = "Import stopped safely. No additional rows will be imported from this file until you retry.";
         }
         finally { IsBusy = false; }
     }
@@ -129,7 +134,8 @@ public partial class TransferViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            StatusMessage = $"Plaintext export failed: {ex.Message}";
+            _exceptions.Report("Transfer.ExportPlaintext", ex);
+            StatusMessage = "Plaintext export failed safely. Use encrypted backup unless plaintext interoperability is required.";
         }
         finally { IsBusy = false; }
     }
@@ -145,7 +151,8 @@ public partial class TransferViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            StatusMessage = $"Cache cleanup could not finish: {ex.Message}";
+            _exceptions.Report("Transfer.CleanPlaintextCache", ex);
+            StatusMessage = "CipherNest could not confirm complete removal of its plaintext export cache. Avoid sensitive work until storage access can be checked.";
         }
         return Task.CompletedTask;
     }
