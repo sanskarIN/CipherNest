@@ -71,7 +71,8 @@ public sealed class SqliteVaultStore : IVaultStore
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
                 var idText = reader.GetString(0);
-                if (!Guid.TryParse(idText, out var id) || id == Guid.Empty) throw new InvalidDataException("Stored vault item identifier is invalid.");
+                if (!Guid.TryParseExact(idText, "D", out var id) || id == Guid.Empty || !string.Equals(idText, id.ToString("D"), StringComparison.Ordinal))
+                    throw new InvalidDataException("Stored vault item identifier is invalid or non-canonical.");
                 var envelopeLength = reader.GetInt64(2);
                 if (envelopeLength is < 1 or > VaultStorageLimits.MaximumStoredEnvelopeBytes) throw new InvalidDataException("Stored vault item envelope exceeds the supported size limit.");
                 var envelope = (byte[])reader[1];
@@ -85,10 +86,16 @@ public sealed class SqliteVaultStore : IVaultStore
 
     public async Task UpsertItemAsync(StoredVaultItem item, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.Id == Guid.Empty) throw new ArgumentException("Stored vault item identifier is invalid.", nameof(item));
+        if (item.Envelope is null || item.Envelope.Length is < 1 or > VaultStorageLimits.MaximumStoredEnvelopeBytes)
+            throw new ArgumentException("Stored vault item envelope exceeds the supported size limit.", nameof(item));
+
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+            await ValidateUpsertBoundsAsync(connection, item.Id, item.Envelope.LongLength, cancellationToken).ConfigureAwait(false);
             await using var command = connection.CreateCommand();
             command.CommandText = "INSERT INTO VaultItems(Id, Envelope) VALUES ($id, $envelope) ON CONFLICT(Id) DO UPDATE SET Envelope = excluded.Envelope;";
             command.Parameters.AddWithValue("$id", item.Id.ToString("D"));
@@ -208,6 +215,20 @@ public sealed class SqliteVaultStore : IVaultStore
         var totalBytes = reader.GetInt64(1);
         if (count < 0 || count > VaultStorageLimits.MaximumItemCount) throw new InvalidDataException("Vault contains more encrypted records than this build supports safely.");
         if (totalBytes < 0 || totalBytes > VaultStorageLimits.MaximumStoredEnvelopeBytesTotal) throw new InvalidDataException("Vault encrypted record storage exceeds the supported aggregate size limit.");
+    }
+
+    private static async Task ValidateUpsertBoundsAsync(SqliteConnection connection, Guid itemId, long envelopeBytes, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*), COALESCE(SUM(length(Envelope)), 0) FROM VaultItems WHERE Id <> $id;";
+        command.Parameters.AddWithValue("$id", itemId.ToString("D"));
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false)) throw new InvalidDataException("Vault item storage metadata is unavailable.");
+        var otherCount = reader.GetInt64(0);
+        var otherBytes = reader.GetInt64(1);
+        if (otherCount < 0 || otherCount >= VaultStorageLimits.MaximumItemCount) throw new InvalidOperationException("Vault has reached the supported encrypted record count limit.");
+        if (otherBytes < 0 || otherBytes > VaultStorageLimits.MaximumStoredEnvelopeBytesTotal - envelopeBytes)
+            throw new InvalidOperationException("Vault has reached the supported encrypted record storage limit.");
     }
 
     private RecoveryFileSet CreateRecoveryFileSet()
