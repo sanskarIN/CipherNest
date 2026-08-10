@@ -73,7 +73,7 @@ public partial class TransferViewModel : ObservableObject
             StatusMessage = "Select a CSV and map its title column first.";
             return;
         }
-        var confirmed = await Shell.Current.DisplayAlert("Import plaintext CSV?", "The selected CSV is plaintext outside CipherNest. Imported fields will be encrypted in the vault, but CipherNest cannot remove the original source file. Review the mappings first.", "Import", "Cancel");
+        var confirmed = await Shell.Current.DisplayAlertAsync("Import plaintext CSV?", "The selected CSV is plaintext outside CipherNest. Imported fields will be encrypted in the vault, but CipherNest cannot remove the original source file. Review the mappings first.", "Import", "Cancel");
         if (!confirmed) return;
         IsBusy = true;
         try
@@ -102,7 +102,7 @@ public partial class TransferViewModel : ObservableObject
             StatusMessage = "Master-passphrase confirmation failed. Recovery keys are not accepted for plaintext export confirmation.";
             return;
         }
-        var confirmed = await Shell.Current.DisplayAlert("Create plaintext export?", "This file will contain readable vault fields and may be copied by the share target, backups, search indexing, antivirus, or the operating system. Encrypted backup is safer. Continue only if you need plaintext interoperability.", "Export plaintext", "Cancel");
+        var confirmed = await Shell.Current.DisplayAlertAsync("Create plaintext export?", "This file will contain readable vault fields and may be copied by the share target, backups, search indexing, antivirus, or the operating system. Encrypted backup is safer. Continue only if you need plaintext interoperability.", "Export plaintext", "Cancel");
         if (!confirmed) return;
         IsBusy = true;
         try
