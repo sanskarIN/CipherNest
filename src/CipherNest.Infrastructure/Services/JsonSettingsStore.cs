@@ -7,6 +7,7 @@ namespace CipherNest.Infrastructure.Services;
 
 public sealed class JsonSettingsStore(string path) : ISettingsStore
 {
+    public const long MaximumSettingsFileBytes = 64 * 1024;
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { WriteIndented = true };
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -18,7 +19,9 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
             if (!File.Exists(path))
                 return new AppPreferences();
 
-            await using var stream = File.OpenRead(path);
+            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 16 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            if (stream.Length is < 0 or > MaximumSettingsFileBytes)
+                return new AppPreferences();
             var loaded = await JsonSerializer.DeserializeAsync<AppPreferences>(stream, Options, cancellationToken).ConfigureAwait(false);
             return AppPreferencesPolicy.Normalize(loaded ?? new AppPreferences());
         }
@@ -48,6 +51,8 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
                 {
                     await JsonSerializer.SerializeAsync(stream, normalized, Options, cancellationToken).ConfigureAwait(false);
                     await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    if (stream.Length > MaximumSettingsFileBytes)
+                        throw new InvalidDataException("Serialized settings exceed the supported size limit.");
                 }
                 File.Move(temp, path, overwrite: true);
             }
