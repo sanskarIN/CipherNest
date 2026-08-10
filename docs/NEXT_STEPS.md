@@ -4,17 +4,16 @@ This roadmap starts from the current local-first CipherNest source tree. It deli
 
 ## Priority 0 — prove the current source on real build environments
 
-These are the first actions to take before calling the current build release-ready.
+Repository source now contains repeatable verification scripts and configured CI compile gates for core tests/formatting, Windows, Android, iOS, Mac Catalyst, the funding-disabled Windows variant, CodeQL application analysis, and dependency review. These gates still need passing evidence from the exact candidate commit.
 
-1. Run the repository build from a clean checkout with the pinned/current .NET SDK.
-2. Run `dotnet workload restore`, solution restore, Release build, all unit tests, all integration tests, and UI-structure tests.
-3. Run `dotnet format --verify-no-changes` and keep warnings/analyzers as errors.
-4. Verify the Windows MAUI target on Windows 11 using the repository build instructions.
-5. Verify the Android target with the selected .NET Android workload, an emulator, and at least one physical device.
-6. Verify iOS and Mac Catalyst from an appropriate Apple host using the selected .NET/iOS workloads.
-7. Record exact SDK/workload versions used for every successful release candidate.
-8. Review GitHub Actions, CodeQL, dependency-review, secret-scanning, and vulnerability results for the exact candidate commit.
-9. Treat any build warning, failed test, migration/restore failure, crypto-vector failure, unbounded parser/resource condition, or secret leak as release-blocking until resolved.
+1. Run `scripts/verify-core.ps1` or `scripts/verify-core.sh` from a clean checkout with the selected .NET 10 SDK.
+2. Run the platform script on each appropriate host: `scripts/verify-windows.ps1`, `scripts/verify-android.sh`, and `scripts/verify-apple.sh`.
+3. Review the main GitHub Actions workflow for the exact candidate: core tests/format, Windows default/funding-disabled builds, Android build, and iOS/Mac Catalyst builds must all complete successfully.
+4. Review CodeQL after it builds both analyzable core code and the Android MAUI application target.
+5. Review dependency-review, secret-scanning, and vulnerability results for the exact candidate commit.
+6. Record exact SDK/workload/platform-toolchain versions used for every successful candidate.
+7. Treat any build warning, failed test, migration/restore failure, crypto-vector failure, unbounded parser/resource condition, raw secret/path disclosure, or unexpected platform analyzer warning as release-blocking until resolved.
+8. Preserve the immutable candidate commit/tag and verification evidence. See `docs/verification/CI_GATES.md`.
 
 ## Priority 1 — device security validation
 
@@ -25,19 +24,22 @@ These are the first actions to take before calling the current build release-rea
 - Verify inactivity timeout at minimum, typical, and maximum configured values.
 - Verify suspend/resume and sleep/wake behavior.
 - Verify a clock change does not extend an unlocked session unexpectedly.
+- Verify fail-closed lifecycle recovery cannot propagate a second lock/clipboard-cleanup exception from the native lifecycle handler.
 - Verify clipboard cleanup is attempted on manual/background/timeout lock.
 
 ### Clipboard behavior
 
 - Verify timed clear on Android, Windows, iOS, and Mac Catalyst where platform APIs permit it.
-- Verify copying unrelated new clipboard content prevents CipherNest from clearing that newer value.
+- Verify copying unrelated new clipboard content prevents CipherNest from clearing that newer value, including when the vault locks before the timer expires.
+- Verify scheduled cleanup continues after the initiating UI operation's cancellation token is no longer relevant.
+- Verify only a fixed-size SHA-256 fingerprint is retained for delayed comparison rather than the copied plaintext secret.
 - Verify platform clipboard-history behavior is accurately described in UI/docs.
 - Verify username, primary-secret, and secret-custom-field copy actions all use the same bounded policy.
 
 ### Biometrics
 
-- Android: test enrolled, not enrolled, cancelled, failed, locked-out, changed-enrollment, and secure-storage-loss cases.
-- iOS/Mac Catalyst: test Face ID/Touch ID availability, cancellation, enrollment changes, passcode-only fallback, and secure-storage lifecycle.
+- Android: test API 28+, enrolled, not enrolled, cancelled, failed, locked-out, changed-enrollment, hardware-unavailable, and secure-storage-loss cases. The source intentionally avoids using the newer `BiometricManager` as an API-28 preflight; the prompt/fallback path must be tested directly.
+- iOS/Mac Catalyst: test Face ID/Touch ID availability, cancellation, enrollment changes, passcode-only fallback, request cancellation, and secure-storage lifecycle.
 - Verify a fresh process requires the master passphrase before biometric convenience unlock becomes available.
 - Verify the configured periodic master-passphrase interval is enforced.
 - Verify backup restore invalidates the local biometric pairing.
@@ -72,6 +74,7 @@ These are the first actions to take before calling the current build release-rea
 - Test a backup created on one supported platform and restored on another where file/container compatibility is expected.
 - Confirm failed restore does not replace the active vault.
 - Confirm restored biometric metadata is deliberately invalidated locally.
+- Verify backup passphrase UI state is cleared before file-picker/share work and restore staging cleanup failures remain redacted.
 - Periodically test restore using disposable data instead of assuming backups are valid.
 
 ### CSV import/export
@@ -79,14 +82,17 @@ These are the first actions to take before calling the current build release-rea
 - Test realistic CSVs with quoted commas, embedded newlines, empty fields, Unicode, duplicate headers, excessive columns, malformed quoted fields, and large rows.
 - Confirm import never guesses which column is a secret without explicit user mapping.
 - Confirm plaintext export requires current-master re-authentication plus the exact confirmation phrase.
+- Confirm the bound master-passphrase field is cleared immediately after the authentication decision.
 - Confirm plaintext export never silently includes encrypted attachments.
 - Confirm temporary plaintext cache cleanup behaves as documented.
+- Confirm file/path-bearing exceptions are not rendered directly into the UI; the user sees fixed messages while the privacy-safe reporter receives only redacted diagnostic metadata.
 
 ### Attachment export/preview
 
 - Test safe in-memory text preview at zero length, normal size, maximum allowed size, invalid UTF-8, unsupported media type, and display truncation boundary.
 - Test encrypted attachment streaming at multiple sizes including multi-megabyte inputs.
-- Test explicit plaintext export warning and temporary-file cleanup.
+- Test explicit plaintext export warning and unique temporary-file naming.
+- Verify temporary plaintext cleanup reports failure without exposing the path and does not overwrite a previous unresolved staging file.
 - Verify that cancellation and share-sheet failures do not leave application-managed plaintext longer than necessary.
 
 ## Priority 4 — accessibility, localization, and responsive UI
@@ -129,8 +135,8 @@ These are the first actions to take before calling the current build release-rea
 ## Priority 7 — security review before broader claims
 
 - Obtain an independent review of the cryptographic envelope, KDF bounds, nonce strategy, associated data, recovery flow, secondary biometric wrapper, attachment format, backup format, and migration strategy.
-- Review memory-lifetime assumptions around managed strings and decrypted ViewModels.
-- Review plaintext export/share-sheet behavior and OS-specific data remnants.
+- Review memory-lifetime assumptions around managed strings and decrypted ViewModels; source now clears bound credential properties earlier, but managed string copies cannot be deterministically erased.
+- Review the SHA-256 clipboard-fingerprint approach, OS clipboard/history behavior, and plaintext export/share-sheet data remnants.
 - Review parser fuzzing opportunities for CSV, backup archives, attachment metadata, and vault-header deserialization.
 - Review rollback/downgrade behavior for future crypto/database format versions.
 - Review dependency/supply-chain pinning and release provenance.
@@ -163,8 +169,8 @@ Each one changes the attack surface materially and should receive its own archit
 
 ## Recommended immediate execution order
 
-1. Clean build + all tests + formatting/analyzers.
-2. Fix every compiler/test/CI problem found.
+1. Run the committed core/platform verification scripts and inspect the exact GitHub CI/CodeQL/dependency-review results.
+2. Fix every compiler/analyzer/test/workload problem found; do not waive a security-sensitive failure just to package a candidate.
 3. Android + Windows smoke tests.
 4. Apple builds/smoke tests on an appropriate host.
 5. Real-device biometric, lifecycle, screenshot, clipboard, and secure-storage validation.
