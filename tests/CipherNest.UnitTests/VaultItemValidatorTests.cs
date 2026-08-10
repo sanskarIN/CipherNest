@@ -112,6 +112,12 @@ public sealed class VaultItemValidatorTests
         };
         Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(invalidMetadata));
 
+        var controlCharacters = valid with
+        {
+            Attachments = [new AttachmentReference(Guid.NewGuid(), "bad\nname.txt", "text/plain\r\ninvalid", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow)]
+        };
+        Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(controlCharacters));
+
         var duplicateIds = valid with
         {
             Attachments =
