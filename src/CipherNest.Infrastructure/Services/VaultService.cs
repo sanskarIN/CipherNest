@@ -70,20 +70,31 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task UnlockAsync(string masterPassphraseOrRecoveryKey, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(masterPassphraseOrRecoveryKey);
-        var header = await ReadHeaderAsync(cancellationToken).ConfigureAwait(false);
-        byte[] key;
-        try { key = _crypto.UnwrapKey(masterPassphraseOrRecoveryKey.AsSpan(), header.Master); }
-        catch (VaultAuthenticationException) when (header.Recovery is not null) { key = _crypto.UnwrapKey(masterPassphraseOrRecoveryKey.AsSpan(), header.Recovery); }
-        ReplaceDataKey(key); LockStateChanged?.Invoke(this, true);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var header = await ReadHeaderAsync(cancellationToken).ConfigureAwait(false);
+            byte[] key;
+            try { key = _crypto.UnwrapKey(masterPassphraseOrRecoveryKey.AsSpan(), header.Master); }
+            catch (VaultAuthenticationException) when (header.Recovery is not null) { key = _crypto.UnwrapKey(masterPassphraseOrRecoveryKey.AsSpan(), header.Recovery); }
+            ReplaceDataKey(key);
+        }
+        finally { _gate.Release(); }
+        LockStateChanged?.Invoke(this, true);
     }
 
     public async Task UnlockWithSecondarySecretAsync(string secondarySecret, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(secondarySecret);
-        var header = await ReadHeaderAsync(cancellationToken).ConfigureAwait(false);
-        if (header.Secondary is null) throw new VaultAuthenticationException();
-        var key = _crypto.UnwrapKey(secondarySecret.AsSpan(), header.Secondary);
-        ReplaceDataKey(key);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var header = await ReadHeaderAsync(cancellationToken).ConfigureAwait(false);
+            if (header.Secondary is null) throw new VaultAuthenticationException();
+            var key = _crypto.UnwrapKey(secondarySecret.AsSpan(), header.Secondary);
+            ReplaceDataKey(key);
+        }
+        finally { _gate.Release(); }
         LockStateChanged?.Invoke(this, true);
     }
 
@@ -159,27 +170,28 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task DeleteVaultAsync(string masterPassphrase, CancellationToken cancellationToken = default)
     {
         if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
-        await LockAsync(cancellationToken).ConfigureAwait(false);
-        var attachmentRoot = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, "attachments");
-        await _store.DeleteDatabaseAsync(cancellationToken).ConfigureAwait(false);
-        if (Directory.Exists(attachmentRoot)) Directory.Delete(attachmentRoot, recursive: true);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ClearSessionKey();
+            var attachmentRoot = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, "attachments");
+            await _store.DeleteDatabaseAsync(cancellationToken).ConfigureAwait(false);
+            if (Directory.Exists(attachmentRoot)) Directory.Delete(attachmentRoot, recursive: true);
+        }
+        finally
+        {
+            _gate.Release();
+            LockStateChanged?.Invoke(this, false);
+        }
     }
 
-    public Task LockAsync(CancellationToken cancellationToken = default)
+    public async Task LockAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        CancellationTokenSource? session;
-        lock (_keySync)
-        {
-            session = _sessionCancellation;
-            _sessionCancellation = null;
-            if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
-            _dataKey = null;
-        }
-        try { session?.Cancel(); }
-        finally { session?.Dispose(); }
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { ClearSessionKey(); }
+        finally { _gate.Release(); }
         LockStateChanged?.Invoke(this, false);
-        return Task.CompletedTask;
     }
 
     public async Task<IReadOnlyList<VaultItem>> GetItemsAsync(bool includeTrash = false, CancellationToken cancellationToken = default)
@@ -255,16 +267,7 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public void Dispose()
     {
-        CancellationTokenSource? session;
-        lock (_keySync)
-        {
-            session = _sessionCancellation;
-            _sessionCancellation = null;
-            if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
-            _dataKey = null;
-        }
-        try { session?.Cancel(); }
-        finally { session?.Dispose(); }
+        ClearSessionKey();
         _gate.Dispose();
     }
 
@@ -330,6 +333,20 @@ public sealed class VaultService : IVaultService, IDisposable
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
         catch (InvalidDataException) { }
+    }
+
+    private void ClearSessionKey()
+    {
+        CancellationTokenSource? session;
+        lock (_keySync)
+        {
+            session = _sessionCancellation;
+            _sessionCancellation = null;
+            if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
+            _dataKey = null;
+        }
+        try { session?.Cancel(); }
+        finally { session?.Dispose(); }
     }
 
     private void ReplaceDataKey(byte[] next)
