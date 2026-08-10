@@ -9,6 +9,7 @@ public sealed class EncryptedAttachmentStore
 {
     private const int ChunkSize = 256 * 1024;
     public const long MaximumPlaintextBytes = 100L * 1024 * 1024;
+    public const long MinimumContainerBytes = 12;
     public const long MaximumContainerBytes = MaximumPlaintextBytes + (((MaximumPlaintextBytes + ChunkSize - 1) / ChunkSize) * 32) + 8 + 4;
     private static readonly byte[] Magic = "CNAT0001"u8.ToArray();
     private readonly string _directory;
