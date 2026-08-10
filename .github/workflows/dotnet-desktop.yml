@@ -32,6 +32,15 @@ jobs:
           dotnet test tests/CipherNest.UnitTests/CipherNest.UnitTests.csproj -c Release --no-build
           dotnet test tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj -c Release --no-build
           dotnet test tests/CipherNest.UiTests/CipherNest.UiTests.csproj -c Release --no-build
+      - name: Verify core formatting
+        run: |
+          dotnet format src/CipherNest.Domain/CipherNest.Domain.csproj --verify-no-changes --no-restore
+          dotnet format src/CipherNest.Application/CipherNest.Application.csproj --verify-no-changes --no-restore
+          dotnet format src/CipherNest.Infrastructure/CipherNest.Infrastructure.csproj --verify-no-changes --no-restore
+          dotnet format src/CipherNest.Shared/CipherNest.Shared.csproj --verify-no-changes --no-restore
+          dotnet format tests/CipherNest.UnitTests/CipherNest.UnitTests.csproj --verify-no-changes --no-restore
+          dotnet format tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj --verify-no-changes --no-restore
+          dotnet format tests/CipherNest.UiTests/CipherNest.UiTests.csproj --verify-no-changes --no-restore
 
   build-windows:
     runs-on: windows-latest
