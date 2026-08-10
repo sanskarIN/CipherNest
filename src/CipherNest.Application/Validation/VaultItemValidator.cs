@@ -21,7 +21,8 @@ public static class VaultItemValidator
         if (item.Username is null || item.Username.Length > 2048) errors.Add("Username or identifier is invalid or too long.");
         if (item.Secret is null || item.Secret.Length > 100_000) errors.Add("Secret is invalid or too large for an item field.");
         if (item.Url is null || item.Url.Length > 4096) errors.Add("URL is invalid or too long.");
-        if (item.Notes is null || item.Notes.Length > 250_000) errors.Add("Notes are invalid or too large for an item.");
+        if (item.Notes is null || item.Notes.Length > SafeNoteLimits.MaximumCharacters) errors.Add($"Notes are invalid or exceed the {SafeNoteLimits.MaximumCharacters:N0}-character safety limit.");
+        if (item.Notes is not null && SafeNoteLimits.ExceedsLineLimit(item.Notes)) errors.Add($"Notes exceed the {SafeNoteLimits.MaximumLines:N0}-line safety limit.");
         if (item.Collection is null || item.Collection.Length > 128) errors.Add("Collection name is invalid or exceeds 128 characters.");
         if (item.Tags is null || tags.Count > 100) errors.Add("An item can have at most 100 tags and the tag collection must be present.");
         if (item.CustomFields is null || customFields.Count > 100) errors.Add("An item can have at most 100 custom fields and the custom-field collection must be present.");
