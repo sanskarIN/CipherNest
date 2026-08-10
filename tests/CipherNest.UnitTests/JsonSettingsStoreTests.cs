@@ -44,6 +44,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
         var actual = await store.LoadAsync();
 
         Assert.Equal(expected, actual);
+        Assert.Empty(Directory.GetFiles(_directory, ".*.tmp", SearchOption.TopDirectoryOnly));
         Assert.False(File.Exists(path + ".tmp"));
     }
 
