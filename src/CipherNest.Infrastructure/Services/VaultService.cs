@@ -122,28 +122,30 @@ public sealed class VaultService : IVaultService, IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(secondarySecret);
         if (secondarySecret.Length < 32) throw new ArgumentException("Secondary unlock secret is too short.", nameof(secondarySecret));
-        if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
-        using var lease = AcquireKeyLease(cancellationToken);
-        await _gate.WaitAsync(lease.Token).ConfigureAwait(false);
+        using var authorizationLease = AcquireKeyLease(cancellationToken);
+        if (!await ReauthenticateAsync(masterPassphrase, authorizationLease.Token).ConfigureAwait(false)) throw new VaultAuthenticationException();
+        authorizationLease.Token.ThrowIfCancellationRequested();
+        await _gate.WaitAsync(authorizationLease.Token).ConfigureAwait(false);
         try
         {
-            var header = await ReadHeaderUnlockedAsync(lease.Token).ConfigureAwait(false);
-            var wrapped = _crypto.WrapKey(lease.Key, secondarySecret.AsSpan());
-            lease.Token.ThrowIfCancellationRequested();
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = wrapped }, JsonOptions), lease.Token).ConfigureAwait(false);
+            var header = await ReadHeaderUnlockedAsync(authorizationLease.Token).ConfigureAwait(false);
+            var wrapped = _crypto.WrapKey(authorizationLease.Key, secondarySecret.AsSpan());
+            authorizationLease.Token.ThrowIfCancellationRequested();
+            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = wrapped }, JsonOptions), authorizationLease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
 
     public async Task DisableSecondaryUnlockAsync(string masterPassphrase, CancellationToken cancellationToken = default)
     {
-        if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
-        using var lease = AcquireKeyLease(cancellationToken);
-        await _gate.WaitAsync(lease.Token).ConfigureAwait(false);
+        using var authorizationLease = AcquireKeyLease(cancellationToken);
+        if (!await ReauthenticateAsync(masterPassphrase, authorizationLease.Token).ConfigureAwait(false)) throw new VaultAuthenticationException();
+        authorizationLease.Token.ThrowIfCancellationRequested();
+        await _gate.WaitAsync(authorizationLease.Token).ConfigureAwait(false);
         try
         {
-            var header = await ReadHeaderUnlockedAsync(lease.Token).ConfigureAwait(false);
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = null }, JsonOptions), lease.Token).ConfigureAwait(false);
+            var header = await ReadHeaderUnlockedAsync(authorizationLease.Token).ConfigureAwait(false);
+            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = null }, JsonOptions), authorizationLease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
@@ -157,24 +159,26 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public async Task ChangeMasterPassphraseAsync(string currentMasterPassphrase, string newMasterPassphrase, CancellationToken cancellationToken = default)
     {
-        if (!await ReauthenticateAsync(currentMasterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
+        using var authorizationLease = AcquireKeyLease(cancellationToken);
+        if (!await ReauthenticateAsync(currentMasterPassphrase, authorizationLease.Token).ConfigureAwait(false)) throw new VaultAuthenticationException();
         if (newMasterPassphrase.Length < 12) throw new ArgumentException("The new master passphrase must contain at least 12 characters.", nameof(newMasterPassphrase));
-        using var lease = AcquireKeyLease(cancellationToken);
-        await _gate.WaitAsync(lease.Token).ConfigureAwait(false);
+        authorizationLease.Token.ThrowIfCancellationRequested();
+        await _gate.WaitAsync(authorizationLease.Token).ConfigureAwait(false);
         try
         {
-            var header = await ReadHeaderUnlockedAsync(lease.Token).ConfigureAwait(false);
-            var newMaster = _crypto.WrapKey(lease.Key, newMasterPassphrase.AsSpan());
-            lease.Token.ThrowIfCancellationRequested();
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Master = newMaster }, JsonOptions), lease.Token).ConfigureAwait(false);
+            var header = await ReadHeaderUnlockedAsync(authorizationLease.Token).ConfigureAwait(false);
+            var newMaster = _crypto.WrapKey(authorizationLease.Key, newMasterPassphrase.AsSpan());
+            authorizationLease.Token.ThrowIfCancellationRequested();
+            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Master = newMaster }, JsonOptions), authorizationLease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
 
     public async Task DeleteVaultAsync(string masterPassphrase, CancellationToken cancellationToken = default)
     {
-        if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
         using var authorizationLease = AcquireKeyLease(cancellationToken);
+        if (!await ReauthenticateAsync(masterPassphrase, authorizationLease.Token).ConfigureAwait(false)) throw new VaultAuthenticationException();
+        authorizationLease.Token.ThrowIfCancellationRequested();
         await _gate.WaitAsync(authorizationLease.Token).ConfigureAwait(false);
         var sessionCleared = false;
         try
