@@ -206,8 +206,7 @@ public sealed class EncryptedBackupService : IBackupService
         var root = Path.GetDirectoryName(_store.DatabasePath)!;
         var currentAttachments = Path.Combine(root, AppConstants.AttachmentDirectoryName);
         var stagedAttachments = Path.Combine(staged, "attachments");
-        var previousAttachments = currentAttachments + ".previous";
-        TryDeleteDirectory(previousAttachments);
+        var previousAttachments = Path.Combine(root, $"{AppConstants.AttachmentDirectoryName}.previous.{Guid.NewGuid():N}");
         try
         {
             await _store.ReplaceDatabaseAsync(Path.Combine(staged, "vault.db"), cancellationToken).ConfigureAwait(false);
@@ -220,7 +219,7 @@ public sealed class EncryptedBackupService : IBackupService
         {
             try
             {
-                await _store.ReplaceDatabaseAsync(rollbackDb, cancellationToken).ConfigureAwait(false);
+                await _store.ReplaceDatabaseAsync(rollbackDb, CancellationToken.None).ConfigureAwait(false);
                 if (Directory.Exists(currentAttachments)) TryDeleteDirectory(currentAttachments);
                 if (Directory.Exists(previousAttachments)) Directory.Move(previousAttachments, currentAttachments);
             }
