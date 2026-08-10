@@ -17,19 +17,31 @@ public sealed class EncryptedAttachmentStore
 
     public EncryptedAttachmentStore(string directory, ICryptoService crypto)
     {
-        _directory = directory;
-        _crypto = crypto;
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        _directory = Path.GetFullPath(directory);
+        _crypto = crypto ?? throw new ArgumentNullException(nameof(crypto));
     }
 
-    public string GetOpaqueFileName(Guid attachmentId) => $"{attachmentId:N}.cna";
+    public string GetOpaqueFileName(Guid attachmentId)
+    {
+        if (attachmentId == Guid.Empty) throw new ArgumentException("Attachment identifier is invalid.", nameof(attachmentId));
+        return $"{attachmentId:N}.cna";
+    }
+
     public string GetPath(string opaqueFileName) => Path.Combine(_directory, AttachmentStorageNamePolicy.ValidateOpaqueFileName(opaqueFileName));
 
     public async Task<long> EncryptAsync(Guid itemId, Guid attachmentId, Stream source, string opaqueFileName, ReadOnlyMemory<byte> dataKey, CancellationToken cancellationToken)
     {
+        if (itemId == Guid.Empty) throw new ArgumentException("Item identifier is invalid.", nameof(itemId));
+        if (attachmentId == Guid.Empty) throw new ArgumentException("Attachment identifier is invalid.", nameof(attachmentId));
         ArgumentNullException.ThrowIfNull(source);
+        if (!source.CanRead) throw new ArgumentException("Attachment source stream must be readable.", nameof(source));
+        if (dataKey.Length != 32) throw new ArgumentException("Vault data key must contain exactly 32 bytes.", nameof(dataKey));
+
         Directory.CreateDirectory(_directory);
-        var finalPath = GetPath(opaqueFileName);
-        var tempPath = Path.Combine(_directory, $".{Path.GetFileName(finalPath)}.{Guid.NewGuid():N}.tmp");
+        var normalizedName = AttachmentStorageNamePolicy.ValidateForAttachment(attachmentId, opaqueFileName);
+        var finalPath = Path.Combine(_directory, normalizedName);
+        var tempPath = Path.Combine(_directory, $".{normalizedName}.{Guid.NewGuid():N}.tmp");
         var buffer = new byte[ChunkSize];
         long total = 0;
         try
@@ -66,8 +78,16 @@ public sealed class EncryptedAttachmentStore
 
     public async Task DecryptToAsync(Guid itemId, Guid attachmentId, string opaqueFileName, long expectedPlaintextLength, Stream destination, ReadOnlyMemory<byte> dataKey, CancellationToken cancellationToken)
     {
+        if (itemId == Guid.Empty) throw new ArgumentException("Item identifier is invalid.", nameof(itemId));
+        if (attachmentId == Guid.Empty) throw new ArgumentException("Attachment identifier is invalid.", nameof(attachmentId));
+        ArgumentNullException.ThrowIfNull(destination);
+        if (!destination.CanWrite) throw new ArgumentException("Attachment destination stream must be writable.", nameof(destination));
+        if (dataKey.Length != 32) throw new ArgumentException("Vault data key must contain exactly 32 bytes.", nameof(dataKey));
         if (expectedPlaintextLength is < 0 or > MaximumPlaintextBytes) throw new InvalidDataException("Attachment length is outside the supported range.");
-        await using var input = new FileStream(GetPath(opaqueFileName), FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
+
+        var normalizedName = AttachmentStorageNamePolicy.ValidateForAttachment(attachmentId, opaqueFileName);
+        var encryptedPath = Path.Combine(_directory, normalizedName);
+        await using var input = new FileStream(encryptedPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
         var magic = new byte[Magic.Length];
         await ReadExactlyAsync(input, magic, cancellationToken).ConfigureAwait(false);
         if (!CryptographicOperations.FixedTimeEquals(magic, Magic)) throw new InvalidDataException("Attachment container is invalid.");
