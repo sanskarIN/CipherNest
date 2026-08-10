@@ -10,7 +10,11 @@ internal sealed class VaultKeyLease : IDisposable
     public VaultKeyLease(byte[] keyCopy, CancellationToken sessionToken, CancellationToken callerToken)
     {
         ArgumentNullException.ThrowIfNull(keyCopy);
-        if (keyCopy.Length != 32) throw new ArgumentException("Vault key lease requires a 256-bit key copy.", nameof(keyCopy));
+        if (keyCopy.Length != 32)
+        {
+            CryptographicOperations.ZeroMemory(keyCopy);
+            throw new ArgumentException("Vault key lease requires a 256-bit key copy.", nameof(keyCopy));
+        }
         Key = keyCopy;
         _linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(sessionToken, callerToken);
     }
