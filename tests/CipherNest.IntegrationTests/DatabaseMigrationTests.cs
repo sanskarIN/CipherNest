@@ -45,9 +45,26 @@ public sealed class DatabaseMigrationTests : IDisposable
         Assert.Contains("newer", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Initialize_RejectsForgedCurrentHistoryWhenRequiredTablesAreMissing()
+    {
+        await using (var connection = new SqliteConnection($"Data Source={DatabasePath}"))
+        {
+            await connection.OpenAsync();
+            await using var create = connection.CreateCommand();
+            create.CommandText = $"CREATE TABLE MigrationHistory (Version INTEGER PRIMARY KEY, AppliedUtc TEXT NOT NULL); INSERT INTO MigrationHistory(Version, AppliedUtc) VALUES ({AppConstants.DatabaseSchemaVersion}, '2026-08-10T00:00:00Z');";
+            await create.ExecuteNonQueryAsync();
+        }
+
+        var store = new SqliteVaultStore(DatabasePath);
+        var ex = await Assert.ThrowsAsync<InvalidDataException>(() => store.InitializeAsync());
+        Assert.Contains("schema", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     public void Dispose()
     {
         try { if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true); }
         catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 }
