@@ -53,12 +53,12 @@ public sealed class VaultLockCancellationIntegrationTests : IDisposable
 
     private sealed class BlockingWriteStream : MemoryStream
     {
-        private readonly TaskCompletionSource _writeStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _writeStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task WriteStarted => _writeStarted.Task;
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            _writeStarted.TrySetResult();
+            _writeStarted.TrySetResult(true);
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         }
     }
