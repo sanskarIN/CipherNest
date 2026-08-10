@@ -182,7 +182,11 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public async Task DeletePermanentlyAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        _ = RequireKey(); var item = await GetItemRequiredAsync(id, cancellationToken).ConfigureAwait(false); foreach (var attachment in item.Attachments) _attachments.Delete(attachment.EncryptedFileName); await _store.DeleteItemAsync(id, cancellationToken).ConfigureAwait(false);
+        _ = RequireKey();
+        var item = await GetItemRequiredAsync(id, cancellationToken).ConfigureAwait(false);
+        var attachmentFiles = item.Attachments.Select(static attachment => attachment.EncryptedFileName).ToArray();
+        await _store.DeleteItemAsync(id, cancellationToken).ConfigureAwait(false);
+        foreach (var attachmentFile in attachmentFiles) TryDeleteAttachment(attachmentFile);
     }
 
     public async Task<IReadOnlyList<VaultItem>> SearchAsync(string query, CancellationToken cancellationToken = default)
@@ -243,6 +247,13 @@ public sealed class VaultService : IVaultService, IDisposable
         var header = JsonSerializer.Deserialize<VaultHeaderDocument>(headerJson, JsonOptions) ?? throw new VaultAuthenticationException();
         if (header.Version is < MinimumSupportedHeaderVersion or > CurrentHeaderVersion || header.Master is null) throw new VaultAuthenticationException();
         return header;
+    }
+
+    private void TryDeleteAttachment(string encryptedFileName)
+    {
+        try { _attachments.Delete(encryptedFileName); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private void ReplaceDataKey(byte[] next) { if (next.Length != 32) { CryptographicOperations.ZeroMemory(next); throw new CryptographicException("Invalid vault data key length."); } if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey); _dataKey = next; }
