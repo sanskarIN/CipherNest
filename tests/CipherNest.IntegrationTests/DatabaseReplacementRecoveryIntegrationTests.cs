@@ -18,6 +18,21 @@ public sealed class DatabaseReplacementRecoveryIntegrationTests : IDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.ReplaceDatabaseAsync(DatabasePath));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("-wal")]
+    [InlineData("-shm")]
+    [InlineData(".previous.test")]
+    public async Task CreateConsistentSnapshot_RejectsActiveAndRecoveryDestinations(string suffix)
+    {
+        var store = new SqliteVaultStore(DatabasePath);
+        await store.InitializeAsync();
+        await store.WriteHeaderAsync("{\"marker\":\"active\"}");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.CreateConsistentSnapshotAsync(DatabasePath + suffix));
+        Assert.Equal("{\"marker\":\"active\"}", await store.ReadHeaderAsync());
+    }
+
     [Fact]
     public async Task ReplaceDatabase_RejectsCurrentSchemaWithoutVaultHeader()
     {
