@@ -41,6 +41,7 @@
 - [ ] No signing keys, certificates, passwords, API keys, crash tokens, store credentials, or other production secrets exist in repository/history/artifacts.
 - [ ] Restored package metadata and license texts are checked against `THIRD_PARTY_NOTICES.md` for the exact resolved versions.
 - [ ] Database migration tests pass, including future-schema rejection, forged-current-history rejection, required table/column shape validation, and compatibility with every supported prior schema.
+- [ ] Consistent snapshot creation refuses the active DB/WAL/SHM and `.previous...` recovery naming family, refuses pre-existing destinations, preserves the active vault on rejection, and cleans a newly created partial snapshot best-effort after failure.
 - [ ] Candidate replacement databases pass SQLite `quick_check`, exact supported schema version, required schema shape, required/bounded vault header, canonical item IDs, and encrypted-record count/per-record/aggregate budgets before active DB/WAL/SHM mutation. Invalid replacements preserve the active vault.
 - [ ] SQLite replacement stages DB/WAL/SHM into a unique recovery set; partial rollback restores only components that actually staged, preserving sidecars that never moved.
 - [ ] Database migration/replacement rollback errors do not mask the original migration/copy failure.
