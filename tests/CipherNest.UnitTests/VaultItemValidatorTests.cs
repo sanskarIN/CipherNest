@@ -34,7 +34,7 @@ public sealed class VaultItemValidatorTests
             Username = new string('U', 2049),
             Secret = new string('S', 100_001),
             Url = new string('W', 4097),
-            Notes = new string('N', 250_001),
+            Notes = new string('N', SafeNoteLimits.MaximumCharacters + 1),
             Collection = new string('C', 129)
         };
 
@@ -44,9 +44,17 @@ public sealed class VaultItemValidatorTests
         Assert.Contains("Username or identifier is invalid or too long.", errors);
         Assert.Contains("Secret is invalid or too large for an item field.", errors);
         Assert.Contains("URL is invalid or too long.", errors);
-        Assert.Contains("Notes are invalid or too large for an item.", errors);
+        Assert.Contains($"Notes are invalid or exceed the {SafeNoteLimits.MaximumCharacters:N0}-character safety limit.", errors);
         Assert.Contains("Collection name is invalid or exceeds 128 characters.", errors);
         Assert.Contains("Title is required.", VaultItemValidator.Validate(item with { Title = " " }));
+    }
+
+    [Fact]
+    public void RejectsNoteBeyondSharedLineLimit()
+    {
+        var notes = string.Join('\n', Enumerable.Repeat("line", SafeNoteLimits.MaximumLines + 1));
+        var errors = VaultItemValidator.Validate(new VaultItem { Id = Guid.NewGuid(), Title = "Line limit", Notes = notes });
+        Assert.Contains($"Notes exceed the {SafeNoteLimits.MaximumLines:N0}-line safety limit.", errors);
     }
 
     [Fact]
@@ -138,7 +146,7 @@ public sealed class VaultItemValidatorTests
         Assert.Contains("Username or identifier is invalid or too long.", errors);
         Assert.Contains("Secret is invalid or too large for an item field.", errors);
         Assert.Contains("URL is invalid or too long.", errors);
-        Assert.Contains("Notes are invalid or too large for an item.", errors);
+        Assert.Contains($"Notes are invalid or exceed the {SafeNoteLimits.MaximumCharacters:N0}-character safety limit.", errors);
         Assert.Contains("Collection name is invalid or exceeds 128 characters.", errors);
         Assert.Contains("An item can have at most 100 tags and the tag collection must be present.", errors);
         Assert.Contains("An item can have at most 100 custom fields and the custom-field collection must be present.", errors);
