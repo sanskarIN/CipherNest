@@ -10,6 +10,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
     private const int MaxColumns = 256;
     private const int MaxRows = 100_000;
     private const int MaxFieldChars = 1_000_000;
+    private const int MaxRowChars = 2_000_000;
     private readonly IVaultService _vault;
     private readonly IClock _clock;
 
@@ -23,7 +24,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
     {
         ArgumentNullException.ThrowIfNull(source);
         if (!source.CanRead) throw new ArgumentException("CSV source stream must be readable.", nameof(source));
-        var parser = new CsvParser(source);
+        var parser = new CsvParser(source, 1);
         var row = await parser.ReadRowAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
         ValidateHeader(row);
         return row;
@@ -35,7 +36,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
         if (!source.CanRead) throw new ArgumentException("CSV source stream must be readable.", nameof(source));
         ArgumentNullException.ThrowIfNull(mapping);
         if (!_vault.IsUnlocked) throw new InvalidOperationException("Unlock the vault before importing.");
-        var parser = new CsvParser(source);
+        var parser = new CsvParser(source, checked(MaxRows + 1));
         var headers = await parser.ReadRowAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
         ValidateHeader(headers);
         var indexes = headers.Select((name, index) => (name, index)).ToDictionary(static x => x.name, static x => x.index, StringComparer.OrdinalIgnoreCase);
@@ -49,7 +50,6 @@ public sealed class CsvTransferService : IPlaintextTransferService
         while ((row = await parser.ReadRowAsync(cancellationToken).ConfigureAwait(false)) is not null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (imported + skipped >= MaxRows) throw new InvalidDataException($"CSV exceeds the {MaxRows:N0}-row safety limit.");
             var logicalRowNumber = imported + skipped + 2;
             var title = Get(row, indexes, mapping.Title).Trim();
             if (title.Length == 0)
@@ -130,18 +130,36 @@ public sealed class CsvTransferService : IPlaintextTransferService
     {
         private readonly StreamReader _reader;
         private readonly char[] _charBuffer = new char[1];
+        private readonly int _maxRows;
+        private int _rowsRead;
         private bool _finished;
 
-        public CsvParser(Stream source) => _reader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, 64 * 1024, leaveOpen: true);
+        public CsvParser(Stream source, int maxRows)
+        {
+            _reader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, 64 * 1024, leaveOpen: true);
+            _maxRows = maxRows > 0 ? maxRows : throw new ArgumentOutOfRangeException(nameof(maxRows));
+        }
 
         public async Task<IReadOnlyList<string>?> ReadRowAsync(CancellationToken cancellationToken)
         {
             if (_finished) return null;
+            if (_rowsRead >= _maxRows)
+            {
+                var extra = await ReadCharAsync(cancellationToken).ConfigureAwait(false);
+                if (extra < 0)
+                {
+                    _finished = true;
+                    return null;
+                }
+                throw new InvalidDataException($"CSV exceeds the {MaxRows:N0}-row safety limit.");
+            }
+
             var fields = new List<string>();
             var field = new StringBuilder();
             var quoted = false;
             var quoteClosed = false;
             var atFieldStart = true;
+            var rowCharacters = 0;
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -152,6 +170,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                     if (quoted) throw new InvalidDataException("CSV ended inside a quoted field.");
                     if (fields.Count == 0 && field.Length == 0 && atFieldStart) return null;
                     AddField(fields, field);
+                    _rowsRead++;
                     return fields;
                 }
                 var ch = (char)read;
@@ -160,15 +179,30 @@ public sealed class CsvTransferService : IPlaintextTransferService
                     if (ch == '"')
                     {
                         var next = _reader.Peek();
-                        if (next == '"') { _ = _reader.Read(); field.Append('"'); }
+                        if (next == '"')
+                        {
+                            _ = _reader.Read();
+                            field.Append('"');
+                            IncrementRowCharacters(ref rowCharacters);
+                        }
                         else { quoted = false; quoteClosed = true; }
                     }
-                    else field.Append(ch);
+                    else
+                    {
+                        field.Append(ch);
+                        IncrementRowCharacters(ref rowCharacters);
+                    }
                 }
                 else if (quoteClosed)
                 {
                     if (ch == ',') { AddField(fields, field); atFieldStart = true; quoteClosed = false; }
-                    else if (ch == '\r' || ch == '\n') { if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read(); AddField(fields, field); return fields; }
+                    else if (ch == '\r' || ch == '\n')
+                    {
+                        if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read();
+                        AddField(fields, field);
+                        _rowsRead++;
+                        return fields;
+                    }
                     else throw new InvalidDataException("Characters after a closing CSV quote are not allowed before the delimiter.");
                 }
                 else if (atFieldStart && ch == '"')
@@ -185,15 +219,23 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 {
                     if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read();
                     AddField(fields, field);
+                    _rowsRead++;
                     return fields;
                 }
                 else
                 {
                     field.Append(ch);
+                    IncrementRowCharacters(ref rowCharacters);
                     atFieldStart = false;
                 }
                 if (field.Length > MaxFieldChars) throw new InvalidDataException("CSV field exceeds the safety limit.");
             }
+        }
+
+        private static void IncrementRowCharacters(ref int rowCharacters)
+        {
+            rowCharacters++;
+            if (rowCharacters > MaxRowChars) throw new InvalidDataException("CSV row exceeds the aggregate character safety limit.");
         }
 
         private static void AddField(List<string> fields, StringBuilder field)
