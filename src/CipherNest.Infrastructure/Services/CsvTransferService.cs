@@ -1,5 +1,6 @@
 using System.Text;
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Validation;
 using CipherNest.Domain.Models;
 
 namespace CipherNest.Infrastructure.Services;
@@ -54,7 +55,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
             if (title.Length == 0)
             {
                 skipped++;
-                if (warnings.Count < 20) warnings.Add($"Skipped row {logicalRowNumber}: title is empty.");
+                AddWarning(warnings, logicalRowNumber, "title is empty.");
                 continue;
             }
             var now = _clock.UtcNow;
@@ -64,8 +65,23 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 Username = Get(row, indexes, mapping.Username), Secret = Get(row, indexes, mapping.Secret), Url = Get(row, indexes, mapping.Url), Notes = Get(row, indexes, mapping.Notes), Collection = Get(row, indexes, mapping.Collection),
                 Tags = SplitTags(Get(row, indexes, mapping.Tags)), Type = ParseType(Get(row, indexes, mapping.Type)), CreatedUtc = now, ModifiedUtc = now
             };
-            try { await _vault.SaveItemAsync(item, cancellationToken).ConfigureAwait(false); imported++; }
-            catch (ArgumentException ex) { skipped++; if (warnings.Count < 20) warnings.Add($"Skipped row {logicalRowNumber}: {ex.Message}"); }
+            var validationErrors = VaultItemValidator.Validate(item);
+            if (validationErrors.Count > 0)
+            {
+                skipped++;
+                AddWarning(warnings, logicalRowNumber, validationErrors[0]);
+                continue;
+            }
+            try
+            {
+                await _vault.SaveItemAsync(item, cancellationToken).ConfigureAwait(false);
+                imported++;
+            }
+            catch (ArgumentException)
+            {
+                skipped++;
+                AddWarning(warnings, logicalRowNumber, "item could not be saved because it failed a local validation rule.");
+            }
         }
         return new CsvImportResult(imported, skipped, warnings);
     }
@@ -85,6 +101,11 @@ public sealed class CsvTransferService : IPlaintextTransferService
             await writer.WriteLineAsync(string.Join(',', fields.Select(Escape))).ConfigureAwait(false);
         }
         await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void AddWarning(ICollection<string> warnings, int logicalRowNumber, string reason)
+    {
+        if (warnings.Count < 20) warnings.Add($"Skipped row {logicalRowNumber}: {reason}");
     }
 
     private static void ValidateHeader(IReadOnlyList<string> row)
