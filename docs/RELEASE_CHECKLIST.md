@@ -1,30 +1,38 @@
 # Release Checklist
 
-- [ ] `dotnet format --verify-no-changes` succeeds in the release environment.
-- [ ] Release build succeeds for every supported target available to the release environment.
-- [ ] Unit, integration, and UI-structure tests pass with warnings-as-errors/analyzers enabled.
+- [ ] `scripts/verify-core.ps1` or `scripts/verify-core.sh` succeeds from a clean checkout with the intended .NET SDK.
+- [ ] Main GitHub CI passes on the exact candidate: core tests/formatting, Windows default/funding-disabled compilation, Android compilation, and iOS/Mac Catalyst compilation.
+- [ ] Platform verification scripts succeed on appropriate hosts where the release target is supported: `verify-windows.ps1`, `verify-android.sh`, and `verify-apple.sh`.
+- [ ] Unit, integration, and UI/source-structure tests pass with warnings-as-errors/analyzers enabled.
+- [ ] No legacy `.DisplayAlert(` call is present in MAUI C# source; current async alert APIs compile without warnings on each target workload.
 - [ ] Android and Windows smoke tests pass; iOS/MacCatalyst build and smoke tests pass on an appropriate Apple environment.
-- [ ] Manual lifecycle tests cover background, sleep/resume, timeout, manual lock, clock rollback, and fail-closed behavior.
-- [ ] Master-passphrase change is verified to lock the vault, clear the remembered master-authentication session, and require the new passphrase before biometric convenience unlock returns.
+- [ ] Manual lifecycle tests cover background, sleep/resume, timeout, manual lock, clock rollback, and fail-closed behavior, including a simulated cleanup failure that does not escape the native lifecycle callback.
+- [ ] Master-passphrase change is verified to clear bound credential fields, lock the vault, clear the remembered master-authentication session, and require the new passphrase before biometric convenience unlock returns.
 - [ ] Failed interactive unlocks match the documented bounded backoff schedule and successful unlock resets client-side throttling.
-- [ ] Biometric enrollment/availability/cancel/failure/device-change behavior is validated on supported real devices before marketing it as supported.
+- [ ] Android biometric tests include API 28+, enrollment/no-enrollment, cancellation, lockout, hardware-unavailable, and secure-storage-loss behavior without depending on a newer preflight manager API.
+- [ ] iOS/Mac Catalyst biometric tests cover enrollment, cancellation/request-token invalidation, device changes, secure storage, and fallback.
 - [ ] Screenshot and clipboard controls are tested on each target and platform limitations remain visible in product/docs.
-- [ ] Username/password/custom-secret copy is always explicit; timed clearing preserves unrelated newer clipboard content; manual/background/timeout locks attempt immediate cleanup.
+- [ ] Username/password/custom-secret copy is always explicit; delayed cleanup retains only a fixed-size fingerprint, uses fixed-time comparison, preserves unrelated newer clipboard content, and still runs after the initiating caller token is no longer relevant.
+- [ ] Manual/background/timeout locks use conditional clipboard cleanup and do not erase unrelated content copied later.
 - [ ] Unlock, Settings, Transfer, Trash, Item Editor, and Onboarding credential/decrypted ViewModel fields are cleared when the sensitive page disappears.
+- [ ] Sensitive bound passphrase fields are cleared before longer authenticated/file/share work where practical, including unlock, onboarding, plaintext export, Trash/per-item re-authentication, biometric settings, backup/restore, passphrase rotation, and full-vault deletion.
+- [ ] Sensitive Settings/backup/restore/delete, transfer, item-open, and attachment file failures show fixed UI messages and route detailed failure classification through the privacy-safe reporter rather than rendering raw exception/path text.
+- [ ] Decrypted attachment export uses unique staging names and reports cleanup failure without leaking the temporary path.
 - [ ] Trash retention runs during routine vault maintenance; manual delete and empty-trash require current-master re-authentication and a separate destructive confirmation.
 - [ ] Large-vault local search/filter/sort is exercised with enough records to confirm 50-item incremental rendering, result counts, and load-more behavior remain responsive.
-- [ ] Dependency vulnerability, dependency-review, CodeQL, and secret scans pass or have documented reviewed exceptions.
+- [ ] CodeQL passes after analyzing both core/integration code and the Android MAUI application target.
+- [ ] Dependency review, vulnerability review, and secret scanning pass or have documented, owned, expiring exceptions; workflow timeout/cancellation behavior remains configured.
 - [ ] No signing keys, certificates, passwords, API keys, crash tokens, store credentials, or other production secrets exist in repository/history/artifacts.
 - [ ] Restored package metadata and license texts are checked against `THIRD_PARTY_NOTICES.md` for the exact resolved versions.
 - [ ] Database migration tests pass, including future-schema rejection and compatibility with every supported prior schema.
 - [ ] Crypto known-answer, tamper, wrong-key, hostile-KDF-resource, and format-version tests pass; every cryptographic-format change has focused review.
 - [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments and corrupted-container rejection.
 - [ ] Large attachment streaming, safe text preview, plaintext export warning, and temporary-cache cleanup are exercised.
-- [ ] Threat model, privacy notice, security design, diagnostics policy, third-party notices, changelog, support instructions, roadmap, and audit status are current.
+- [ ] Threat model, privacy notice, security design, diagnostics policy, third-party notices, changelog, support instructions, roadmap, CI-gate documentation, and audit status are current.
 - [ ] `docs/NEXT_STEPS.md` has been reviewed against the candidate and any completed/obsolete action has been reconciled before release notes are cut.
 - [ ] `AppConstants.BuyMeACoffeeUrl`, About, README, SUPPORT, and `.github/FUNDING.yml` still reference the intended `https://buymeacoffee.com/sanskarIN` project-support URL.
 - [ ] Financial support remains clearly optional and does not change security/privacy treatment, support priority, GPL feature access, or recovery behavior.
-- [ ] The current policy for any external funding/payment CTA has been checked for each target store, distribution method, app category, and region; any disallowed in-app CTA is omitted/disabled in that packaged build.
+- [ ] The current policy for any external funding/payment CTA has been checked for each target store, distribution method, app category, and region; any disallowed in-app CTA is omitted/disabled with `CipherNestEnableFundingLink=false`, and the chosen value is recorded in release provenance.
 - [ ] Store permissions/descriptions match actual app behavior and the store copy makes no unverified security claim.
 - [ ] Primary/adaptive/monochrome/dark branding sources and generated store icons/splash/feature-graphic screenshots are checked for safe-zone clipping, contrast, scaling, creator-credit placement, and synthetic-only demo data.
 - [ ] Localization fallback and large-interface layout are smoke-tested; future translations must preserve the meaning of security warnings.
