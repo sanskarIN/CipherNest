@@ -123,7 +123,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                     _finished = true;
                     if (quoted) throw new InvalidDataException("CSV ended inside a quoted field.");
                     if (fields.Count == 0 && field.Length == 0 && atFieldStart) return null;
-                    fields.Add(field.ToString());
+                    AddField(fields, field);
                     return fields;
                 }
                 var ch = (char)read;
@@ -140,7 +140,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 else if (quoteClosed)
                 {
                     if (ch == ',') { AddField(fields, field); atFieldStart = true; quoteClosed = false; }
-                    else if (ch == '\r' || ch == '\n') { if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read(); fields.Add(field.ToString()); return fields; }
+                    else if (ch == '\r' || ch == '\n') { if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read(); AddField(fields, field); return fields; }
                     else throw new InvalidDataException("Characters after a closing CSV quote are not allowed before the delimiter.");
                 }
                 else if (atFieldStart && ch == '"')
@@ -156,7 +156,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 else if (ch == '\r' || ch == '\n')
                 {
                     if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read();
-                    fields.Add(field.ToString());
+                    AddField(fields, field);
                     return fields;
                 }
                 else
