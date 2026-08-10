@@ -79,8 +79,7 @@ public partial class App : Microsoft.Maui.Controls.Application
         catch (Exception exception)
         {
             _exceptions.Report("Lifecycle.Inactive", exception);
-            if (_vault.IsUnlocked) await _vault.LockAsync();
-            try { await _clipboard.ClearAsync(); } catch (Exception clipboardException) { _exceptions.Report("Lifecycle.Inactive.Clipboard", clipboardException); }
+            await FailClosedLockAndClearClipboardAsync("Lifecycle.Inactive");
         }
     }
 
@@ -106,12 +105,32 @@ public partial class App : Microsoft.Maui.Controls.Application
         catch (Exception exception)
         {
             _exceptions.Report("Lifecycle.Active", exception);
-            if (_vault.IsUnlocked) await _vault.LockAsync();
-            try { await _clipboard.ClearAsync(); } catch (Exception clipboardException) { _exceptions.Report("Lifecycle.Active.Clipboard", clipboardException); }
+            await FailClosedLockAndClearClipboardAsync("Lifecycle.Active");
         }
         finally
         {
             _inactiveUtc = null;
+        }
+    }
+
+    private async Task FailClosedLockAndClearClipboardAsync(string operation)
+    {
+        try
+        {
+            if (_vault.IsUnlocked) await _vault.LockAsync();
+        }
+        catch (Exception lockException)
+        {
+            _exceptions.Report($"{operation}.Lock", lockException);
+        }
+
+        try
+        {
+            await _clipboard.ClearAsync();
+        }
+        catch (Exception clipboardException)
+        {
+            _exceptions.Report($"{operation}.Clipboard", clipboardException);
         }
     }
 
