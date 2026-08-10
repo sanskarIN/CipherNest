@@ -11,6 +11,21 @@ Attachments are stored as individually encrypted files under the app data direct
 
 SQLite WAL files are treated as sensitive encrypted-container material. No plaintext item fields are written to SQL indexes or FTS tables.
 
+## Storage resource budgets
+
+The current source treats database length/count metadata as untrusted resource input and applies explicit budgets:
+
+- vault-header JSON: maximum 64 KiB UTF-8;
+- serialized decrypted item JSON: maximum 16 MiB;
+- stored encrypted item envelope: maximum 24 MiB per row;
+- item count: maximum 100,000 rows;
+- aggregate stored encrypted envelope bytes: maximum 256 MiB;
+- application-level combined item text: maximum 2,000,000 characters before serialization.
+
+`ReadHeaderAsync` reads the UTF-8 byte length before materializing header text. `ReadAllItemsAsync` checks aggregate count/bytes and each `length(Envelope)` before reading the BLOB. Writes enforce the corresponding limits as well. Stored item IDs must be canonical lower-case GUID `D` strings; after decryption the payload ID must still equal the authenticated row ID.
+
+These are safety/resource limits, not recommendations that ordinary vaults should approach them. Raising them requires memory/performance/security review and compatibility testing.
+
 ## Migration runner
 
 `DatabaseMigrator` applies ordered migrations transactionally. Initialization creates `MigrationHistory`, reads the highest completed schema version, rejects databases from a newer unsupported version, applies each missing migration inside a transaction, records its completion, and verifies that the final version matches `AppConstants.DatabaseSchemaVersion`.
@@ -28,23 +43,27 @@ Migration source must be append-only after release. A migration already shipped 
 
 ## Restore / database replacement boundary
 
-`SqliteVaultStore.ReplaceDatabaseAsync` validates the replacement file **before** deleting WAL/SHM sidecars or moving the active database:
+`SqliteVaultStore.ReplaceDatabaseAsync` validates the replacement file **before** active database/WAL/SHM mutation:
 
 1. open the candidate read-only;
 2. run `PRAGMA quick_check;` and require `ok`;
 3. require exactly `AppConstants.DatabaseSchemaVersion`;
 4. validate the required current table/column shape;
-5. only then move/copy the active/replacement files.
+5. require a bounded vault header;
+6. validate item count, aggregate envelope bytes, per-envelope sizes, and canonical item IDs;
+7. only then stage the active SQLite file set and install the replacement database.
 
-If candidate validation fails, the current database is not touched. If the replacement copy itself fails after the old database was moved to `.previous`, CipherNest attempts to move the previous database back while preserving the original copy exception even if that rollback attempt also encounters an I/O/access error. Integration/source tests cover invalid-schema preservation and validation/rollback ordering.
+The active database, WAL, and SHM are staged into a unique `.previous.<guid>` recovery file set. If staging or replacement fails, rollback restores only recovery components that actually exist. This matters for partial staging: a WAL or SHM that failed to move is not deleted simply because another component was staged successfully.
 
-Encrypted-backup restore uses this store boundary after its own authenticated container/path/size validation, so a valid SQLite signature alone is not sufficient to replace the active vault.
+If candidate validation fails, the current database is not touched. Successful replacement cleans recovery artifacts best-effort. Full-vault deletion also sweeps the unique recovery naming pattern.
+
+Encrypted-backup restore uses this store boundary after its own authenticated container/path/size validation, so a valid SQLite signature or even a structurally correct schema alone is not sufficient to replace the active vault.
 
 ## Decrypted record boundary
 
 Each `VaultItems.Id` is included as associated data when the encrypted envelope is authenticated. After decryption, `VaultService` additionally requires the payload's `VaultItem.Id` to equal that authenticated row ID and runs `VaultItemValidator` before returning the object to application/search/UI code. The plaintext JSON byte buffer is zeroed in `finally` regardless of validation outcome.
 
-This validation rejects malformed runtime-null metadata, invalid enum/empty identifiers, over-limit note/field/tag/attachment data, and duplicate attachment identifiers/storage names instead of allowing malformed authenticated payload objects to propagate into later code paths.
+`VaultService` independently enforces the 16 MiB plaintext-JSON and 24 MiB stored-envelope limits so alternate `IVaultStore` implementations cannot bypass the SQLite storage budgets. Validation also rejects malformed runtime-null metadata, invalid enum/empty identifiers, over-limit note/field/tag/attachment data, excessive aggregate item text, and duplicate attachment identifiers/storage names.
 
 ## Search design
 
