@@ -97,13 +97,22 @@ public partial class TransferViewModel : ObservableObject
             StatusMessage = $"Type exactly {ExportPhrase} to acknowledge that the export will contain plaintext secrets.";
             return;
         }
-        if (!await _vault.ReauthenticateAsync(ExportMasterPassphrase))
+
+        var authenticated = await _vault.ReauthenticateAsync(ExportMasterPassphrase);
+        ExportMasterPassphrase = string.Empty;
+        if (!authenticated)
         {
             StatusMessage = "Master-passphrase confirmation failed. Recovery keys are not accepted for plaintext export confirmation.";
             return;
         }
+
         var confirmed = await Shell.Current.DisplayAlertAsync("Create plaintext export?", "This file will contain readable vault fields and may be copied by the share target, backups, search indexing, antivirus, or the operating system. Encrypted backup is safer. Continue only if you need plaintext interoperability.", "Export plaintext", "Cancel");
-        if (!confirmed) return;
+        if (!confirmed)
+        {
+            ExportConfirmationPhrase = string.Empty;
+            return;
+        }
+
         IsBusy = true;
         try
         {
@@ -114,7 +123,6 @@ public partial class TransferViewModel : ObservableObject
             {
                 await _transfer.ExportCsvAsync(stream);
             }
-            ExportMasterPassphrase = string.Empty;
             ExportConfirmationPhrase = string.Empty;
             StatusMessage = "Plaintext CSV created in temporary app cache. After sharing, delete every copy you no longer need and use 'Clean plaintext export cache'. Attachments are not included in plaintext CSV exports.";
             await Share.Default.RequestAsync(new ShareFileRequest("CipherNest plaintext export — sensitive", new ShareFile(path)));
