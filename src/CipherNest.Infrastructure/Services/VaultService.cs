@@ -17,7 +17,9 @@ public sealed class VaultService : IVaultService, IDisposable
     private readonly IClock _clock;
     private readonly EncryptedAttachmentStore _attachments;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly object _keySync = new();
     private byte[]? _dataKey;
+    private CancellationTokenSource? _sessionCancellation;
 
     public VaultService(IVaultStore store, ICryptoService crypto, IClock clock)
     {
@@ -26,7 +28,14 @@ public sealed class VaultService : IVaultService, IDisposable
         _attachments = new EncryptedAttachmentStore(Path.Combine(root, "attachments"), crypto);
     }
 
-    public bool IsUnlocked => _dataKey is { Length: 32 };
+    public bool IsUnlocked
+    {
+        get
+        {
+            lock (_keySync) return _dataKey is { Length: 32 } && _sessionCancellation is not null;
+        }
+    }
+
     public event EventHandler<bool>? LockStateChanged;
 
     public async Task<bool> HasVaultAsync(CancellationToken cancellationToken = default)
@@ -86,9 +95,11 @@ public sealed class VaultService : IVaultService, IDisposable
         try
         {
             candidate = _crypto.UnwrapKey(masterPassphrase.AsSpan(), header.Master);
-            return _dataKey is not null && CryptographicOperations.FixedTimeEquals(candidate, _dataKey);
+            using var lease = AcquireKeyLease(cancellationToken);
+            return CryptographicOperations.FixedTimeEquals(candidate, lease.Key);
         }
         catch (VaultAuthenticationException) { return false; }
+        catch (VaultLockedException) { return false; }
         finally { if (candidate is not null) CryptographicOperations.ZeroMemory(candidate); }
     }
 
@@ -97,13 +108,14 @@ public sealed class VaultService : IVaultService, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(secondarySecret);
         if (secondarySecret.Length < 32) throw new ArgumentException("Secondary unlock secret is too short.", nameof(secondarySecret));
         if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
-        var key = RequireKey();
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var lease = AcquireKeyLease(cancellationToken);
+        await _gate.WaitAsync(lease.Token).ConfigureAwait(false);
         try
         {
-            var header = await ReadHeaderUnlockedAsync(cancellationToken).ConfigureAwait(false);
-            var wrapped = _crypto.WrapKey(key, secondarySecret.AsSpan());
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = wrapped }, JsonOptions), cancellationToken).ConfigureAwait(false);
+            var header = await ReadHeaderUnlockedAsync(lease.Token).ConfigureAwait(false);
+            var wrapped = _crypto.WrapKey(lease.Key, secondarySecret.AsSpan());
+            lease.Token.ThrowIfCancellationRequested();
+            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = wrapped }, JsonOptions), lease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
@@ -111,11 +123,12 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task DisableSecondaryUnlockAsync(string masterPassphrase, CancellationToken cancellationToken = default)
     {
         if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var lease = AcquireKeyLease(cancellationToken);
+        await _gate.WaitAsync(lease.Token).ConfigureAwait(false);
         try
         {
-            var header = await ReadHeaderUnlockedAsync(cancellationToken).ConfigureAwait(false);
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = null }, JsonOptions), cancellationToken).ConfigureAwait(false);
+            var header = await ReadHeaderUnlockedAsync(lease.Token).ConfigureAwait(false);
+            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = null }, JsonOptions), lease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
@@ -131,13 +144,14 @@ public sealed class VaultService : IVaultService, IDisposable
     {
         if (!await ReauthenticateAsync(currentMasterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
         if (newMasterPassphrase.Length < 12) throw new ArgumentException("The new master passphrase must contain at least 12 characters.", nameof(newMasterPassphrase));
-        var key = RequireKey();
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var lease = AcquireKeyLease(cancellationToken);
+        await _gate.WaitAsync(lease.Token).ConfigureAwait(false);
         try
         {
-            var header = await ReadHeaderUnlockedAsync(cancellationToken).ConfigureAwait(false);
-            var newMaster = _crypto.WrapKey(key, newMasterPassphrase.AsSpan());
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Master = newMaster }, JsonOptions), cancellationToken).ConfigureAwait(false);
+            var header = await ReadHeaderUnlockedAsync(lease.Token).ConfigureAwait(false);
+            var newMaster = _crypto.WrapKey(lease.Key, newMasterPassphrase.AsSpan());
+            lease.Token.ThrowIfCancellationRequested();
+            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Master = newMaster }, JsonOptions), lease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
@@ -153,13 +167,33 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public Task LockAsync(CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested(); if (_dataKey is not null) { CryptographicOperations.ZeroMemory(_dataKey); _dataKey = null; } LockStateChanged?.Invoke(this, false); return Task.CompletedTask;
+        cancellationToken.ThrowIfCancellationRequested();
+        CancellationTokenSource? session;
+        lock (_keySync)
+        {
+            session = _sessionCancellation;
+            _sessionCancellation = null;
+            if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
+            _dataKey = null;
+        }
+        try { session?.Cancel(); }
+        finally { session?.Dispose(); }
+        LockStateChanged?.Invoke(this, false);
+        return Task.CompletedTask;
     }
 
     public async Task<IReadOnlyList<VaultItem>> GetItemsAsync(bool includeTrash = false, CancellationToken cancellationToken = default)
     {
-        var key = RequireKey(); var stored = await _store.ReadAllItemsAsync(cancellationToken).ConfigureAwait(false); var result = new List<VaultItem>(stored.Count);
-        foreach (var row in stored) { cancellationToken.ThrowIfCancellationRequested(); var item = DecryptItem(row, key); if (includeTrash || item.DeletedUtc is null) result.Add(item); }
+        using var lease = AcquireKeyLease(cancellationToken);
+        var stored = await _store.ReadAllItemsAsync(lease.Token).ConfigureAwait(false);
+        var result = new List<VaultItem>(stored.Count);
+        foreach (var row in stored)
+        {
+            lease.Token.ThrowIfCancellationRequested();
+            var item = DecryptItem(row, lease.Key);
+            if (includeTrash || item.DeletedUtc is null) result.Add(item);
+        }
+        lease.Token.ThrowIfCancellationRequested();
         return result.OrderByDescending(static x => x.IsFavorite).ThenBy(static x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
 
@@ -182,10 +216,10 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public async Task DeletePermanentlyAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        _ = RequireKey();
-        var item = await GetItemRequiredAsync(id, cancellationToken).ConfigureAwait(false);
+        using var lease = AcquireKeyLease(cancellationToken);
+        var item = await GetItemRequiredAsync(id, lease.Token).ConfigureAwait(false);
         var attachmentFiles = item.Attachments.Select(static attachment => attachment.EncryptedFileName).ToArray();
-        await _store.DeleteItemAsync(id, cancellationToken).ConfigureAwait(false);
+        await _store.DeleteItemAsync(id, lease.Token).ConfigureAwait(false);
         foreach (var attachmentFile in attachmentFiles) TryDeleteAttachment(attachmentFile);
     }
 
@@ -197,33 +231,62 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public async Task<AttachmentReference> AddAttachmentAsync(Guid itemId, Stream source, string displayName, string mediaType, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(source); if (!source.CanRead) throw new ArgumentException("Attachment stream must be readable.", nameof(source)); var item = await GetItemRequiredAsync(itemId, cancellationToken).ConfigureAwait(false); if (item.Attachments.Count >= 25) throw new InvalidOperationException("An item can have at most 25 attachments.");
+        ArgumentNullException.ThrowIfNull(source); if (!source.CanRead) throw new ArgumentException("Attachment stream must be readable.", nameof(source));
+        using var lease = AcquireKeyLease(cancellationToken);
+        var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false);
+        if (item.Attachments.Count >= 25) throw new InvalidOperationException("An item can have at most 25 attachments.");
         displayName = Path.GetFileName(displayName?.Trim()); if (string.IsNullOrWhiteSpace(displayName) || displayName.Length > 240) throw new ArgumentException("Attachment name is invalid.", nameof(displayName)); mediaType = string.IsNullOrWhiteSpace(mediaType) ? "application/octet-stream" : mediaType.Trim();
-        var attachmentId = Guid.NewGuid(); var opaque = _attachments.GetOpaqueFileName(attachmentId); var length = await _attachments.EncryptAsync(itemId, attachmentId, source, opaque, RequireKey(), cancellationToken).ConfigureAwait(false); var reference = new AttachmentReference(attachmentId, displayName, mediaType, length, opaque, _clock.UtcNow);
-        try { await SaveItemAsync(item with { Attachments = item.Attachments.Append(reference).ToArray() }, cancellationToken).ConfigureAwait(false); return reference; } catch { _attachments.Delete(opaque); throw; }
+        var attachmentId = Guid.NewGuid(); var opaque = _attachments.GetOpaqueFileName(attachmentId); var length = await _attachments.EncryptAsync(itemId, attachmentId, source, opaque, lease.Key, lease.Token).ConfigureAwait(false); var reference = new AttachmentReference(attachmentId, displayName, mediaType, length, opaque, _clock.UtcNow);
+        try { await SaveItemAsync(item with { Attachments = item.Attachments.Append(reference).ToArray() }, lease.Token).ConfigureAwait(false); return reference; } catch { TryDeleteAttachment(opaque); throw; }
     }
 
     public async Task RemoveAttachmentAsync(Guid itemId, Guid attachmentId, CancellationToken cancellationToken = default)
     {
-        var item = await GetItemRequiredAsync(itemId, cancellationToken).ConfigureAwait(false); var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist."); await SaveItemAsync(item with { Attachments = item.Attachments.Where(a => a.Id != attachmentId).ToArray() }, cancellationToken).ConfigureAwait(false); _attachments.Delete(reference.EncryptedFileName);
+        using var lease = AcquireKeyLease(cancellationToken);
+        var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false); var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist."); await SaveItemAsync(item with { Attachments = item.Attachments.Where(a => a.Id != attachmentId).ToArray() }, lease.Token).ConfigureAwait(false); TryDeleteAttachment(reference.EncryptedFileName);
     }
 
     public async Task ExportAttachmentAsync(Guid itemId, Guid attachmentId, Stream destination, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(destination); if (!destination.CanWrite) throw new ArgumentException("Destination stream must be writable.", nameof(destination)); var item = await GetItemRequiredAsync(itemId, cancellationToken).ConfigureAwait(false); var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist."); await _attachments.DecryptToAsync(itemId, attachmentId, reference.EncryptedFileName, reference.PlaintextLength, destination, RequireKey(), cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(destination); if (!destination.CanWrite) throw new ArgumentException("Destination stream must be writable.", nameof(destination));
+        using var lease = AcquireKeyLease(cancellationToken);
+        var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false); var reference = item.Attachments.FirstOrDefault(a => a.Id == attachmentId) ?? throw new KeyNotFoundException("Attachment does not exist."); await _attachments.DecryptToAsync(itemId, attachmentId, reference.EncryptedFileName, reference.PlaintextLength, destination, lease.Key, lease.Token).ConfigureAwait(false);
     }
 
-    public void Dispose() { if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey); _dataKey = null; _gate.Dispose(); }
-    private byte[] RequireKey() => _dataKey ?? throw new VaultLockedException();
+    public void Dispose()
+    {
+        CancellationTokenSource? session;
+        lock (_keySync)
+        {
+            session = _sessionCancellation;
+            _sessionCancellation = null;
+            if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
+            _dataKey = null;
+        }
+        try { session?.Cancel(); }
+        finally { session?.Dispose(); }
+        _gate.Dispose();
+    }
+
+    private VaultKeyLease AcquireKeyLease(CancellationToken cancellationToken)
+    {
+        lock (_keySync)
+        {
+            if (_dataKey is not { Length: 32 } || _sessionCancellation is null) throw new VaultLockedException();
+            return new VaultKeyLease(_dataKey.ToArray(), _sessionCancellation.Token, cancellationToken);
+        }
+    }
 
     private async Task PersistItemAsync(VaultItem item, CancellationToken cancellationToken)
     {
-        var key = RequireKey();
+        using var lease = AcquireKeyLease(cancellationToken);
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(item, JsonOptions);
         try
         {
-            var envelope = _crypto.Encrypt(plaintext, key, item.Id.ToByteArray());
-            await _store.UpsertItemAsync(new StoredVaultItem(item.Id, JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions)), cancellationToken).ConfigureAwait(false);
+            lease.Token.ThrowIfCancellationRequested();
+            var envelope = _crypto.Encrypt(plaintext, lease.Key, item.Id.ToByteArray());
+            lease.Token.ThrowIfCancellationRequested();
+            await _store.UpsertItemAsync(new StoredVaultItem(item.Id, JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions)), lease.Token).ConfigureAwait(false);
         }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
     }
@@ -254,9 +317,24 @@ public sealed class VaultService : IVaultService, IDisposable
         try { _attachments.Delete(encryptedFileName); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
+        catch (InvalidDataException) { }
     }
 
-    private void ReplaceDataKey(byte[] next) { if (next.Length != 32) { CryptographicOperations.ZeroMemory(next); throw new CryptographicException("Invalid vault data key length."); } if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey); _dataKey = next; }
+    private void ReplaceDataKey(byte[] next)
+    {
+        if (next.Length != 32) { CryptographicOperations.ZeroMemory(next); throw new CryptographicException("Invalid vault data key length."); }
+        CancellationTokenSource? previousSession;
+        lock (_keySync)
+        {
+            previousSession = _sessionCancellation;
+            _sessionCancellation = new CancellationTokenSource();
+            if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
+            _dataKey = next;
+        }
+        try { previousSession?.Cancel(); }
+        finally { previousSession?.Dispose(); }
+    }
+
     private static string GenerateRecoveryKey() { var bytes = RandomNumberGenerator.GetBytes(32); try { return "CN1-" + Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_'); } finally { CryptographicOperations.ZeroMemory(bytes); } }
     private sealed record VaultHeaderDocument(int Version, WrappedKeyEnvelope Master, WrappedKeyEnvelope? Recovery, WrappedKeyEnvelope? Secondary = null);
 }
