@@ -42,7 +42,27 @@ public sealed class DatabaseMigrationTests : IDisposable
 
         var store = new SqliteVaultStore(DatabasePath);
         var ex = await Assert.ThrowsAsync<InvalidDataException>(() => store.InitializeAsync());
-        Assert.Contains("newer", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("migration history", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(0, "2026-08-10T00:00:00Z")]
+    [InlineData(-1, "2026-08-10T00:00:00Z")]
+    [InlineData(1, "not-a-timestamp")]
+    public async Task Initialize_RejectsInvalidMigrationHistory(int version, string appliedUtc)
+    {
+        await using (var connection = new SqliteConnection($"Data Source={DatabasePath}"))
+        {
+            await connection.OpenAsync();
+            await using var create = connection.CreateCommand();
+            create.CommandText = "CREATE TABLE MigrationHistory (Version INTEGER PRIMARY KEY, AppliedUtc TEXT NOT NULL); INSERT INTO MigrationHistory(Version, AppliedUtc) VALUES ($version, $utc);";
+            create.Parameters.AddWithValue("$version", version);
+            create.Parameters.AddWithValue("$utc", appliedUtc);
+            await create.ExecuteNonQueryAsync();
+        }
+
+        var store = new SqliteVaultStore(DatabasePath);
+        await Assert.ThrowsAsync<InvalidDataException>(() => store.InitializeAsync());
     }
 
     [Fact]
