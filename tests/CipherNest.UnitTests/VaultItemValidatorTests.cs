@@ -52,7 +52,7 @@ public sealed class VaultItemValidatorTests
     [Fact]
     public void RejectsNoteBeyondSharedLineLimit()
     {
-        var notes = string.Join('\n', Enumerable.Repeat("line", SafeNoteLimits.MaximumLines + 1));
+        var notes = string.Join("\n", Enumerable.Repeat("line", SafeNoteLimits.MaximumLines + 1));
         var errors = VaultItemValidator.Validate(new VaultItem { Id = Guid.NewGuid(), Title = "Line limit", Notes = notes });
         Assert.Contains($"Notes exceed the {SafeNoteLimits.MaximumLines:N0}-line safety limit.", errors);
     }
