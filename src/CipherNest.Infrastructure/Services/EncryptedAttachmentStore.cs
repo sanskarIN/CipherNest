@@ -20,7 +20,7 @@ public sealed class EncryptedAttachmentStore
     }
 
     public string GetOpaqueFileName(Guid attachmentId) => $"{attachmentId:N}.cna";
-    public string GetPath(string opaqueFileName) => Path.Combine(_directory, opaqueFileName);
+    public string GetPath(string opaqueFileName) => Path.Combine(_directory, AttachmentStorageNamePolicy.ValidateOpaqueFileName(opaqueFileName));
 
     public async Task<long> EncryptAsync(Guid itemId, Guid attachmentId, Stream source, string opaqueFileName, ReadOnlyMemory<byte> dataKey, CancellationToken cancellationToken)
     {
