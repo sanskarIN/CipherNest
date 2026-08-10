@@ -248,11 +248,12 @@ public sealed class VaultService : IVaultService, IDisposable
     public async Task<AttachmentReference> AddAttachmentAsync(Guid itemId, Stream source, string displayName, string mediaType, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source); if (!source.CanRead) throw new ArgumentException("Attachment stream must be readable.", nameof(source));
+        var normalizedDisplayName = AttachmentImportPolicy.NormalizeDisplayName(displayName);
+        var normalizedMediaType = AttachmentImportPolicy.NormalizeMediaType(mediaType);
         using var lease = AcquireKeyLease(cancellationToken);
         var item = await GetItemRequiredAsync(itemId, lease.Token).ConfigureAwait(false);
         if (item.Attachments.Count >= 25) throw new InvalidOperationException("An item can have at most 25 attachments.");
-        displayName = Path.GetFileName(displayName?.Trim()); if (string.IsNullOrWhiteSpace(displayName) || displayName.Length > 240) throw new ArgumentException("Attachment name is invalid.", nameof(displayName)); mediaType = string.IsNullOrWhiteSpace(mediaType) ? "application/octet-stream" : mediaType.Trim();
-        var attachmentId = Guid.NewGuid(); var opaque = _attachments.GetOpaqueFileName(attachmentId); var length = await _attachments.EncryptAsync(itemId, attachmentId, source, opaque, lease.Key, lease.Token).ConfigureAwait(false); var reference = new AttachmentReference(attachmentId, displayName, mediaType, length, opaque, _clock.UtcNow);
+        var attachmentId = Guid.NewGuid(); var opaque = _attachments.GetOpaqueFileName(attachmentId); var length = await _attachments.EncryptAsync(itemId, attachmentId, source, opaque, lease.Key, lease.Token).ConfigureAwait(false); var reference = new AttachmentReference(attachmentId, normalizedDisplayName, normalizedMediaType, length, opaque, _clock.UtcNow);
         try { await SaveItemAsync(item with { Attachments = item.Attachments.Append(reference).ToArray() }, lease.Token).ConfigureAwait(false); return reference; } catch { TryDeleteAttachment(opaque); throw; }
     }
 
