@@ -64,18 +64,15 @@ internal static class DatabaseMigrator
         await ValidateCurrentSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<int> GetCurrentVersionAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    internal static async Task ValidateCurrentSchemaAsync(SqliteConnection connection, CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM MigrationHistory;";
-        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-        return Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
-
-    private static async Task ValidateCurrentSchemaAsync(SqliteConnection connection, CancellationToken cancellationToken)
-    {
+        ArgumentNullException.ThrowIfNull(connection);
         try
         {
+            var version = await GetCurrentVersionAsync(connection, cancellationToken).ConfigureAwait(false);
+            if (version != AppConstants.DatabaseSchemaVersion)
+                throw new InvalidDataException($"Vault database schema version {version} does not match the supported version {AppConstants.DatabaseSchemaVersion}.");
+
             await ValidateShapeAsync(connection, "SELECT Id, HeaderJson FROM VaultHeader LIMIT 0;", cancellationToken).ConfigureAwait(false);
             await ValidateShapeAsync(connection, "SELECT Id, Envelope FROM VaultItems LIMIT 0;", cancellationToken).ConfigureAwait(false);
             await ValidateShapeAsync(connection, "SELECT Key, Value FROM AppSettings LIMIT 0;", cancellationToken).ConfigureAwait(false);
@@ -85,6 +82,14 @@ internal static class DatabaseMigrator
         {
             throw new InvalidDataException("Vault database schema does not match the supported CipherNest structure.", ex);
         }
+    }
+
+    private static async Task<int> GetCurrentVersionAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM MigrationHistory;";
+        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        return Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static async Task ValidateShapeAsync(SqliteConnection connection, string sql, CancellationToken cancellationToken)
