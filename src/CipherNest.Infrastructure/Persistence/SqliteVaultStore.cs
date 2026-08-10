@@ -80,8 +80,7 @@ public sealed class SqliteVaultStore : IVaultStore
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
                 var idText = reader.GetString(0);
-                if (!Guid.TryParseExact(idText, "D", out var id) || id == Guid.Empty || !string.Equals(idText, id.ToString("D"), StringComparison.Ordinal))
-                    throw new InvalidDataException("Stored vault item identifier is invalid or non-canonical.");
+                if (!TryParseCanonicalItemId(idText, out var id)) throw new InvalidDataException("Stored vault item identifier is invalid or non-canonical.");
                 var envelopeLength = reader.GetInt64(2);
                 if (envelopeLength is < 1 or > VaultStorageLimits.MaximumStoredEnvelopeBytes) throw new InvalidDataException("Stored vault item envelope exceeds the supported size limit.");
                 var envelope = (byte[])reader[1];
@@ -207,10 +206,35 @@ public sealed class SqliteVaultStore : IVaultStore
             }
 
             await DatabaseMigrator.ValidateCurrentSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
+            await ValidateStoredVaultResourceBoundsAsync(connection, cancellationToken).ConfigureAwait(false);
         }
         catch (SqliteException ex)
         {
             throw new InvalidDataException("Replacement vault database is not a valid supported CipherNest database.", ex);
+        }
+    }
+
+    private static async Task ValidateStoredVaultResourceBoundsAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        await using (var header = connection.CreateCommand())
+        {
+            header.CommandText = "SELECT length(CAST(HeaderJson AS BLOB)) FROM VaultHeader WHERE Id = 1;";
+            var result = await header.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            if (result is null or DBNull) throw new InvalidDataException("Replacement vault database does not contain a vault header.");
+            var headerBytes = Convert.ToInt64(result, System.Globalization.CultureInfo.InvariantCulture);
+            if (headerBytes is < 1 or > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes) throw new InvalidDataException("Replacement vault header exceeds the supported size limit.");
+        }
+
+        await ValidateStoredItemSetBoundsAsync(connection, cancellationToken).ConfigureAwait(false);
+        await using var items = connection.CreateCommand();
+        items.CommandText = "SELECT Id, length(Envelope) FROM VaultItems ORDER BY Id;";
+        await using var reader = await items.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var idText = reader.GetString(0);
+            if (!TryParseCanonicalItemId(idText, out _)) throw new InvalidDataException("Replacement vault contains an invalid or non-canonical item identifier.");
+            var envelopeLength = reader.GetInt64(1);
+            if (envelopeLength is < 1 or > VaultStorageLimits.MaximumStoredEnvelopeBytes) throw new InvalidDataException("Replacement vault contains an encrypted item outside the supported size limit.");
         }
     }
 
@@ -238,6 +262,13 @@ public sealed class SqliteVaultStore : IVaultStore
         if (otherCount < 0 || otherCount >= VaultStorageLimits.MaximumItemCount) throw new InvalidOperationException("Vault has reached the supported encrypted record count limit.");
         if (otherBytes < 0 || otherBytes > VaultStorageLimits.MaximumStoredEnvelopeBytesTotal - envelopeBytes)
             throw new InvalidOperationException("Vault has reached the supported encrypted record storage limit.");
+    }
+
+    private static bool TryParseCanonicalItemId(string idText, out Guid id)
+    {
+        return Guid.TryParseExact(idText, "D", out id) &&
+               id != Guid.Empty &&
+               string.Equals(idText, id.ToString("D"), StringComparison.Ordinal);
     }
 
     private RecoveryFileSet CreateRecoveryFileSet()
