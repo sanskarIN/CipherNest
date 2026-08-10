@@ -66,19 +66,24 @@ public partial class UnlockViewModel : ObservableObject
                 return;
             }
 
+            var passphrase = MasterPassphrase;
+            MasterPassphrase = string.Empty;
             try
             {
-                await _vault.UnlockAsync(MasterPassphrase);
-                var isMaster = await _vault.ReauthenticateAsync(MasterPassphrase);
+                await _vault.UnlockAsync(passphrase);
+                var isMaster = await _vault.ReauthenticateAsync(passphrase);
                 if (isMaster) _sessionSecurity.RecordMasterAuthentication(DateTimeOffset.UtcNow);
                 _limiter.RegisterSuccess();
-                MasterPassphrase = string.Empty;
                 await Shell.Current.GoToAsync("//vault");
             }
             catch (VaultAuthenticationException)
             {
                 _limiter.RegisterFailure(DateTimeOffset.UtcNow);
                 ErrorMessage = "The passphrase is incorrect or the vault cannot be authenticated.";
+            }
+            finally
+            {
+                passphrase = string.Empty;
             }
         }
         finally { IsBusy = false; }
