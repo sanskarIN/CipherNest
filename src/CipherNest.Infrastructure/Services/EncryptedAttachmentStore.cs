@@ -38,7 +38,7 @@ public sealed class EncryptedAttachmentStore
             await output.WriteAsync(Magic, cancellationToken).ConfigureAwait(false);
             var chunkIndex = 0;
             int read;
-            while ((read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
+            while ((read = await ReadChunkAsync(source, buffer, cancellationToken).ConfigureAwait(false)) > 0)
             {
                 AttachmentFormatPolicy.ValidateChunkIndex(chunkIndex);
                 total += read;
@@ -129,6 +129,18 @@ public sealed class EncryptedAttachmentStore
         var bytes = new byte[4];
         await ReadExactlyAsync(stream, bytes, cancellationToken).ConfigureAwait(false);
         return BinaryPrimitives.ReadInt32BigEndian(bytes);
+    }
+
+    private static async Task<int> ReadChunkAsync(Stream stream, Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        var total = 0;
+        while (total < buffer.Length)
+        {
+            var read = await stream.ReadAsync(buffer[total..], cancellationToken).ConfigureAwait(false);
+            if (read == 0) break;
+            total += read;
+        }
+        return total;
     }
 
     private static async Task ReadExactlyAsync(Stream stream, Memory<byte> buffer, CancellationToken cancellationToken)
