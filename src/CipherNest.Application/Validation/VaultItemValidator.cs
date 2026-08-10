@@ -5,6 +5,7 @@ namespace CipherNest.Application.Validation;
 public static class VaultItemValidator
 {
     private const long MaximumAttachmentBytes = 100L * 1024 * 1024;
+    public const int MaximumAggregateTextCharacters = 2_000_000;
 
     public static IReadOnlyList<string> Validate(VaultItem item)
     {
@@ -40,11 +41,44 @@ public static class VaultItemValidator
             errors.Add("An attachment contains invalid metadata.");
         }
 
+        if (CalculateAggregateTextCharacters(item, tags, customFields, attachments) > MaximumAggregateTextCharacters)
+            errors.Add($"Combined vault item text exceeds the {MaximumAggregateTextCharacters:N0}-character safety limit.");
+
         var nonNullAttachments = attachments.Where(static attachment => attachment is not null).ToArray();
         if (nonNullAttachments.Select(static attachment => attachment.Id).Distinct().Count() != nonNullAttachments.Length)
             errors.Add("Attachment identifiers must be unique within an item.");
         if (nonNullAttachments.Select(static attachment => attachment.EncryptedFileName).Where(static name => name is not null).Distinct(StringComparer.OrdinalIgnoreCase).Count() != nonNullAttachments.Count(static attachment => attachment.EncryptedFileName is not null))
             errors.Add("Encrypted attachment storage names must be unique within an item.");
         return errors;
+    }
+
+    private static long CalculateAggregateTextCharacters(
+        VaultItem item,
+        IReadOnlyList<string> tags,
+        IReadOnlyList<CustomField> customFields,
+        IReadOnlyList<AttachmentReference> attachments)
+    {
+        long total = 0;
+        total += item.Title?.Length ?? 0;
+        total += item.Username?.Length ?? 0;
+        total += item.Secret?.Length ?? 0;
+        total += item.Url?.Length ?? 0;
+        total += item.Notes?.Length ?? 0;
+        total += item.Collection?.Length ?? 0;
+        foreach (var tag in tags) total += tag?.Length ?? 0;
+        foreach (var field in customFields)
+        {
+            if (field is null) continue;
+            total += field.Name?.Length ?? 0;
+            total += field.Value?.Length ?? 0;
+        }
+        foreach (var attachment in attachments)
+        {
+            if (attachment is null) continue;
+            total += attachment.DisplayName?.Length ?? 0;
+            total += attachment.MediaType?.Length ?? 0;
+            total += attachment.EncryptedFileName?.Length ?? 0;
+        }
+        return total;
     }
 }
