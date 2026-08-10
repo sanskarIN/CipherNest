@@ -38,12 +38,13 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Settings directory is missing."));
-            var temp = path + ".tmp";
+            var directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Settings directory is missing.");
+            Directory.CreateDirectory(directory);
+            var temp = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
             try
             {
                 var normalized = AppPreferencesPolicy.Normalize(preferences);
-                await using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 16 * 1024, FileOptions.Asynchronous))
+                await using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 16 * 1024, FileOptions.Asynchronous))
                 {
                     await JsonSerializer.SerializeAsync(stream, normalized, Options, cancellationToken).ConfigureAwait(false);
                     await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
