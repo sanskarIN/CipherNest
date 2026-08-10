@@ -186,9 +186,9 @@ public sealed class SqliteVaultStore : IVaultStore
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            DeleteIfExists(DatabasePath);
             DeleteIfExists(DatabasePath + "-wal");
             DeleteIfExists(DatabasePath + "-shm");
-            DeleteIfExists(DatabasePath);
             DeleteIfExists(DatabasePath + ".previous");
             DeleteRecoveryArtifacts();
         }
