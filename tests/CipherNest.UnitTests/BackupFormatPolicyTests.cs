@@ -1,6 +1,6 @@
+using CipherNest.Application.Abstractions;
 using CipherNest.Infrastructure.Crypto;
 using CipherNest.Infrastructure.Services;
-using CipherNest.Shared;
 
 namespace CipherNest.UnitTests;
 
