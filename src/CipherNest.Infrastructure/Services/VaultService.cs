@@ -174,18 +174,20 @@ public sealed class VaultService : IVaultService, IDisposable
         if (!await ReauthenticateAsync(masterPassphrase, cancellationToken).ConfigureAwait(false)) throw new VaultAuthenticationException();
         using var authorizationLease = AcquireKeyLease(cancellationToken);
         await _gate.WaitAsync(authorizationLease.Token).ConfigureAwait(false);
+        var sessionCleared = false;
         try
         {
             authorizationLease.Token.ThrowIfCancellationRequested();
             ClearSessionKey();
+            sessionCleared = true;
             var attachmentRoot = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, "attachments");
-            await _store.DeleteDatabaseAsync(cancellationToken).ConfigureAwait(false);
+            await _store.DeleteDatabaseAsync(CancellationToken.None).ConfigureAwait(false);
             if (Directory.Exists(attachmentRoot)) Directory.Delete(attachmentRoot, recursive: true);
         }
         finally
         {
             _gate.Release();
-            LockStateChanged?.Invoke(this, false);
+            if (sessionCleared) LockStateChanged?.Invoke(this, false);
         }
     }
 
@@ -357,8 +359,7 @@ public sealed class VaultService : IVaultService, IDisposable
             if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
             _dataKey = null;
         }
-        try { session?.Cancel(); }
-        finally { session?.Dispose(); }
+        CancelAndDisposeSession(session);
     }
 
     private void ReplaceDataKey(byte[] next)
@@ -372,8 +373,18 @@ public sealed class VaultService : IVaultService, IDisposable
             if (_dataKey is not null) CryptographicOperations.ZeroMemory(_dataKey);
             _dataKey = next;
         }
-        try { previousSession?.Cancel(); }
-        finally { previousSession?.Dispose(); }
+        CancelAndDisposeSession(previousSession);
+    }
+
+    private static void CancelAndDisposeSession(CancellationTokenSource? session)
+    {
+        if (session is null) return;
+        try { session.Cancel(); }
+        catch (AggregateException)
+        {
+            // Session-key state has already transitioned. Cancellation callback failures must not reverse or mask that transition.
+        }
+        finally { session.Dispose(); }
     }
 
     private static string GenerateRecoveryKey() { var bytes = RandomNumberGenerator.GetBytes(32); try { return "CN1-" + Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_'); } finally { CryptographicOperations.ZeroMemory(bytes); } }
