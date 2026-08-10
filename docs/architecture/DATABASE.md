@@ -41,6 +41,14 @@ This prevents a database that merely forges a current-version `MigrationHistory`
 
 Migration source must be append-only after release. A migration already shipped under a version number must never be silently rewritten. Backward-compatible restore tests and database-migration tests are release gates.
 
+## Consistent snapshot boundary
+
+`CreateConsistentSnapshotAsync` is used by encrypted backup and rollback workflows. Snapshot destinations are canonicalized and must not equal the active database, its WAL/SHM sidecars, or the `.previous...` recovery naming family. The destination must not already exist. This prevents an accidental caller-supplied path from deleting or replacing active/recovery SQLite files before the backup operation even starts.
+
+The store checkpoints WAL before using SQLite's backup API. If snapshot creation fails after creating the new destination, CipherNest attempts to delete that partial snapshot and rethrows the original failure.
+
+Callers are expected to supply a unique staging path. The encrypted-backup service does this under a unique temporary working directory.
+
 ## Restore / database replacement boundary
 
 `SqliteVaultStore.ReplaceDatabaseAsync` validates the replacement file **before** active database/WAL/SHM mutation:
