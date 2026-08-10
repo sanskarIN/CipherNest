@@ -311,7 +311,7 @@ public partial class SettingsViewModel : ObservableObject
             if (tempPath is not null)
             {
                 try { if (File.Exists(tempPath)) File.Delete(tempPath); }
-                catch (IOException) { }
+                catch (IOException cleanupException) { _exceptions.Report("Settings.RestoreBackup.TempCleanup", cleanupException); }
             }
             backupPassphrase = string.Empty;
         }
