@@ -25,11 +25,11 @@ public sealed class BiometricUnlockService : IBiometricUnlockService
     {
         cancellationToken.ThrowIfCancellationRequested();
 #if ANDROID
-        if (!OperatingSystem.IsAndroidVersionAtLeast(28)) return Task.FromResult(false);
-        var activity = Platform.CurrentActivity;
-        if (activity is null) return Task.FromResult(false);
-        var manager = (Android.Hardware.Biometrics.BiometricManager?)activity.GetSystemService(Android.Content.Context.BiometricService);
-        return Task.FromResult(manager?.CanAuthenticate() == Android.Hardware.Biometrics.BiometricManager.BiometricSuccess);
+        // BiometricPrompt is available from API 28. Avoid preflighting with
+        // BiometricManager because that API was introduced later. Enrollment,
+        // lockout, hardware availability, and policy errors are reported by the
+        // prompt itself and fall back to the master passphrase.
+        return Task.FromResult(OperatingSystem.IsAndroidVersionAtLeast(28) && Platform.CurrentActivity is not null);
 #elif IOS || MACCATALYST
         using var context = new LocalAuthentication.LAContext();
         return Task.FromResult(context.CanEvaluatePolicy(LocalAuthentication.LAPolicy.DeviceOwnerAuthenticationWithBiometrics, out _));
