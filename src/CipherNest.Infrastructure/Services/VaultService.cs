@@ -4,6 +4,7 @@ using CipherNest.Application.Abstractions;
 using CipherNest.Application.Exceptions;
 using CipherNest.Application.Validation;
 using CipherNest.Domain.Models;
+using CipherNest.Shared;
 
 namespace CipherNest.Infrastructure.Services;
 
@@ -288,20 +289,26 @@ public sealed class VaultService : IVaultService, IDisposable
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(item, JsonOptions);
         try
         {
+            if (plaintext.Length > VaultStorageLimits.MaximumItemPlaintextJsonBytes) throw new InvalidOperationException("Vault item exceeds the supported serialized size limit.");
             lease.Token.ThrowIfCancellationRequested();
             var envelope = _crypto.Encrypt(plaintext, lease.Key, item.Id.ToByteArray());
             lease.Token.ThrowIfCancellationRequested();
-            await _store.UpsertItemAsync(new StoredVaultItem(item.Id, JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions)), lease.Token).ConfigureAwait(false);
+            var storedEnvelope = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions);
+            if (storedEnvelope.Length > VaultStorageLimits.MaximumStoredEnvelopeBytes) throw new InvalidOperationException("Encrypted vault item exceeds the supported storage size limit.");
+            await _store.UpsertItemAsync(new StoredVaultItem(item.Id, storedEnvelope), lease.Token).ConfigureAwait(false);
         }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
     }
 
     private VaultItem DecryptItem(StoredVaultItem row, byte[] key)
     {
+        if (row.Envelope is null || row.Envelope.Length is < 1 or > VaultStorageLimits.MaximumStoredEnvelopeBytes)
+            throw new CryptographicException("Stored record envelope size is invalid.");
         var envelope = JsonSerializer.Deserialize<EncryptedEnvelope>(row.Envelope, JsonOptions) ?? throw new CryptographicException("Stored record envelope is invalid.");
         var plaintext = _crypto.Decrypt(envelope, key, row.Id.ToByteArray());
         try
         {
+            if (plaintext.Length > VaultStorageLimits.MaximumItemPlaintextJsonBytes) throw new CryptographicException("Stored record payload exceeds the supported size limit.");
             var item = JsonSerializer.Deserialize<VaultItem>(plaintext, JsonOptions) ?? throw new CryptographicException("Stored record payload is invalid.");
             if (item.Id != row.Id) throw new CryptographicException("Stored record identifier does not match its authenticated database key.");
             var errors = VaultItemValidator.Validate(item);
