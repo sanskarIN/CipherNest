@@ -10,6 +10,8 @@
 - [ ] Locking an unlocked vault cancels current per-session key leases; an in-flight decrypted attachment export stops through cancellation and no key-using operation intentionally continues with a stale session after lock.
 - [ ] Master/recovery unlock, secondary unlock, public lock, and full-vault deletion remain serialized through the service transition gate; stress a delayed unlock racing a lock and verify the final state follows the serialized transition order rather than a late derivation publishing an unexpected session.
 - [ ] Full-vault deletion requires a live authorization key lease while waiting for the transition gate; an intervening lock/unlock invalidates the destructive authorization and cancels deletion instead of allowing stale re-authentication to survive a new session.
+- [ ] Once full-vault deletion clears the session key, database deletion proceeds with an uncancelled token and the locked-state event is emitted only if the session actually crossed that destructive commit point.
+- [ ] Session cancellation callback failures do not mask or reverse an already-completed key-state transition, and the replaced/cancelled session cancellation source is disposed.
 - [ ] Owned DEK lease copies, attachment plaintext chunk buffers, clipboard fingerprint buffers, and generator temporary arrays are zeroed where implemented; release notes/docs still state that managed strings cannot be deterministically erased.
 - [ ] Master-passphrase change is verified to clear bound credential fields, lock the vault, clear the remembered master-authentication session, and require the new passphrase before biometric convenience unlock returns.
 - [ ] Failed interactive unlocks match the documented bounded backoff schedule and successful unlock resets client-side throttling.
@@ -24,11 +26,15 @@
 - [ ] Sensitive Settings/backup/restore/delete, transfer, item-open, and attachment file failures show fixed UI messages and route detailed failure classification through the privacy-safe reporter rather than rendering raw exception/path text.
 - [ ] Decrypted attachment export uses unique staging names and reports cleanup failure without leaking the temporary path.
 - [ ] Encrypted attachment import uses a collision-resistant `CreateNew` staging path and refuses final overwrite; plaintext chunk buffers are zeroed on all exits.
+- [ ] Attachment import metadata is normalized and validated before any encryption work: leaf filename only, 240-character display-name cap, 256-character media-type cap, no control characters, and `application/octet-stream` fallback for a missing media type.
 - [ ] Opaque encrypted attachment storage filenames are accepted only as GUID-based `.cna` names without separators; malformed/traversal-like names fail before filesystem access.
-- [ ] Attachment metadata validation covers non-empty/size-bounded names/media types, 100 MB plaintext limit, non-empty IDs/storage names, and duplicate attachment ID/storage-name rejection.
+- [ ] Attachment metadata validation covers non-empty/size-bounded names/media types, control-character rejection, 100 MB plaintext limit, non-empty IDs/storage names, and duplicate attachment ID/storage-name rejection.
+- [ ] Attachment add/remove/permanent-delete mutations are serialized through the cancellable attachment-mutation gate, preserve the 25-attachment per-item cap, and enforce the 10,000 total referenced-attachment cap used by encrypted backup accounting.
+- [ ] Locking remains able to cancel a long attachment mutation; the attachment-mutation gate is separate from the lock/unlock transition gate and is disposed with the vault service.
 - [ ] Permanent item deletion removes the database row before best-effort encrypted attachment cleanup, so a failed record delete cannot leave a surviving record whose files were already intentionally removed.
 - [ ] Trash retention runs during routine vault maintenance; manual delete and empty-trash require current-master re-authentication and a separate destructive confirmation.
 - [ ] Settings persistence round-trips the full current preference model, normalizes invalid enum/numeric values, restores a valid password character group when needed, falls back on malformed/unreadable files, uses unique sibling staging, and leaves no staging file after successful save.
+- [ ] Settings files larger than 64 KiB fall back before JSON deserialization; serialized settings are checked against the same 64 KiB ceiling before replacing the active settings file.
 - [ ] Storage/cache maintenance handles directory enumeration failures inside guarded blocks and skips reparse-point directories.
 - [ ] Large-vault local search/filter/sort is exercised with enough records to confirm 50-item incremental rendering, result counts, and load-more behavior remain responsive.
 - [ ] Decrypted record validation rejects row-ID/payload-ID mismatch, runtime-null/unknown metadata, invalid attachment metadata, excessive aggregate text, and over-limit serialized/stored sizes before objects reach application/search/UI code.
@@ -44,10 +50,13 @@
 - [ ] Consistent snapshot creation refuses the active DB/WAL/SHM and `.previous...` recovery naming family, refuses pre-existing destinations, preserves the active vault on rejection, and cleans a newly created partial snapshot best-effort after failure.
 - [ ] Candidate replacement databases pass SQLite `quick_check`, exact supported schema version, required schema shape, required/bounded vault header, canonical item IDs, and encrypted-record count/per-record/aggregate budgets before active DB/WAL/SHM mutation. Invalid replacements preserve the active vault.
 - [ ] SQLite replacement stages DB/WAL/SHM into a unique recovery set; partial rollback restores only components that actually staged, preserving sidecars that never moved.
+- [ ] Full database deletion removes the primary database before WAL/SHM; simulate primary-delete failure and verify sidecars are not intentionally removed first.
 - [ ] Database migration/replacement rollback errors do not mask the original migration/copy failure.
 - [ ] Crypto known-answer, tamper, wrong-key, hostile-KDF-resource, and format-version tests pass; every cryptographic-format change has focused review.
 - [ ] Backup header validation rejects unsupported version, invalid salt length, hostile KDF parameters, or chunk size outside supported bounds before Argon2 key derivation.
 - [ ] Backup export refuses destinations that collide with the active DB/WAL/SHM/recovery files or encrypted attachment directory and uses unique sibling encrypted staging.
+- [ ] Backup creation and restore share the same archive resource policy: at most 1 GiB aggregate plaintext archive content and at most `VaultStorageLimits.MaximumAttachmentCountTotal + 1` entries. The exporter must not intentionally produce a container this build refuses solely on those resource bounds.
+- [ ] Backup attachment enumeration is materialized under guarded filesystem access and deterministic path ordering is retained before ZIP entry creation.
 - [ ] Backup archive restore rejects duplicate normalized ZIP paths, invalid entry paths, excessive archive/count/entry sizes, and attachment entries outside the encrypted-container size envelope.
 - [ ] Backup rollback after active mutation uses an uncancelled recovery token; cancellation of the original restore request does not cancel the rollback database replacement.
 - [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments, corrupted-container rejection, invalid staged-database rejection, cancellation during replacement, and preservation of the active vault after failure.
