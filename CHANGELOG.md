@@ -16,7 +16,7 @@ All notable changes are documented here following Semantic Versioning principles
 - Exact duplicate-entry detection in the local security audit alongside weak/reused/overdue findings.
 - Explicit timed-copy actions for usernames, primary secrets, and secret custom fields; secret custom-field values remain hidden in the quick-copy list.
 - Clipboard cleanup tracks a zeroed fixed-size SHA-256 fingerprint rather than retaining copied plaintext in delayed timer state, uses fixed-time matching, preserves newer clipboard content, and keeps the security timer independent from the initiating caller cancellation token.
-- Testable session-lock, trash-retention, failed-unlock backoff, settings-normalization, backup-header/path, attachment-storage-name/staging, vault-item, and encrypted-record resource policies with focused coverage.
+- Testable session-lock, trash-retention, failed-unlock backoff, settings-normalization, backup-header/path/archive, attachment-import/storage-name/staging, vault-item, and encrypted-record resource policies with focused coverage.
 - Cancellable zeroing `VaultKeyLease` buffers for key-using operations, linked to both caller cancellation and the active unlock session.
 - Integration coverage that blocks a plaintext attachment export and verifies vault lock cancels the export.
 - Explicit supported vault-header version bounds plus future-header and 64 KiB UTF-8 size rejection coverage.
@@ -27,17 +27,20 @@ All notable changes are documented here following Semantic Versioning principles
 - Transactional ordered database migration runner with future-schema rejection, required table/column shape validation, forged-current-history rejection, and rollback-error containment.
 - Replacement-database validation using SQLite `quick_check`, exact supported schema version, required schema shape, bounded vault header, canonical item IDs, and encrypted-record count/per-record/aggregate budgets before active DB/WAL/SHM mutation.
 - Unique SQLite DB/WAL/SHM recovery file sets with component-aware partial rollback.
-- Explicit storage budgets: 16 MiB serialized/decrypted item JSON, 24 MiB per encrypted stored envelope, 100,000 rows, 256 MiB aggregate encrypted envelopes, and 2,000,000 aggregate item-text characters.
+- Explicit storage budgets: 16 MiB serialized/decrypted item JSON, 24 MiB per encrypted stored envelope, 100,000 rows, 256 MiB aggregate encrypted envelopes, 10,000 total referenced attachments, and 2,000,000 aggregate item-text characters.
 - Argon2id known-answer test vector and explicit hostile KDF resource-bound tests.
 - Backup-format header policy that validates version, salt, KDF bounds, and chunk size before backup Argon2 derivation.
 - Backup export path policy preventing writes over the active DB/WAL/SHM/recovery files or encrypted attachment directory, with unique encrypted sibling staging.
+- Shared backup archive resource policy limiting both export and restore to 1 GiB aggregate archive content and 10,001 entries, derived from the 10,000 global attachment budget plus `vault.db`.
 - Backup archive duplicate-path rejection and attachment encrypted-container size bounds.
 - Cancellation-safe backup rollback coverage requiring an uncancelled recovery database replacement once active mutation begins.
 - Multi-megabyte attachment streaming, plaintext-buffer zeroing, encrypted attachment tamper/truncation, backup corruption, and wrong-backup-passphrase integration coverage.
+- Pre-encryption attachment import metadata normalization/bounds plus control-character rejection.
+- Serialized attachment add/remove/permanent-delete mutations with a cancellable mutation gate and global backup-compatible attachment budget.
 - Opaque attachment storage-name validation requiring GUID-based `.cna` names without path separators, plus attachment metadata/uniqueness validation.
 - Malformed CSV parser robustness corpus, final-field maximum-column enforcement, and reusable parser character buffer.
 - Null-safe item validation plus decrypted-record identity/metadata validation before records leave the infrastructure boundary.
-- Settings persistence round-trip/corruption tests, centralized normalization of enum/numeric/generator defaults, and unique `CreateNew` sibling staging.
+- Settings persistence round-trip/corruption tests, centralized normalization of enum/numeric/generator defaults, unique `CreateNew` sibling staging, and a 64 KiB pre-parse/pre-replace file-size ceiling.
 - Dynamic larger-interface typography resources and startup restoration of accessibility preferences.
 - English-first localization resource catalog, persisted System/English preference, and resource-backed localization service ready for additional culture catalogs.
 - Dedicated in-app security/privacy/threat-limit information surface.
@@ -49,19 +52,23 @@ All notable changes are documented here following Semantic Versioning principles
 - `docs/verification/CI_GATES.md` plus committed core/Windows/Android/Apple verification scripts.
 - Main CI compile gates for Windows, Android, iOS, and Mac Catalyst; Windows also compiles the funding-disabled variant.
 - Core CI formatting verification, CodeQL MAUI application analysis, bounded workflow timeouts, and superseded-run cancellation.
-- Source regression tests for shortened credential binding lifetime, fingerprint-only clipboard state, contained lifecycle fallback, sensitive error redaction, cross-platform CI gates, serialized vault session transitions, live-session vault-deletion authorization, backup/attachment staging, SQLite recovery, storage budgets, and rejection of legacy `.DisplayAlert(` calls.
+- Source regression tests for shortened credential binding lifetime, fingerprint-only clipboard state, contained lifecycle fallback, sensitive error redaction, cross-platform CI gates, serialized/cancellation-safe vault session transitions, live-session vault-deletion authorization, backup/attachment staging, SQLite recovery/deletion ordering, storage budgets, attachment mutation serialization, and rejection of legacy `.DisplayAlert(` calls.
 - Splash wordmark/creator credit, monochrome icon source, and dark-surface logo source in addition to the existing original vector branding.
 - Third-party dependency notices, implemented cryptographic design specification, secure-note security documentation, passphrase-generator design notes, privacy-safe diagnostics policy, localization architecture guidance, packaging/reproducibility guidance, branding asset documentation, and store-listing guidance.
 
 ### Changed
 - Vault master/recovery unlock, secondary unlock, public lock, and full-vault deletion transitions are serialized through the service transition gate so a late-finishing unlock cannot publish a new session after an already-requested lock.
 - Full-vault deletion requires a live session key lease while waiting for the transition gate; an intervening lock/unlock invalidates that authorization rather than allowing deletion on stale re-authentication.
+- After full-vault deletion clears its session key, database deletion uses an uncancelled token and locked-state notification occurs only if the destructive session transition actually occurred.
+- Session cancellation callback failures are contained after key-state transition so they cannot reverse/mask an already-completed transition; cancellation sources are still disposed.
 - Key-using reads/writes/attachment operations use private 32-byte key copies that zero on disposal; locking zeroes the shared session key and cancels the per-unlock session token.
 - Restoring a backup clears the local biometric secure-storage secret and disables biometric unlock until it is deliberately configured again.
 - Backup restore validates untrusted header resource metadata before Argon2 work, rejects duplicate/pathological archive entries, and database replacement validates SQLite integrity/schema/resource budgets before active-file mutation.
+- Backup creation now applies the same archive count/aggregate-size policy as restore and materializes attachment-directory enumeration inside guarded filesystem handling.
 - Backup rollback uses an uncancelled recovery token after active mutation starts; caller cancellation can no longer cancel the recovery database replacement.
 - Backup export canonicalizes and protects live vault/attachment paths and uses unique collision-resistant encrypted staging.
 - SQLite replacement stages DB/WAL/SHM together in unique recovery names and restores only components that actually moved.
+- Full database deletion removes the primary SQLite file before WAL/SHM sidecars so a failed primary delete does not intentionally remove sidecars first.
 - Changing the master passphrase clears the bound credential fields before rotation, clears the remembered master-authentication session, locks the vault, attempts conditional clipboard cleanup, and requires the new master passphrase before biometric convenience unlock can resume.
 - Unlock, onboarding, plaintext export, Trash deletion, per-item re-authentication, biometric settings, backup/restore, passphrase rotation, and full-vault deletion clear bound credential fields earlier in their operation where practical; managed-memory limitations remain documented.
 - Manual/background/timeout vault locks use conditional clipboard cleanup that does not erase unrelated newer clipboard content.
@@ -69,11 +76,12 @@ All notable changes are documented here following Semantic Versioning principles
 - Android biometric availability no longer preflights with a manager API newer than the API-28 `BiometricPrompt` baseline; prompt/fallback behavior handles enrollment/hardware/lockout results. Apple request cancellation invalidates the native authentication context.
 - Sensitive Settings, backup, restore, vault-delete, CSV transfer, item-open, attachment import/export, and temporary-cleanup failures use fixed user-facing text with privacy-safe redacted diagnostic events instead of rendering filesystem/context-bearing exception messages.
 - Decrypted attachment export staging filenames include a random component to avoid collision/reuse when a prior cleanup could not complete.
+- Attachment import validates normalized display-name/media-type metadata before encryption work; attachment mutations are serialized separately from session transitions so security lock can still cancel long file work.
 - Attachment encryption uses collision-resistant `CreateNew` staging, refuses final overwrite, zeroes its reusable plaintext buffer after each chunk and on exit, and exposes container-size bounds for backup validation.
 - Permanent item deletion removes the database row before best-effort encrypted attachment cleanup.
-- Settings persistence normalizes out-of-range values on read/write, safely falls back on malformed/unreadable files, and uses unique sibling staging with best-effort cleanup.
+- Settings persistence normalizes out-of-range values on read/write, safely falls back on malformed/unreadable files, rejects files larger than 64 KiB before JSON parsing, validates output against the same bound, and uses unique sibling staging with best-effort cleanup.
 - Storage/cache enumeration is materialized inside guarded blocks so lazy enumeration errors do not bypass intended fail-soft handling.
-- Vault header, item JSON, stored-envelope, item-count, aggregate-envelope, and aggregate-text resource limits are enforced at persistence/service validation boundaries.
+- Vault header, item JSON, stored-envelope, item-count, aggregate-envelope, total-attachment, and aggregate-text resource limits are enforced at persistence/service validation boundaries.
 - Trash retention cleanup runs during normal vault maintenance rather than depending on the user opening Trash.
 - Interactive failed-attempt rate limiting uses an explicit bounded exponential-backoff policy with test coverage.
 - KDF metadata read from vault/backup containers is bounded before Argon2 work: salt 16–64 bytes, memory 16–512 MiB, iterations 1–10, and parallelism 1–16.
