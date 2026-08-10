@@ -12,7 +12,6 @@ namespace CipherNest.Infrastructure.Services;
 public sealed class EncryptedBackupService : IBackupService
 {
     private const int ChunkSize = 1024 * 1024;
-    private const long MaxArchiveBytes = 1024L * 1024 * 1024;
     private static readonly byte[] Magic = "CNBK0002"u8.ToArray();
     private readonly IVaultStore _store;
     private readonly ICryptoService _crypto;
@@ -123,16 +122,33 @@ public sealed class EncryptedBackupService : IBackupService
     {
         await using var stream = new FileStream(archivePath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 128 * 1024, useAsync: true);
         using var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true);
-        await AddFileAsync(zip, snapshot, "vault.db", cancellationToken).ConfigureAwait(false);
+        long totalBytes = 0;
+        var entryCount = 0;
+        await AddBoundedFileAsync(zip, snapshot, "vault.db", ref totalBytes, ref entryCount, cancellationToken).ConfigureAwait(false);
+
         var attachmentDirectory = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, AppConstants.AttachmentDirectoryName);
         if (!Directory.Exists(attachmentDirectory)) return;
-        foreach (var file in Directory.EnumerateFiles(attachmentDirectory, "*.cna", SearchOption.TopDirectoryOnly))
+        string[] files;
+        try { files = Directory.GetFiles(attachmentDirectory, "*.cna", SearchOption.TopDirectoryOnly); }
+        catch (IOException ex) { throw new IOException("Encrypted attachment directory could not be enumerated for backup.", ex); }
+        catch (UnauthorizedAccessException ex) { throw new IOException("Encrypted attachment directory could not be enumerated for backup.", ex); }
+        Array.Sort(files, StringComparer.Ordinal);
+        foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var name = Path.GetFileName(file);
             if (!Guid.TryParseExact(Path.GetFileNameWithoutExtension(name), "N", out _)) continue;
-            await AddFileAsync(zip, file, $"attachments/{name}", cancellationToken).ConfigureAwait(false);
+            await AddBoundedFileAsync(zip, file, $"attachments/{name}", ref totalBytes, ref entryCount, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static async Task AddBoundedFileAsync(ZipArchive zip, string sourcePath, string entryName, ref long totalBytes, ref int entryCount, CancellationToken cancellationToken)
+    {
+        var length = new FileInfo(sourcePath).Length;
+        totalBytes = BackupArchivePolicy.AddEntryLength(totalBytes, length);
+        entryCount++;
+        BackupArchivePolicy.ValidateEntryCount(entryCount);
+        await AddFileAsync(zip, sourcePath, entryName, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task AddFileAsync(ZipArchive zip, string sourcePath, string entryName, CancellationToken cancellationToken)
@@ -153,8 +169,7 @@ public sealed class EncryptedBackupService : IBackupService
             var plainLength = await ReadInt32Async(input, cancellationToken).ConfigureAwait(false);
             if (plainLength == -1) break;
             if (plainLength is < 1 || plainLength > header.ChunkSize) throw new InvalidDataException("Invalid backup chunk size.");
-            total += plainLength;
-            if (total > MaxArchiveBytes) throw new InvalidDataException("Backup archive exceeds the supported size limit.");
+            total = BackupArchivePolicy.AddEntryLength(total, plainLength);
             var nonce = new byte[12];
             var tag = new byte[16];
             var cipher = new byte[plainLength];
@@ -174,16 +189,14 @@ public sealed class EncryptedBackupService : IBackupService
     private static async Task ExtractAndValidateArchiveAsync(string archivePath, string destination, CancellationToken cancellationToken)
     {
         using var archive = ZipFile.OpenRead(archivePath);
-        if (archive.Entries.Count > 10_001) throw new InvalidDataException("Backup contains too many files.");
+        BackupArchivePolicy.ValidateEntryCount(archive.Entries.Count);
         var hasDatabase = false;
         var seenEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         long total = 0;
         foreach (var entry in archive.Entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (entry.Length < 0 || entry.Length > MaxArchiveBytes) throw new InvalidDataException("Backup entry is too large.");
-            total += entry.Length;
-            if (total > MaxArchiveBytes) throw new InvalidDataException("Backup content exceeds the supported size limit.");
+            total = BackupArchivePolicy.AddEntryLength(total, entry.Length);
             var normalized = entry.FullName.Replace('\\', '/');
             if (!seenEntries.Add(normalized)) throw new InvalidDataException("Backup contains duplicate paths.");
             var allowedDb = normalized == "vault.db";
