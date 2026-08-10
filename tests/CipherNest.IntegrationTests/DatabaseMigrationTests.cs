@@ -61,6 +61,27 @@ public sealed class DatabaseMigrationTests : IDisposable
         Assert.Contains("schema", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task ReplaceDatabase_RejectsInvalidSchemaBeforeTouchingActiveDatabase()
+    {
+        var store = new SqliteVaultStore(DatabasePath);
+        await store.InitializeAsync();
+        await store.WriteHeaderAsync("{\"marker\":\"active\"}");
+
+        var replacementPath = Path.Combine(_directory, "invalid-replacement.db");
+        await using (var replacement = new SqliteConnection($"Data Source={replacementPath}"))
+        {
+            await replacement.OpenAsync();
+            await using var create = replacement.CreateCommand();
+            create.CommandText = $"CREATE TABLE MigrationHistory (Version INTEGER PRIMARY KEY, AppliedUtc TEXT NOT NULL); INSERT INTO MigrationHistory(Version, AppliedUtc) VALUES ({AppConstants.DatabaseSchemaVersion}, '2026-08-10T00:00:00Z');";
+            await create.ExecuteNonQueryAsync();
+        }
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => store.ReplaceDatabaseAsync(replacementPath));
+
+        Assert.Equal("{\"marker\":\"active\"}", await store.ReadHeaderAsync());
+    }
+
     public void Dispose()
     {
         try { if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true); }
