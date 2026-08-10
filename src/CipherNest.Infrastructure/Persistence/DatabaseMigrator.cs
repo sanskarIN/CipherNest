@@ -29,19 +29,19 @@ internal static class DatabaseMigrator
         foreach (var migration in Migrations.Where(migration => migration.Version > current).OrderBy(static migration => migration.Version))
         {
             if (migration.Version > AppConstants.DatabaseSchemaVersion) break;
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 foreach (var statement in migration.Statements)
                 {
                     await using var command = connection.CreateCommand();
-                    command.Transaction = (SqliteTransaction)transaction;
+                    command.Transaction = transaction;
                     command.CommandText = statement;
                     await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 await using var history = connection.CreateCommand();
-                history.Transaction = (SqliteTransaction)transaction;
+                history.Transaction = transaction;
                 history.CommandText = "INSERT INTO MigrationHistory(Version, AppliedUtc) VALUES ($version, $utc);";
                 history.Parameters.AddWithValue("$version", migration.Version);
                 history.Parameters.AddWithValue("$utc", DateTimeOffset.UtcNow.ToString("O"));
@@ -50,7 +50,9 @@ internal static class DatabaseMigrator
             }
             catch
             {
-                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                try { await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false); }
+                catch (InvalidOperationException) { }
+                catch (SqliteException) { }
                 throw;
             }
         }
@@ -58,6 +60,8 @@ internal static class DatabaseMigrator
         var finalVersion = await GetCurrentVersionAsync(connection, cancellationToken).ConfigureAwait(false);
         if (finalVersion != AppConstants.DatabaseSchemaVersion)
             throw new InvalidDataException($"Vault database migration stopped at version {finalVersion}; expected {AppConstants.DatabaseSchemaVersion}.");
+
+        await ValidateCurrentSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<int> GetCurrentVersionAsync(SqliteConnection connection, CancellationToken cancellationToken)
@@ -66,6 +70,28 @@ internal static class DatabaseMigrator
         command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM MigrationHistory;";
         var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         return Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static async Task ValidateCurrentSchemaAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ValidateShapeAsync(connection, "SELECT Id, HeaderJson FROM VaultHeader LIMIT 0;", cancellationToken).ConfigureAwait(false);
+            await ValidateShapeAsync(connection, "SELECT Id, Envelope FROM VaultItems LIMIT 0;", cancellationToken).ConfigureAwait(false);
+            await ValidateShapeAsync(connection, "SELECT Key, Value FROM AppSettings LIMIT 0;", cancellationToken).ConfigureAwait(false);
+            await ValidateShapeAsync(connection, "SELECT Version, AppliedUtc FROM MigrationHistory LIMIT 0;", cancellationToken).ConfigureAwait(false);
+        }
+        catch (SqliteException ex)
+        {
+            throw new InvalidDataException("Vault database schema does not match the supported CipherNest structure.", ex);
+        }
+    }
+
+    private static async Task ValidateShapeAsync(SqliteConnection connection, string sql, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task ExecuteAsync(SqliteConnection connection, string sql, CancellationToken cancellationToken)
