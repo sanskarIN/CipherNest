@@ -153,7 +153,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     private async Task ExportAttachmentAsync(AttachmentReference attachment)
     {
         if (IsReauthenticationRequired || _existing is null || attachment is null) return;
-        var confirm = await Shell.Current.DisplayAlert("Export decrypted attachment?", "CipherNest must create a temporary plaintext copy so the operating-system share sheet can export this file. Other apps, cloud providers, backups, or the receiving destination may retain it. Continue only if you trust the destination.", "Export plaintext", "Cancel");
+        var confirm = await Shell.Current.DisplayAlertAsync("Export decrypted attachment?", "CipherNest must create a temporary plaintext copy so the operating-system share sheet can export this file. Other apps, cloud providers, backups, or the receiving destination may retain it. Continue only if you trust the destination.", "Export plaintext", "Cancel");
         if (!confirm) return;
 
         var exportRoot = Path.Combine(FileSystem.Current.CacheDirectory, "attachment-exports");
@@ -185,7 +185,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     private async Task RemoveAttachmentAsync(AttachmentReference attachment)
     {
         if (IsReauthenticationRequired || _existing is null || attachment is null) return;
-        var confirm = await Shell.Current.DisplayAlert("Remove attachment?", "The encrypted attachment file will be removed from this item. Filesystem remnants may be outside CipherNest's control.", "Remove", "Cancel"); if (!confirm) return;
+        var confirm = await Shell.Current.DisplayAlertAsync("Remove attachment?", "The encrypted attachment file will be removed from this item. Filesystem remnants may be outside CipherNest's control.", "Remove", "Cancel"); if (!confirm) return;
         await _vault.RemoveAttachmentAsync(_existing.Id, attachment.Id); Attachments.Remove(attachment); _existing = await _vault.GetItemAsync(_existing.Id);
     }
 
@@ -193,7 +193,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     private async Task MoveToTrashAsync()
     {
         if (IsReauthenticationRequired || _existing is null) return;
-        var confirm = await Shell.Current.DisplayAlert("Move to trash?", "The item can be restored until it is permanently deleted or expires from trash retention.", "Move", "Cancel"); if (!confirm) return;
+        var confirm = await Shell.Current.DisplayAlertAsync("Move to trash?", "The item can be restored until it is permanently deleted or expires from trash retention.", "Move", "Cancel"); if (!confirm) return;
         await _vault.MoveToTrashAsync(_existing.Id); await Shell.Current.GoToAsync("..");
     }
 
