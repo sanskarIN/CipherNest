@@ -13,7 +13,7 @@
 - [ ] Owned DEK lease copies, attachment plaintext chunk buffers, clipboard fingerprint buffers, and generator temporary arrays are zeroed where implemented; release notes/docs still state that managed strings cannot be deterministically erased.
 - [ ] Master-passphrase change is verified to clear bound credential fields, lock the vault, clear the remembered master-authentication session, and require the new passphrase before biometric convenience unlock returns.
 - [ ] Failed interactive unlocks match the documented bounded backoff schedule and successful unlock resets client-side throttling.
-- [ ] Vault header compatibility tests reject future/unknown header versions before key unwrap while current supported headers remain unlockable.
+- [ ] Vault header compatibility tests reject future/unknown header versions before key unwrap while current supported headers remain unlockable; header UTF-8 storage above 64 KiB is rejected before deserialization/materialization where implemented.
 - [ ] Android biometric tests include API 28+, enrollment/no-enrollment, cancellation, lockout, hardware-unavailable, and secure-storage-loss behavior without depending on a newer preflight manager API.
 - [ ] iOS/Mac Catalyst biometric tests cover enrollment, cancellation/request-token invalidation, device changes, secure storage, and fallback.
 - [ ] Screenshot and clipboard controls are tested on each target and platform limitations remain visible in product/docs.
@@ -23,14 +23,17 @@
 - [ ] Sensitive bound passphrase fields are cleared before longer authenticated/file/share work where practical, including unlock, onboarding, plaintext export, Trash/per-item re-authentication, biometric settings, backup/restore, passphrase rotation, and full-vault deletion.
 - [ ] Sensitive Settings/backup/restore/delete, transfer, item-open, and attachment file failures show fixed UI messages and route detailed failure classification through the privacy-safe reporter rather than rendering raw exception/path text.
 - [ ] Decrypted attachment export uses unique staging names and reports cleanup failure without leaking the temporary path.
+- [ ] Encrypted attachment import uses a collision-resistant `CreateNew` staging path and refuses final overwrite; plaintext chunk buffers are zeroed on all exits.
 - [ ] Opaque encrypted attachment storage filenames are accepted only as GUID-based `.cna` names without separators; malformed/traversal-like names fail before filesystem access.
 - [ ] Attachment metadata validation covers non-empty/size-bounded names/media types, 100 MB plaintext limit, non-empty IDs/storage names, and duplicate attachment ID/storage-name rejection.
 - [ ] Permanent item deletion removes the database row before best-effort encrypted attachment cleanup, so a failed record delete cannot leave a surviving record whose files were already intentionally removed.
 - [ ] Trash retention runs during routine vault maintenance; manual delete and empty-trash require current-master re-authentication and a separate destructive confirmation.
-- [ ] Settings persistence round-trips the full current preference model, normalizes invalid enum/numeric values, restores a valid password character group when needed, falls back on malformed JSON, and leaves no stale `.tmp` file after successful save.
+- [ ] Settings persistence round-trips the full current preference model, normalizes invalid enum/numeric values, restores a valid password character group when needed, falls back on malformed/unreadable files, uses unique sibling staging, and leaves no staging file after successful save.
 - [ ] Storage/cache maintenance handles directory enumeration failures inside guarded blocks and skips reparse-point directories.
 - [ ] Large-vault local search/filter/sort is exercised with enough records to confirm 50-item incremental rendering, result counts, and load-more behavior remain responsive.
-- [ ] Decrypted record validation rejects row-ID/payload-ID mismatch, runtime-null/unknown metadata, invalid attachment metadata, and over-limit values before objects reach application/search/UI code.
+- [ ] Decrypted record validation rejects row-ID/payload-ID mismatch, runtime-null/unknown metadata, invalid attachment metadata, excessive aggregate text, and over-limit serialized/stored sizes before objects reach application/search/UI code.
+- [ ] Stored encrypted-record budgets are verified: no more than 100,000 items, 24 MiB per stored envelope, 256 MiB aggregate envelope bytes, and 16 MiB serialized/decrypted item JSON. SQLite length/count checks occur before BLOB materialization where practical.
+- [ ] Stored item IDs remain canonical lower-case GUID `D` strings and empty/non-canonical IDs are rejected.
 - [ ] Secure-note storage/import/editor operations share the 200,000-character and 5,000-line limits; an imported/programmatic save cannot create a note that the bounded renderer rejects only because of size.
 - [ ] CSV malformed-input tests include excessive columns in data rows where the final field ends at newline/EOF, and parser source retains the reusable character buffer rather than allocating one per character.
 - [ ] CodeQL passes after analyzing both core/integration code and the Android MAUI application target.
@@ -38,11 +41,15 @@
 - [ ] No signing keys, certificates, passwords, API keys, crash tokens, store credentials, or other production secrets exist in repository/history/artifacts.
 - [ ] Restored package metadata and license texts are checked against `THIRD_PARTY_NOTICES.md` for the exact resolved versions.
 - [ ] Database migration tests pass, including future-schema rejection, forged-current-history rejection, required table/column shape validation, and compatibility with every supported prior schema.
-- [ ] Candidate replacement databases pass SQLite `quick_check`, exact supported schema version, and required schema shape before active-file/WAL mutation. Invalid replacements preserve the active vault.
+- [ ] Candidate replacement databases pass SQLite `quick_check`, exact supported schema version, required schema shape, required/bounded vault header, canonical item IDs, and encrypted-record count/per-record/aggregate budgets before active DB/WAL/SHM mutation. Invalid replacements preserve the active vault.
+- [ ] SQLite replacement stages DB/WAL/SHM into a unique recovery set; partial rollback restores only components that actually staged, preserving sidecars that never moved.
 - [ ] Database migration/replacement rollback errors do not mask the original migration/copy failure.
 - [ ] Crypto known-answer, tamper, wrong-key, hostile-KDF-resource, and format-version tests pass; every cryptographic-format change has focused review.
 - [ ] Backup header validation rejects unsupported version, invalid salt length, hostile KDF parameters, or chunk size outside supported bounds before Argon2 key derivation.
-- [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments, corrupted-container rejection, invalid staged-database rejection, and preservation of the active vault after failure.
+- [ ] Backup export refuses destinations that collide with the active DB/WAL/SHM/recovery files or encrypted attachment directory and uses unique sibling encrypted staging.
+- [ ] Backup archive restore rejects duplicate normalized ZIP paths, invalid entry paths, excessive archive/count/entry sizes, and attachment entries outside the encrypted-container size envelope.
+- [ ] Backup rollback after active mutation uses an uncancelled recovery token; cancellation of the original restore request does not cancel the rollback database replacement.
+- [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments, corrupted-container rejection, invalid staged-database rejection, cancellation during replacement, and preservation of the active vault after failure.
 - [ ] Large attachment streaming, plaintext-buffer zeroing, safe text preview, plaintext export warning, and temporary-cache cleanup are exercised.
 - [ ] Threat model, privacy notice, security design, diagnostics policy, third-party notices, changelog, support instructions, roadmap, CI-gate documentation, and audit status are current.
 - [ ] `docs/NEXT_STEPS.md` has been reviewed against the candidate and any completed/obsolete action has been reconciled before release notes are cut.
