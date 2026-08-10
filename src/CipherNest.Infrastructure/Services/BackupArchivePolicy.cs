@@ -1,8 +1,10 @@
+using CipherNest.Shared;
+
 namespace CipherNest.Infrastructure.Services;
 
 public static class BackupArchivePolicy
 {
-    public const int MaximumEntryCount = 10_001;
+    public const int MaximumEntryCount = VaultStorageLimits.MaximumAttachmentCountTotal + 1;
     public const long MaximumArchiveBytes = 1024L * 1024 * 1024;
 
     public static void ValidateEntryCount(int count)
