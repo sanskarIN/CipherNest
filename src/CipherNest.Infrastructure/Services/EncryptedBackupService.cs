@@ -176,6 +176,7 @@ public sealed class EncryptedBackupService : IBackupService
         using var archive = ZipFile.OpenRead(archivePath);
         if (archive.Entries.Count > 10_001) throw new InvalidDataException("Backup contains too many files.");
         var hasDatabase = false;
+        var seenEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         long total = 0;
         foreach (var entry in archive.Entries)
         {
@@ -184,12 +185,15 @@ public sealed class EncryptedBackupService : IBackupService
             total += entry.Length;
             if (total > MaxArchiveBytes) throw new InvalidDataException("Backup content exceeds the supported size limit.");
             var normalized = entry.FullName.Replace('\\', '/');
+            if (!seenEntries.Add(normalized)) throw new InvalidDataException("Backup contains duplicate paths.");
             var allowedDb = normalized == "vault.db";
             var allowedAttachment = normalized.StartsWith("attachments/", StringComparison.Ordinal) &&
                                     normalized.Count(static c => c == '/') == 1 &&
                                     normalized.EndsWith(".cna", StringComparison.OrdinalIgnoreCase) &&
                                     Guid.TryParseExact(Path.GetFileNameWithoutExtension(normalized), "N", out _);
             if (!allowedDb && !allowedAttachment) throw new InvalidDataException("Backup contains an unexpected path.");
+            if (allowedAttachment && entry.Length is < EncryptedAttachmentStore.MinimumContainerBytes or > EncryptedAttachmentStore.MaximumContainerBytes)
+                throw new InvalidDataException("Backup attachment container size is outside the supported range.");
             if (allowedDb) hasDatabase = true;
             var target = allowedDb
                 ? Path.Combine(destination, "vault.db")
