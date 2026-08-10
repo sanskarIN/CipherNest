@@ -186,11 +186,14 @@ public sealed class SqliteVaultStore : IVaultStore
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            DeleteIfExists(DatabasePath);
-            DeleteIfExists(DatabasePath + "-wal");
-            DeleteIfExists(DatabasePath + "-shm");
-            DeleteIfExists(DatabasePath + ".previous");
-            DeleteRecoveryArtifacts();
+            var failures = new List<Exception>();
+            TryDeleteManagedFile(DatabasePath, failures);
+            TryDeleteManagedFile(DatabasePath + "-wal", failures);
+            TryDeleteManagedFile(DatabasePath + "-shm", failures);
+            TryDeleteManagedFile(DatabasePath + ".previous", failures);
+            DeleteRecoveryArtifacts(failures);
+            if (failures.Count > 0)
+                throw new IOException("One or more CipherNest database files could not be deleted.", new AggregateException(failures));
         }
         finally { _gate.Release(); }
     }
@@ -336,16 +339,23 @@ public sealed class SqliteVaultStore : IVaultStore
         TryDeleteFile(recovery.ShmPath);
     }
 
-    private void DeleteRecoveryArtifacts()
+    private void DeleteRecoveryArtifacts(ICollection<Exception> failures)
     {
         var directory = Path.GetDirectoryName(DatabasePath);
         if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) return;
         var pattern = Path.GetFileName(DatabasePath) + ".previous.*";
         string[] files;
         try { files = Directory.GetFiles(directory, pattern, SearchOption.TopDirectoryOnly); }
-        catch (IOException) { return; }
-        catch (UnauthorizedAccessException) { return; }
-        foreach (var file in files) TryDeleteFile(file);
+        catch (IOException ex) { failures.Add(ex); return; }
+        catch (UnauthorizedAccessException ex) { failures.Add(ex); return; }
+        foreach (var file in files) TryDeleteManagedFile(file, failures);
+    }
+
+    private static void TryDeleteManagedFile(string path, ICollection<Exception> failures)
+    {
+        try { DeleteIfExists(path); }
+        catch (IOException ex) { failures.Add(ex); }
+        catch (UnauthorizedAccessException ex) { failures.Add(ex); }
     }
 
     private static void MoveIfExists(string source, string destination, bool overwrite = false)
