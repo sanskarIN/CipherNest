@@ -87,14 +87,17 @@ internal static class DatabaseMigrator
     private static async Task<int> ValidateMigrationHistoryAsync(SqliteConnection connection, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT Version, AppliedUtc FROM MigrationHistory ORDER BY Version;";
+        command.CommandText = $"SELECT Version, AppliedUtc FROM MigrationHistory ORDER BY Version LIMIT {AppConstants.DatabaseSchemaVersion + 1};";
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
 
         var expectedVersion = 1;
         var currentVersion = 0;
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
-            var version = reader.GetInt32(0);
+            var rawVersion = reader.GetInt64(0);
+            if (rawVersion is < 1 || rawVersion > AppConstants.DatabaseSchemaVersion + 1L)
+                throw new InvalidDataException("Vault database migration history contains an unsupported version value.");
+            var version = (int)rawVersion;
             var appliedUtc = reader.GetString(1);
             if (version != expectedVersion)
                 throw new InvalidDataException("Vault database migration history is invalid or non-contiguous.");
