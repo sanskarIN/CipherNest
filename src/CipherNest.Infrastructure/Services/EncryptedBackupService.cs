@@ -52,14 +52,21 @@ public sealed class EncryptedBackupService : IBackupService
             int read;
             while ((read = await ReadChunkAsync(input, buffer, cancellationToken).ConfigureAwait(false)) > 0)
             {
-                BackupFormatPolicy.ValidateChunkIndex(index);
-                var isFinal = input.Position == input.Length;
-                var envelope = _crypto.Encrypt(buffer.AsSpan(0, read), key, BuildChunkAad(headerJson, index, isFinal));
-                await WriteInt32Async(output, read, cancellationToken).ConfigureAwait(false);
-                await output.WriteAsync(envelope.Nonce, cancellationToken).ConfigureAwait(false);
-                await output.WriteAsync(envelope.Tag, cancellationToken).ConfigureAwait(false);
-                await output.WriteAsync(envelope.Ciphertext, cancellationToken).ConfigureAwait(false);
-                index++;
+                try
+                {
+                    BackupFormatPolicy.ValidateChunkIndex(index);
+                    var isFinal = input.Position == input.Length;
+                    var envelope = _crypto.Encrypt(buffer.AsSpan(0, read), key, BuildChunkAad(headerJson, index, isFinal));
+                    await WriteInt32Async(output, read, cancellationToken).ConfigureAwait(false);
+                    await output.WriteAsync(envelope.Nonce, cancellationToken).ConfigureAwait(false);
+                    await output.WriteAsync(envelope.Tag, cancellationToken).ConfigureAwait(false);
+                    await output.WriteAsync(envelope.Ciphertext, cancellationToken).ConfigureAwait(false);
+                    index++;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(buffer.AsSpan(0, read));
+                }
             }
             await WriteInt32Async(output, -1, cancellationToken).ConfigureAwait(false);
             await output.FlushAsync(cancellationToken).ConfigureAwait(false);
