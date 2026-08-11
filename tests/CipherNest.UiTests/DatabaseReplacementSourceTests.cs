@@ -25,17 +25,21 @@ public sealed class DatabaseReplacementSourceTests
     }
 
     [Fact]
-    public void DeleteDatabase_RemovesPrimaryBeforeWalAndSharedMemorySidecars()
+    public void DeleteDatabase_AttemptsCompleteManagedFileSetBeforeReportingFailures()
     {
         var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Persistence", "SqliteVaultStore.cs"));
         var method = Method(source, "public async Task DeleteDatabaseAsync", "private void ValidateSnapshotDestination");
 
-        var database = method.IndexOf("DeleteIfExists(DatabasePath);", StringComparison.Ordinal);
-        var wal = method.IndexOf("DeleteIfExists(DatabasePath + \"-wal\")", StringComparison.Ordinal);
-        var shm = method.IndexOf("DeleteIfExists(DatabasePath + \"-shm\")", StringComparison.Ordinal);
-        var recovery = method.IndexOf("DeleteRecoveryArtifacts();", StringComparison.Ordinal);
+        var database = method.IndexOf("TryDeleteManagedFile(DatabasePath, failures);", StringComparison.Ordinal);
+        var wal = method.IndexOf("TryDeleteManagedFile(DatabasePath + \"-wal\", failures);", StringComparison.Ordinal);
+        var shm = method.IndexOf("TryDeleteManagedFile(DatabasePath + \"-shm\", failures);", StringComparison.Ordinal);
+        var legacyRecovery = method.IndexOf("TryDeleteManagedFile(DatabasePath + \".previous\", failures);", StringComparison.Ordinal);
+        var generatedRecovery = method.IndexOf("DeleteRecoveryArtifacts(failures);", StringComparison.Ordinal);
+        var report = method.IndexOf("if (failures.Count > 0)", StringComparison.Ordinal);
 
-        Assert.True(database >= 0 && wal > database && shm > wal && recovery > shm);
+        Assert.True(database >= 0 && wal > database && shm > wal && legacyRecovery > shm);
+        Assert.True(generatedRecovery > legacyRecovery && report > generatedRecovery);
+        Assert.Contains("new AggregateException(failures)", method, StringComparison.Ordinal);
     }
 
     private static string Method(string source, string signature, string nextSignature)
