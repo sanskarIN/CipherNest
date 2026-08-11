@@ -4,18 +4,23 @@
 - [ ] Main GitHub CI passes on the exact candidate: core tests/formatting, Windows default/funding-disabled compilation, Android compilation, and iOS/Mac Catalyst compilation.
 - [ ] Platform verification scripts succeed on appropriate hosts where the release target is supported: `verify-windows.ps1`, `verify-android.sh`, and `verify-apple.sh`.
 - [ ] Unit, integration, and UI/source-structure tests pass with warnings-as-errors/analyzers enabled.
+- [ ] The additional 2026-08-11 framing/session/platform checks in `docs/verification/SECURITY_HARDENING_2026_08_11.md` pass on the exact candidate.
 - [ ] No legacy `.DisplayAlert(` call is present in MAUI C# source; current async alert APIs compile without warnings on each target workload.
 - [ ] Android and Windows smoke tests pass; iOS/MacCatalyst build and smoke tests pass on an appropriate Apple environment.
 - [ ] Manual lifecycle tests cover background, sleep/resume, timeout, manual lock, clock rollback, and fail-closed behavior, including a simulated cleanup failure that does not escape the native lifecycle callback.
+- [ ] Startup preference restoration contains both its primary failure and secondary fallback theme/localization/accessibility failures; the fire-and-forget startup task does not leak a fallback exception.
 - [ ] Locking an unlocked vault cancels current per-session key leases; an in-flight decrypted attachment export stops through cancellation and no key-using operation intentionally continues with a stale session after lock.
+- [ ] Vault key leases zero their private 32-byte copy on normal disposal and if linked cancellation-token construction fails.
 - [ ] Master/recovery unlock, secondary unlock, public lock, and full-vault deletion remain serialized through the service transition gate; stress a delayed unlock racing a lock and verify the final state follows the serialized transition order rather than a late derivation publishing an unexpected session.
 - [ ] Full-vault deletion requires a live authorization key lease while waiting for the transition gate; an intervening lock/unlock invalidates the destructive authorization and cancels deletion instead of allowing stale re-authentication to survive a new session.
-- [ ] Once full-vault deletion clears the session key, database deletion proceeds with an uncancelled token and the locked-state event is emitted only if the session actually crossed that destructive commit point.
+- [ ] Once full-vault deletion clears the session key, database and encrypted-attachment cleanup are both attempted with an uncancelled destructive transition and incomplete cleanup is reported generically.
 - [ ] Session cancellation callback failures do not mask or reverse an already-completed key-state transition, and the replaced/cancelled session cancellation source is disposed.
-- [ ] Owned DEK lease copies, attachment plaintext chunk buffers, clipboard fingerprint buffers, and generator temporary arrays are zeroed where implemented; release notes/docs still state that managed strings cannot be deterministically erased.
+- [ ] Owned DEK lease copies, backup/attachment plaintext chunk buffers, clipboard fingerprint buffers, and generator temporary arrays are zeroed where implemented; release notes/docs still state that managed strings cannot be deterministically erased.
 - [ ] Master-passphrase change is verified to clear bound credential fields, lock the vault, clear the remembered master-authentication session, and require the new passphrase before biometric convenience unlock returns.
+- [ ] Crypto-bound master/recovery/backup/secondary passphrase inputs remain inside the supported 12–4,096-character range. Oversized onboarding/settings input is rejected before expensive strength/KDF work; invalid-length unwrap guesses become normal authentication failures.
 - [ ] Failed interactive unlocks match the documented bounded backoff schedule and successful unlock resets client-side throttling.
-- [ ] Vault header compatibility tests reject future/unknown header versions before key unwrap while current supported headers remain unlockable; header UTF-8 storage above 64 KiB is rejected before deserialization/materialization where implemented.
+- [ ] Vault header compatibility tests reject future/unknown versions and malformed header JSON as authentication failures before key unwrap while current supported headers remain unlockable; header UTF-8 storage above 64 KiB is rejected before deserialization/materialization where implemented.
+- [ ] Local vault search rejects a trimmed query longer than 4,096 characters before matching decrypted fields.
 - [ ] Android biometric tests include API 28+, enrollment/no-enrollment, cancellation, lockout, hardware-unavailable, and secure-storage-loss behavior without depending on a newer preflight manager API.
 - [ ] iOS/Mac Catalyst biometric tests cover enrollment, cancellation/request-token invalidation, device changes, secure storage, and fallback.
 - [ ] Screenshot and clipboard controls are tested on each target and platform limitations remain visible in product/docs.
@@ -24,11 +29,15 @@
 - [ ] Unlock, Settings, Transfer, Trash, Item Editor, and Onboarding credential/decrypted ViewModel fields are cleared when the sensitive page disappears.
 - [ ] Sensitive bound passphrase fields are cleared before longer authenticated/file/share work where practical, including unlock, onboarding, plaintext export, Trash/per-item re-authentication, biometric settings, backup/restore, passphrase rotation, and full-vault deletion.
 - [ ] Sensitive Settings/backup/restore/delete, transfer, item-open, and attachment file failures show fixed UI messages and route detailed failure classification through the privacy-safe reporter rather than rendering raw exception/path text.
+- [ ] Settings load/save/cache, biometric enable/disable, backup share/restore picker/confirmation, and delete-confirmation platform failures remain contained and privacy-safe.
+- [ ] Transfer CSV picker/import confirmation, plaintext re-authentication/export confirmation/share, and temporary plaintext cleanup remain contained and privacy-safe; the staging CSV is deleted in `finally` where permitted.
+- [ ] Item-editor re-authentication/copy, attachment picker/export/share/removal, and move-to-trash failures remain contained and privacy-safe.
 - [ ] Decrypted attachment export uses unique staging names and reports cleanup failure without leaking the temporary path.
 - [ ] Encrypted attachment import uses a collision-resistant `CreateNew` staging path and refuses final overwrite; plaintext chunk buffers are zeroed on all exits.
+- [ ] Encrypted attachment framing enforces its chunk-count ceiling in addition to the 100 MiB plaintext bound, and normal writer reads fill a chunk before encryption unless EOF is reached.
 - [ ] Attachment import metadata is normalized and validated before any encryption work: leaf filename only, 240-character display-name cap, 256-character media-type cap, no control characters, and `application/octet-stream` fallback for a missing media type.
-- [ ] Opaque encrypted attachment storage filenames are accepted only as GUID-based `.cna` names without separators; malformed/traversal-like names fail before filesystem access.
-- [ ] Attachment metadata validation covers non-empty/size-bounded names/media types, control-character rejection, 100 MB plaintext limit, non-empty IDs/storage names, and duplicate attachment ID/storage-name rejection.
+- [ ] Opaque encrypted attachment storage filenames are accepted only as non-empty GUID-based `.cna` names without separators and must correspond to the actual attachment ID before encryption/decryption filesystem access.
+- [ ] Attachment metadata validation covers non-empty/size-bounded names/media types, control-character rejection, 100 MB plaintext limit, non-empty IDs/storage names, attachment-ID/storage-name binding, and duplicate attachment ID/storage-name rejection.
 - [ ] Attachment add/remove/permanent-delete mutations are serialized through the cancellable attachment-mutation gate, preserve the 25-attachment per-item cap, and enforce the 10,000 total referenced-attachment cap used by encrypted backup accounting.
 - [ ] Locking remains able to cancel a long attachment mutation; the attachment-mutation gate is separate from the lock/unlock transition gate and is disposed with the vault service.
 - [ ] Permanent item deletion removes the database row before best-effort encrypted attachment cleanup, so a failed record delete cannot leave a surviving record whose files were already intentionally removed.
@@ -41,19 +50,20 @@
 - [ ] Stored encrypted-record budgets are verified: no more than 100,000 items, 24 MiB per stored envelope, 256 MiB aggregate envelope bytes, and 16 MiB serialized/decrypted item JSON. SQLite length/count checks occur before BLOB materialization where practical.
 - [ ] Stored item IDs remain canonical lower-case GUID `D` strings and empty/non-canonical IDs are rejected.
 - [ ] Secure-note storage/import/editor operations share the 200,000-character and 5,000-line limits; an imported/programmatic save cannot create a note that the bounded renderer rejects only because of size.
-- [ ] CSV malformed-input tests include excessive columns in data rows where the final field ends at newline/EOF, and parser source retains the reusable character buffer rather than allocating one per character.
+- [ ] CSV malformed-input tests include excessive columns in data rows where the final field ends at newline/EOF, aggregate row character bounds, and the logical row ceiling before parsing an additional row; parser source retains the reusable character buffer rather than allocating one per character.
 - [ ] CodeQL passes after analyzing both core/integration code and the Android MAUI application target.
 - [ ] Dependency review, vulnerability review, and secret scanning pass or have documented, owned, expiring exceptions; workflow timeout/cancellation behavior remains configured.
 - [ ] No signing keys, certificates, passwords, API keys, crash tokens, store credentials, or other production secrets exist in repository/history/artifacts.
 - [ ] Restored package metadata and license texts are checked against `THIRD_PARTY_NOTICES.md` for the exact resolved versions.
-- [ ] Database migration tests pass, including future-schema rejection, forged-current-history rejection, required table/column shape validation, and compatibility with every supported prior schema.
+- [ ] Database migration tests pass, including future-schema rejection, forged-current-history rejection, positive/contiguous/timestamp-valid history, bounded validation work, extreme integer rejection, required table/column shape validation, and compatibility with every supported prior schema.
 - [ ] Consistent snapshot creation refuses the active DB/WAL/SHM and `.previous...` recovery naming family, refuses pre-existing destinations, preserves the active vault on rejection, and cleans a newly created partial snapshot best-effort after failure.
 - [ ] Candidate replacement databases pass SQLite `quick_check`, exact supported schema version, required schema shape, required/bounded vault header, canonical item IDs, and encrypted-record count/per-record/aggregate budgets before active DB/WAL/SHM mutation. Invalid replacements preserve the active vault.
 - [ ] SQLite replacement stages DB/WAL/SHM into a unique recovery set; partial rollback restores only components that actually staged, preserving sidecars that never moved.
-- [ ] Full database deletion removes the primary database before WAL/SHM; simulate primary-delete failure and verify sidecars are not intentionally removed first.
+- [ ] Full database deletion attempts DB, WAL, SHM, legacy recovery, and generated recovery artifacts before reporting aggregate cleanup failure.
 - [ ] Database migration/replacement rollback errors do not mask the original migration/copy failure.
-- [ ] Crypto known-answer, tamper, wrong-key, hostile-KDF-resource, and format-version tests pass; every cryptographic-format change has focused review.
+- [ ] Crypto known-answer, tamper, wrong-key, hostile-KDF-resource, null/malformed envelope, passphrase-bound, and format-version tests pass; every cryptographic-format change has focused review.
 - [ ] Backup header validation rejects unsupported version, invalid salt length, hostile KDF parameters, or chunk size outside supported bounds before Argon2 key derivation.
+- [ ] Backup encrypted framing enforces its chunk-count ceiling, normal export reads fill each chunk before encryption unless EOF is reached, and the reusable plaintext export span is zeroed in `finally` after every encrypted chunk.
 - [ ] Backup export refuses destinations that collide with the active DB/WAL/SHM/recovery files or encrypted attachment directory and uses unique sibling encrypted staging.
 - [ ] Backup creation and restore share the same archive resource policy: at most 1 GiB aggregate plaintext archive content and at most `VaultStorageLimits.MaximumAttachmentCountTotal + 1` entries. The exporter must not intentionally produce a container this build refuses solely on those resource bounds.
 - [ ] Backup attachment enumeration is materialized under guarded filesystem access and deterministic path ordering is retained before ZIP entry creation.
@@ -61,7 +71,7 @@
 - [ ] Backup rollback after active mutation uses an uncancelled recovery token; cancellation of the original restore request does not cancel the rollback database replacement.
 - [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments, corrupted-container rejection, invalid staged-database rejection, cancellation during replacement, and preservation of the active vault after failure.
 - [ ] Large attachment streaming, plaintext-buffer zeroing, safe text preview, plaintext export warning, and temporary-cache cleanup are exercised.
-- [ ] Threat model, privacy notice, security design, diagnostics policy, third-party notices, changelog, support instructions, roadmap, CI-gate documentation, and audit status are current.
+- [ ] Threat model, privacy notice, security design, diagnostics policy, third-party notices, changelog, support instructions, roadmap, CI-gate documentation, `SECURITY_HARDENING_2026_08_11.md`, and audit status are current.
 - [ ] `docs/NEXT_STEPS.md` has been reviewed against the candidate and any completed/obsolete action has been reconciled before release notes are cut.
 - [ ] `AppConstants.BuyMeACoffeeUrl`, About, README, SUPPORT, and `.github/FUNDING.yml` still reference the intended `https://buymeacoffee.com/sanskarIN` project-support URL.
 - [ ] Financial support remains clearly optional and does not change security/privacy treatment, support priority, GPL feature access, or recovery behavior.
