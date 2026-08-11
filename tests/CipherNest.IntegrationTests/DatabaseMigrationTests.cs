@@ -46,10 +46,11 @@ public sealed class DatabaseMigrationTests : IDisposable
     }
 
     [Theory]
-    [InlineData(0, "2026-08-10T00:00:00Z")]
-    [InlineData(-1, "2026-08-10T00:00:00Z")]
-    [InlineData(1, "not-a-timestamp")]
-    public async Task Initialize_RejectsInvalidMigrationHistory(int version, string appliedUtc)
+    [InlineData(0L, "2026-08-10T00:00:00Z")]
+    [InlineData(-1L, "2026-08-10T00:00:00Z")]
+    [InlineData(long.MaxValue, "2026-08-10T00:00:00Z")]
+    [InlineData(1L, "not-a-timestamp")]
+    public async Task Initialize_RejectsInvalidMigrationHistory(long version, string appliedUtc)
     {
         await using (var connection = new SqliteConnection($"Data Source={DatabasePath}"))
         {
