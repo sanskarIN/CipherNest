@@ -15,8 +15,17 @@ internal sealed class VaultKeyLease : IDisposable
             CryptographicOperations.ZeroMemory(keyCopy);
             throw new ArgumentException("Vault key lease requires a 256-bit key copy.", nameof(keyCopy));
         }
+
         Key = keyCopy;
-        _linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(sessionToken, callerToken);
+        try
+        {
+            _linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(sessionToken, callerToken);
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(Key);
+            throw;
+        }
     }
 
     public byte[] Key { get; }
