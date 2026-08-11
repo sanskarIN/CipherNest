@@ -6,6 +6,8 @@ namespace CipherNest.App.ViewModels;
 
 public partial class OnboardingViewModel : ObservableObject
 {
+    private const int MinimumMasterPassphraseCharacters = 12;
+    private const int MaximumMasterPassphraseCharacters = 4_096;
     private readonly IVaultService _vault;
     private readonly IPasswordGenerator _generator;
 
@@ -26,13 +28,25 @@ public partial class OnboardingViewModel : ObservableObject
         _generator = generator;
     }
 
-    partial void OnMasterPassphraseChanged(string value) { StrengthLabel = _generator.Evaluate(value).Label; CreateVaultCommand.NotifyCanExecuteChanged(); }
+    partial void OnMasterPassphraseChanged(string value)
+    {
+        StrengthLabel = value.Length > MaximumMasterPassphraseCharacters
+            ? $"Master passphrase cannot exceed {MaximumMasterPassphraseCharacters:N0} characters."
+            : _generator.Evaluate(value).Label;
+        CreateVaultCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnConfirmationChanged(string value) => CreateVaultCommand.NotifyCanExecuteChanged();
     partial void OnRecoveryLimitAcknowledgedChanged(bool value) => CreateVaultCommand.NotifyCanExecuteChanged();
     partial void OnRecoveryKeySavedChanged(bool value) => ContinueCommand.NotifyCanExecuteChanged();
     partial void OnIsBusyChanged(bool value) => CreateVaultCommand.NotifyCanExecuteChanged();
 
-    private bool CanCreate() => !IsBusy && RecoveryLimitAcknowledged && MasterPassphrase.Length >= 12 && _generator.Evaluate(MasterPassphrase).Score >= 3 && string.Equals(MasterPassphrase, Confirmation, StringComparison.Ordinal);
+    private bool CanCreate() =>
+        !IsBusy &&
+        RecoveryLimitAcknowledged &&
+        MasterPassphrase.Length is >= MinimumMasterPassphraseCharacters and <= MaximumMasterPassphraseCharacters &&
+        _generator.Evaluate(MasterPassphrase).Score >= 3 &&
+        string.Equals(MasterPassphrase, Confirmation, StringComparison.Ordinal);
 
     [RelayCommand(CanExecute = nameof(CanCreate))]
     private async Task CreateVaultAsync()
@@ -55,9 +69,13 @@ public partial class OnboardingViewModel : ObservableObject
                 await Shell.Current.GoToAsync("//vault");
             }
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        catch (ArgumentException)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = $"Master passphrase must contain between {MinimumMasterPassphraseCharacters:N0} and {MaximumMasterPassphraseCharacters:N0} supported characters and satisfy the strength requirement.";
+        }
+        catch (InvalidOperationException)
+        {
+            ErrorMessage = "A local vault already exists or could not be initialized safely.";
         }
         finally
         {
