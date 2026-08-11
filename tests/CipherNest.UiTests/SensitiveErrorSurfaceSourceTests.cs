@@ -24,13 +24,17 @@ public sealed class SensitiveErrorSurfaceSourceTests
     }
 
     [Fact]
-    public void AttachmentFileFailures_UseRedactedReporterAndUniqueTempNames()
+    public void ItemEditorPlatformFailures_UseRedactedReporterAndUniqueTempNames()
     {
         var editor = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "ItemEditorViewModel.cs"));
 
+        Assert.Contains("_exceptions.Report(\"ItemEditor.Reauthenticate\"", editor, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"ItemEditor.CopySecret\"", editor, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"ItemEditor.AddAttachment\"", editor, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"ItemEditor.ExportAttachment\"", editor, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"ItemEditor.ExportAttachment.TempCleanup\"", editor, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"ItemEditor.RemoveAttachment\"", editor, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"ItemEditor.MoveToTrash\"", editor, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"ItemEditor.Load\"", editor, StringComparison.Ordinal);
         Assert.Contains("Guid.NewGuid():N", editor, StringComparison.Ordinal);
         Assert.DoesNotContain("Attachment export failed: {ex.Message}", editor, StringComparison.Ordinal);
