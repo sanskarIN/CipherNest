@@ -33,6 +33,20 @@ public sealed class VaultHeaderCompatibilityIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task MalformedVaultHeaderJson_IsRejectedAsAuthenticationFailure()
+    {
+        const string master = "Malformed Header Test Master Passphrase 2026!";
+        var store = new SqliteVaultStore(DatabasePath);
+        using var vault = new VaultService(store, new CryptoService(), new SystemClock());
+        await vault.CreateAsync(master, createRecoveryKey: false);
+        await vault.LockAsync();
+        await store.WriteHeaderAsync("{\"version\":2,\"master\":");
+
+        await Assert.ThrowsAsync<VaultAuthenticationException>(() => vault.UnlockAsync(master));
+        Assert.False(vault.IsUnlocked);
+    }
+
+    [Fact]
     public async Task CurrentVaultHeaderVersion_RemainsUnlockable()
     {
         const string master = "Current Header Test Master Passphrase 2026!";
