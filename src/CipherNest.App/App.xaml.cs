@@ -147,9 +147,37 @@ public partial class App : Microsoft.Maui.Controls.Application
         catch (Exception exception)
         {
             _exceptions.Report("Startup.Preferences", exception);
+            ApplyFallbackPreferencesSafely();
+        }
+    }
+
+    private void ApplyFallbackPreferencesSafely()
+    {
+        try
+        {
             ApplyTheme(AppThemePreference.System);
+        }
+        catch (Exception themeException)
+        {
+            _exceptions.Report("Startup.Preferences.FallbackTheme", themeException);
+        }
+
+        try
+        {
             _localization.Apply(AppLanguagePreference.System);
+        }
+        catch (Exception localizationException)
+        {
+            _exceptions.Report("Startup.Preferences.FallbackLanguage", localizationException);
+        }
+
+        try
+        {
             AccessibilityPreferenceApplicator.Apply(largerInterface: false, reducedMotion: true);
+        }
+        catch (Exception accessibilityException)
+        {
+            _exceptions.Report("Startup.Preferences.FallbackAccessibility", accessibilityException);
         }
     }
 
