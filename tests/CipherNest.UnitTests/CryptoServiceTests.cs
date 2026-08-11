@@ -26,6 +26,21 @@ public sealed class CryptoServiceTests
     }
 
     [Fact]
+    public void WrappedKey_RejectsTooShortAttemptAsAuthenticationFailure()
+    {
+        var wrapped = _crypto.CreateWrappedKey("correct horse battery staple 2026");
+        Assert.Throws<VaultAuthenticationException>(() => _crypto.UnwrapKey("short", wrapped));
+    }
+
+    [Fact]
+    public void WrappedKey_RejectsOversizedAttemptAsAuthenticationFailure()
+    {
+        var wrapped = _crypto.CreateWrappedKey("correct horse battery staple 2026");
+        var attempt = new string('x', CryptoService.MaximumPassphraseCharacters + 1);
+        Assert.Throws<VaultAuthenticationException>(() => _crypto.UnwrapKey(attempt, wrapped));
+    }
+
+    [Fact]
     public void RecordEnvelope_RejectsTampering()
     {
         var key = RandomNumberGenerator.GetBytes(32);
