@@ -66,10 +66,11 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     {
         if (string.IsNullOrWhiteSpace(ReauthenticationPassphrase)) { ErrorMessage = "Enter the current master passphrase."; return; }
         IsBusy = true;
+        var passphrase = ReauthenticationPassphrase;
+        ReauthenticationPassphrase = string.Empty;
         try
         {
-            var authenticated = await _vault.ReauthenticateAsync(ReauthenticationPassphrase);
-            ReauthenticationPassphrase = string.Empty;
+            var authenticated = await _vault.ReauthenticateAsync(passphrase);
             if (!authenticated)
             {
                 ErrorMessage = "Master-passphrase confirmation failed. Recovery keys do not satisfy per-item re-authentication.";
@@ -79,7 +80,16 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             if (_existing is not null) Populate(_existing);
             ErrorMessage = string.Empty;
         }
-        finally { IsBusy = false; }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.Reauthenticate", ex);
+            ErrorMessage = "Master-passphrase confirmation could not be completed safely. Return to the vault and try again.";
+        }
+        finally
+        {
+            passphrase = string.Empty;
+            IsBusy = false;
+        }
     }
 
     [RelayCommand] private void ToggleSecret() => IsSecretVisible = !IsSecretVisible;
@@ -104,8 +114,16 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     private async Task CopySecretAsync()
     {
         if (IsReauthenticationRequired || string.IsNullOrEmpty(Secret)) return;
-        var preferences = await _settings.LoadAsync();
-        await _clipboard.CopySecretAsync(Secret, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
+        try
+        {
+            var preferences = await _settings.LoadAsync();
+            await _clipboard.CopySecretAsync(Secret, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.CopySecret", ex);
+            ErrorMessage = "The secret could not be copied safely. The vault item remains unchanged.";
+        }
     }
 
     [RelayCommand]
@@ -139,19 +157,22 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     {
         if (IsReauthenticationRequired) return;
         if (_existing is null) { ErrorMessage = "Save this item first, then reopen it to add encrypted attachments."; return; }
-        var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a file to encrypt into this vault item" }); if (result is null) return;
         IsBusy = true;
         try
         {
+            var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a file to encrypt into this vault item" });
+            if (result is null) return;
             await using var stream = await result.OpenReadAsync();
             var mediaType = AttachmentTypePolicy.ResolveMediaType(result.ContentType, result.FileName);
             var attachment = await _vault.AddAttachmentAsync(_existing.Id, stream, result.FileName, mediaType);
-            Attachments.Add(attachment); _existing = await _vault.GetItemAsync(_existing.Id); ErrorMessage = string.Empty;
+            Attachments.Add(attachment);
+            _existing = await _vault.GetItemAsync(_existing.Id);
+            ErrorMessage = string.Empty;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException)
+        catch (Exception ex)
         {
             _exceptions.Report("ItemEditor.AddAttachment", ex);
-            ErrorMessage = "Attachment was not added safely. Check file access, size, and supported metadata, then try again.";
+            ErrorMessage = "Attachment was not selected or added safely. Check file access, size, and supported metadata, then try again.";
         }
         finally { IsBusy = false; }
     }
@@ -160,34 +181,38 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     private async Task ExportAttachmentAsync(AttachmentReference attachment)
     {
         if (IsReauthenticationRequired || _existing is null || attachment is null) return;
-        var confirm = await Shell.Current.DisplayAlertAsync("Export decrypted attachment?", "CipherNest must create a temporary plaintext copy so the operating-system share sheet can export this file. Other apps, cloud providers, backups, or the receiving destination may retain it. Continue only if you trust the destination.", "Export plaintext", "Cancel");
-        if (!confirm) return;
-
-        var exportRoot = Path.Combine(FileSystem.Current.CacheDirectory, "attachment-exports");
-        Directory.CreateDirectory(exportRoot);
-        var safeName = Path.GetFileName(attachment.DisplayName);
-        if (string.IsNullOrWhiteSpace(safeName)) safeName = $"attachment-{attachment.Id:N}";
-        var path = Path.Combine(exportRoot, $"{attachment.Id:N}-{Guid.NewGuid():N}-{safeName}");
         IsBusy = true;
+        string? path = null;
         try
         {
+            var confirm = await Shell.Current.DisplayAlertAsync("Export decrypted attachment?", "CipherNest must create a temporary plaintext copy so the operating-system share sheet can export this file. Other apps, cloud providers, backups, or the receiving destination may retain it. Continue only if you trust the destination.", "Export plaintext", "Cancel");
+            if (!confirm) return;
+
+            var exportRoot = Path.Combine(FileSystem.Current.CacheDirectory, "attachment-exports");
+            Directory.CreateDirectory(exportRoot);
+            var safeName = Path.GetFileName(attachment.DisplayName);
+            if (string.IsNullOrWhiteSpace(safeName)) safeName = $"attachment-{attachment.Id:N}";
+            path = Path.Combine(exportRoot, $"{attachment.Id:N}-{Guid.NewGuid():N}-{safeName}");
             await using (var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
                 await _vault.ExportAttachmentAsync(_existing.Id, attachment.Id, stream);
             await Share.Default.RequestAsync(new ShareFileRequest("Export decrypted CipherNest attachment", new ShareFile(path, attachment.MediaType)));
             ErrorMessage = "The temporary plaintext export was deleted after the share request returned. CipherNest cannot delete copies retained by the operating system or destination app.";
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException)
+        catch (Exception ex)
         {
             _exceptions.Report("ItemEditor.ExportAttachment", ex);
-            ErrorMessage = "Attachment export failed safely. The encrypted source attachment remains unchanged.";
+            ErrorMessage = "Attachment export or sharing failed safely. The encrypted source attachment remains unchanged.";
         }
         finally
         {
-            try { if (File.Exists(path)) File.Delete(path); }
-            catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+            if (!string.IsNullOrWhiteSpace(path))
             {
-                _exceptions.Report("ItemEditor.ExportAttachment.TempCleanup", cleanupException);
-                ErrorMessage = "Export finished, but CipherNest could not confirm deletion of the temporary plaintext file. Clear the app cache before continuing with sensitive work.";
+                try { if (File.Exists(path)) File.Delete(path); }
+                catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+                {
+                    _exceptions.Report("ItemEditor.ExportAttachment.TempCleanup", cleanupException);
+                    ErrorMessage = "CipherNest could not confirm deletion of the temporary plaintext attachment. Clear the app cache before continuing with sensitive work.";
+                }
             }
             IsBusy = false;
         }
@@ -197,16 +222,41 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     private async Task RemoveAttachmentAsync(AttachmentReference attachment)
     {
         if (IsReauthenticationRequired || _existing is null || attachment is null) return;
-        var confirm = await Shell.Current.DisplayAlertAsync("Remove attachment?", "The encrypted attachment file will be removed from this item. Filesystem remnants may be outside CipherNest's control.", "Remove", "Cancel"); if (!confirm) return;
-        await _vault.RemoveAttachmentAsync(_existing.Id, attachment.Id); Attachments.Remove(attachment); _existing = await _vault.GetItemAsync(_existing.Id);
+        IsBusy = true;
+        try
+        {
+            var confirm = await Shell.Current.DisplayAlertAsync("Remove attachment?", "The encrypted attachment file will be removed from this item. Filesystem remnants may be outside CipherNest's control.", "Remove", "Cancel");
+            if (!confirm) return;
+            await _vault.RemoveAttachmentAsync(_existing.Id, attachment.Id);
+            Attachments.Remove(attachment);
+            _existing = await _vault.GetItemAsync(_existing.Id);
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.RemoveAttachment", ex);
+            ErrorMessage = "The encrypted attachment could not be removed safely. Refresh the item before retrying.";
+        }
+        finally { IsBusy = false; }
     }
 
     [RelayCommand]
     private async Task MoveToTrashAsync()
     {
         if (IsReauthenticationRequired || _existing is null) return;
-        var confirm = await Shell.Current.DisplayAlertAsync("Move to trash?", "The item can be restored until it is permanently deleted or expires from trash retention.", "Move", "Cancel"); if (!confirm) return;
-        await _vault.MoveToTrashAsync(_existing.Id); await Shell.Current.GoToAsync("..");
+        IsBusy = true;
+        try
+        {
+            var confirm = await Shell.Current.DisplayAlertAsync("Move to trash?", "The item can be restored until it is permanently deleted or expires from trash retention.", "Move", "Cancel");
+            if (!confirm) return;
+            await _vault.MoveToTrashAsync(_existing.Id);
+            await Shell.Current.GoToAsync("..");
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.MoveToTrash", ex);
+            ErrorMessage = "The item could not be moved to trash safely. Refresh the vault before retrying.";
+        }
+        finally { IsBusy = false; }
     }
 
     private async Task LoadAsync(Guid id)
