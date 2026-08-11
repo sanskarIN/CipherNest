@@ -19,7 +19,11 @@ public sealed class VaultSessionTransitionSourceTests
             "var sessionCleared = false",
             "ClearSessionKey()",
             "sessionCleared = true",
+            "var failures = new List<Exception>()",
             "DeleteDatabaseAsync(CancellationToken.None)",
+            "Directory.Delete(attachmentRoot, recursive: true)",
+            "if (failures.Count > 0)",
+            "new AggregateException(failures)",
             "if (sessionCleared) LockStateChanged?.Invoke(this, false)");
         Assert.Contains("private void ClearSessionKey()", source, StringComparison.Ordinal);
         Assert.Contains("CancelAndDisposeSession(session)", source, StringComparison.Ordinal);
