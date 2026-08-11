@@ -154,26 +154,42 @@ public partial class TransferViewModel : ObservableObject
             return;
         }
 
+        ExportConfirmationPhrase = string.Empty;
         IsBusy = true;
+        string? plaintextPath = null;
         try
         {
             var directory = Path.Combine(FileSystem.Current.CacheDirectory, "plaintext-exports");
             Directory.CreateDirectory(directory);
-            var path = Path.Combine(directory, $"CipherNest-PLAINTEXT-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.csv");
-            await using (var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
+            plaintextPath = Path.Combine(directory, $"CipherNest-PLAINTEXT-{DateTimeOffset.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.csv");
+            await using (var stream = new FileStream(plaintextPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
             {
                 await _transfer.ExportCsvAsync(stream);
             }
-            ExportConfirmationPhrase = string.Empty;
-            StatusMessage = "Plaintext CSV created in temporary app cache. After sharing, delete every copy you no longer need and use 'Clean plaintext export cache'. Attachments are not included in plaintext CSV exports.";
-            await Share.Default.RequestAsync(new ShareFileRequest("CipherNest plaintext export — sensitive", new ShareFile(path)));
+            StatusMessage = "Plaintext CSV was created temporarily for the operating-system share flow. CipherNest will attempt to delete its staging copy as soon as sharing returns. Copies created by the receiving app remain outside CipherNest's control.";
+            await Share.Default.RequestAsync(new ShareFileRequest("CipherNest plaintext export — sensitive", new ShareFile(plaintextPath)));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        catch (Exception ex)
         {
             _exceptions.Report("Transfer.ExportPlaintext", ex);
-            StatusMessage = "Plaintext export failed safely. Use encrypted backup unless plaintext interoperability is required.";
+            StatusMessage = "Plaintext export or sharing failed safely. Use encrypted backup unless plaintext interoperability is required.";
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(plaintextPath))
+            {
+                try
+                {
+                    if (File.Exists(plaintextPath)) File.Delete(plaintextPath);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _exceptions.Report("Transfer.ExportPlaintext.TempCleanup", ex);
+                    StatusMessage += " CipherNest could not confirm removal of its temporary plaintext staging file; use 'Clean plaintext export cache' before sensitive work continues.";
+                }
+            }
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
