@@ -13,8 +13,14 @@ public sealed class SensitiveErrorSurfaceSourceTests
         Assert.Contains("_exceptions.Report(\"Settings.BackupExport\"", settings, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Settings.BackupRestore\"", settings, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Settings.DeleteVault\"", settings, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Transfer.PickCsv\"", transfer, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Transfer.ImportConfirm\"", transfer, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Transfer.ImportCsv\"", transfer, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Transfer.ExportPlaintext.Reauthenticate\"", transfer, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Transfer.ExportPlaintext.Confirm\"", transfer, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Transfer.ExportPlaintext\"", transfer, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Transfer.ExportPlaintext.TempCleanup\"", transfer, StringComparison.Ordinal);
+        Assert.Contains("if (File.Exists(plaintextPath)) File.Delete(plaintextPath);", transfer, StringComparison.Ordinal);
     }
 
     [Fact]
