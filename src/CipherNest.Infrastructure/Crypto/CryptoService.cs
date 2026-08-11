@@ -62,7 +62,15 @@ public sealed class CryptoService : ICryptoService
 
     public byte[] UnwrapKey(ReadOnlySpan<char> passphrase, WrappedKeyEnvelope envelope)
     {
-        ValidatePassphrase(passphrase);
+        try
+        {
+            ValidatePassphrase(passphrase);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new VaultAuthenticationException(ex);
+        }
+
         ValidateWrappedKey(envelope);
         byte[]? kek = null;
         try
