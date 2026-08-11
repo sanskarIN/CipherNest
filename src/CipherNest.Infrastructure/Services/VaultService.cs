@@ -13,6 +13,7 @@ public sealed class VaultService : IVaultService, IDisposable
 {
     private const int MinimumSupportedHeaderVersion = 1;
     private const int CurrentHeaderVersion = 2;
+    public const int MaximumSearchQueryCharacters = 4_096;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IVaultStore _store;
     private readonly ICryptoService _crypto;
@@ -187,8 +188,20 @@ public sealed class VaultService : IVaultService, IDisposable
             ClearSessionKey();
             sessionCleared = true;
             var attachmentRoot = Path.Combine(Path.GetDirectoryName(_store.DatabasePath)!, AppConstants.AttachmentDirectoryName);
-            await _store.DeleteDatabaseAsync(CancellationToken.None).ConfigureAwait(false);
-            if (Directory.Exists(attachmentRoot)) Directory.Delete(attachmentRoot, recursive: true);
+            var failures = new List<Exception>();
+            try { await _store.DeleteDatabaseAsync(CancellationToken.None).ConfigureAwait(false); }
+            catch (IOException ex) { failures.Add(ex); }
+            catch (UnauthorizedAccessException ex) { failures.Add(ex); }
+
+            try
+            {
+                if (Directory.Exists(attachmentRoot)) Directory.Delete(attachmentRoot, recursive: true);
+            }
+            catch (IOException ex) { failures.Add(ex); }
+            catch (UnauthorizedAccessException ex) { failures.Add(ex); }
+
+            if (failures.Count > 0)
+                throw new IOException("One or more CipherNest vault files could not be deleted.", new AggregateException(failures));
         }
         finally
         {
@@ -280,7 +293,11 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public async Task<IReadOnlyList<VaultItem>> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
-        var items = await GetItemsAsync(false, cancellationToken).ConfigureAwait(false); if (string.IsNullOrWhiteSpace(query)) return items; var q = query.Trim();
+        var items = await GetItemsAsync(false, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(query)) return items;
+        var q = query.Trim();
+        if (q.Length > MaximumSearchQueryCharacters)
+            throw new ArgumentException($"Search query cannot exceed {MaximumSearchQueryCharacters:N0} characters.", nameof(query));
         return items.Where(item => item.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Username.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Url.Contains(q, StringComparison.OrdinalIgnoreCase) || item.Notes.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Collection.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Tags.Any(tag => tag.Contains(q, StringComparison.CurrentCultureIgnoreCase)) || item.CustomFields.Any(field => field.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase) || field.Value.Contains(q, StringComparison.CurrentCultureIgnoreCase))).ToArray();
     }
 
@@ -437,7 +454,15 @@ public sealed class VaultService : IVaultService, IDisposable
     {
         var headerJson = await _store.ReadHeaderAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("No local vault exists yet.");
         if (Encoding.UTF8.GetByteCount(headerJson) is < 1 or > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes) throw new VaultAuthenticationException();
-        var header = JsonSerializer.Deserialize<VaultHeaderDocument>(headerJson, JsonOptions) ?? throw new VaultAuthenticationException();
+        VaultHeaderDocument header;
+        try
+        {
+            header = JsonSerializer.Deserialize<VaultHeaderDocument>(headerJson, JsonOptions) ?? throw new VaultAuthenticationException();
+        }
+        catch (JsonException ex)
+        {
+            throw new VaultAuthenticationException(ex);
+        }
         if (header.Version is < MinimumSupportedHeaderVersion or > CurrentHeaderVersion || header.Master is null) throw new VaultAuthenticationException();
         return header;
     }
