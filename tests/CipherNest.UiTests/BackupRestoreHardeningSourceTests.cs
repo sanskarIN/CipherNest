@@ -16,6 +16,9 @@ public sealed class BackupRestoreHardeningSourceTests
         Assert.Contains("EncryptedAttachmentStore.MaximumContainerBytes", source, StringComparison.Ordinal);
         Assert.Contains("CancellationToken.None", source, StringComparison.Ordinal);
         Assert.Contains(".previous.{Guid.NewGuid():N}", source, StringComparison.Ordinal);
+        Assert.Contains("BackupFormatPolicy.ValidateChunkIndex(index)", source, StringComparison.Ordinal);
+        Assert.Contains("ReadChunkAsync(input, buffer", source, StringComparison.Ordinal);
+        Assert.Contains("CryptographicOperations.ZeroMemory(buffer.AsSpan(0, read))", source, StringComparison.Ordinal);
     }
 
     [Fact]
