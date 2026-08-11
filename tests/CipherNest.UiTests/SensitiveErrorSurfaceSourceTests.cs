@@ -10,9 +10,16 @@ public sealed class SensitiveErrorSurfaceSourceTests
 
         Assert.DoesNotContain("ex.Message", settings, StringComparison.Ordinal);
         Assert.DoesNotContain("ex.Message", transfer, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Settings.Load\"", settings, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Settings.Save\"", settings, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Settings.StorageUsage\"", settings, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Settings.ClearCache\"", settings, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Settings.BiometricEnable\"", settings, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Settings.BiometricDisable\"", settings, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Settings.BackupExport\"", settings, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Settings.BackupRestore\"", settings, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Settings.DeleteVault\"", settings, StringComparison.Ordinal);
+        Assert.Contains("_exceptions.Report(\"Settings.DeleteVault.Confirm\"", settings, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Transfer.PickCsv\"", transfer, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Transfer.ImportConfirm\"", transfer, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Transfer.ImportCsv\"", transfer, StringComparison.Ordinal);
