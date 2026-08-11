@@ -11,6 +11,7 @@ namespace CipherNest.App.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private const string DeletePhrase = "DELETE MY VAULT";
+    private const int MaximumPassphraseCharacters = 4_096;
     private readonly ISettingsStore _settings;
     private readonly IBackupService _backup;
     private readonly IVaultService _vault;
@@ -78,65 +79,81 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     public async Task LoadAsync()
     {
-        _loadedPreferences = await _settings.LoadAsync();
-        SelectedTheme = _loadedPreferences.Theme;
-        LockTimeoutSeconds = _loadedPreferences.LockTimeoutSeconds;
-        LockOnBackground = _loadedPreferences.LockOnBackground;
-        ClipboardClearSeconds = _loadedPreferences.ClipboardClearSeconds;
-        ScreenshotProtection = _loadedPreferences.ScreenshotProtection;
-        BiometricUnlockEnabled = _loadedPreferences.BiometricUnlockEnabled;
-        ReducedMotion = _loadedPreferences.ReducedMotion;
-        LargerInterface = _loadedPreferences.LargerInterface;
-        TrashRetentionDays = _loadedPreferences.TrashRetentionDays;
-        BackupReminderDays = _loadedPreferences.BackupReminderDays;
-        ReviewRemindersEnabled = _loadedPreferences.ReviewRemindersEnabled;
-        ReviewReminderLeadDays = _loadedPreferences.ReviewReminderLeadDays;
-        RequireMasterPassphraseAfterHours = _loadedPreferences.RequireMasterPassphraseAfterHours;
-        BiometricAvailable = _biometrics.IsSupported && await _biometrics.IsAvailableAsync();
-        var configured = await _vault.IsSecondaryUnlockConfiguredAsync();
-        if (!configured && BiometricUnlockEnabled)
+        try
         {
-            BiometricUnlockEnabled = false;
-            _loadedPreferences = _loadedPreferences with { BiometricUnlockEnabled = false };
-            await _settings.SaveAsync(_loadedPreferences);
+            _loadedPreferences = await _settings.LoadAsync();
+            SelectedTheme = _loadedPreferences.Theme;
+            LockTimeoutSeconds = _loadedPreferences.LockTimeoutSeconds;
+            LockOnBackground = _loadedPreferences.LockOnBackground;
+            ClipboardClearSeconds = _loadedPreferences.ClipboardClearSeconds;
+            ScreenshotProtection = _loadedPreferences.ScreenshotProtection;
+            BiometricUnlockEnabled = _loadedPreferences.BiometricUnlockEnabled;
+            ReducedMotion = _loadedPreferences.ReducedMotion;
+            LargerInterface = _loadedPreferences.LargerInterface;
+            TrashRetentionDays = _loadedPreferences.TrashRetentionDays;
+            BackupReminderDays = _loadedPreferences.BackupReminderDays;
+            ReviewRemindersEnabled = _loadedPreferences.ReviewRemindersEnabled;
+            ReviewReminderLeadDays = _loadedPreferences.ReviewReminderLeadDays;
+            RequireMasterPassphraseAfterHours = _loadedPreferences.RequireMasterPassphraseAfterHours;
+            BiometricAvailable = _biometrics.IsSupported && await _biometrics.IsAvailableAsync();
+            var configured = await _vault.IsSecondaryUnlockConfiguredAsync();
+            if (!configured && BiometricUnlockEnabled)
+            {
+                BiometricUnlockEnabled = false;
+                _loadedPreferences = _loadedPreferences with { BiometricUnlockEnabled = false };
+                await _settings.SaveAsync(_loadedPreferences);
+            }
+            BiometricSupportMessage = BiometricAvailable
+                ? (configured ? "Biometric unlock is configured. The master passphrase is still required for sensitive settings and periodically according to this security setting." : "Biometric authentication is available on this device but is not configured for CipherNest.")
+                : "Biometric unlock is not available through the current platform/device implementation. Use the master passphrase.";
+            ApplyTheme(_loadedPreferences.Theme);
+            await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection);
+            await RefreshStorageAsync();
         }
-        BiometricSupportMessage = BiometricAvailable
-            ? (configured ? "Biometric unlock is configured. The master passphrase is still required for sensitive settings and periodically according to this security setting." : "Biometric authentication is available on this device but is not configured for CipherNest.")
-            : "Biometric unlock is not available through the current platform/device implementation. Use the master passphrase.";
-        ApplyTheme(_loadedPreferences.Theme);
-        await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection);
-        await RefreshStorageAsync();
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.Load", ex);
+            StatusMessage = "Settings could not be loaded completely. CipherNest kept safe defaults where possible; return to the vault and retry.";
+        }
     }
 
     [RelayCommand]
     private async Task SaveAsync()
     {
-        LockTimeoutSeconds = Math.Clamp(LockTimeoutSeconds, 5, 3600);
-        ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300);
-        TrashRetentionDays = Math.Clamp(TrashRetentionDays, 1, 365);
-        BackupReminderDays = Math.Clamp(BackupReminderDays, 1, 365);
-        ReviewReminderLeadDays = Math.Clamp(ReviewReminderLeadDays, 0, 365);
-        RequireMasterPassphraseAfterHours = Math.Clamp(RequireMasterPassphraseAfterHours, 1, 168);
-        _loadedPreferences = _loadedPreferences with
+        try
         {
-            Theme = SelectedTheme,
-            LockTimeoutSeconds = LockTimeoutSeconds,
-            LockOnBackground = LockOnBackground,
-            ClipboardClearSeconds = ClipboardClearSeconds,
-            ScreenshotProtection = ScreenshotProtection,
-            BiometricUnlockEnabled = BiometricUnlockEnabled,
-            ReducedMotion = ReducedMotion,
-            LargerInterface = LargerInterface,
-            TrashRetentionDays = TrashRetentionDays,
-            BackupReminderDays = BackupReminderDays,
-            ReviewRemindersEnabled = ReviewRemindersEnabled,
-            ReviewReminderLeadDays = ReviewReminderLeadDays,
-            RequireMasterPassphraseAfterHours = RequireMasterPassphraseAfterHours
-        };
-        await _settings.SaveAsync(_loadedPreferences);
-        ApplyTheme(_loadedPreferences.Theme);
-        await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection);
-        StatusMessage = "Settings saved.";
+            LockTimeoutSeconds = Math.Clamp(LockTimeoutSeconds, 5, 3600);
+            ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300);
+            TrashRetentionDays = Math.Clamp(TrashRetentionDays, 1, 365);
+            BackupReminderDays = Math.Clamp(BackupReminderDays, 1, 365);
+            ReviewReminderLeadDays = Math.Clamp(ReviewReminderLeadDays, 0, 365);
+            RequireMasterPassphraseAfterHours = Math.Clamp(RequireMasterPassphraseAfterHours, 1, 168);
+            _loadedPreferences = _loadedPreferences with
+            {
+                Theme = SelectedTheme,
+                LockTimeoutSeconds = LockTimeoutSeconds,
+                LockOnBackground = LockOnBackground,
+                ClipboardClearSeconds = ClipboardClearSeconds,
+                ScreenshotProtection = ScreenshotProtection,
+                BiometricUnlockEnabled = BiometricUnlockEnabled,
+                ReducedMotion = ReducedMotion,
+                LargerInterface = LargerInterface,
+                TrashRetentionDays = TrashRetentionDays,
+                BackupReminderDays = BackupReminderDays,
+                ReviewRemindersEnabled = ReviewRemindersEnabled,
+                ReviewReminderLeadDays = ReviewReminderLeadDays,
+                RequireMasterPassphraseAfterHours = RequireMasterPassphraseAfterHours
+            };
+            await _settings.SaveAsync(_loadedPreferences);
+            ApplyTheme(_loadedPreferences.Theme);
+            await _screenshots.ApplyAsync(_loadedPreferences.ScreenshotProtection);
+            StatusMessage = "Settings saved.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.Save", ex);
+            StatusMessage = "Settings could not be saved or applied completely. Review the values and try again.";
+        }
     }
 
     [RelayCommand]
@@ -147,7 +164,7 @@ public partial class SettingsViewModel : ObservableObject
             var usage = await _storage.GetUsageAsync();
             StorageUsageMessage = $"Encrypted app data: {FormatBytes(usage.AppDataBytes)} · Temporary cache: {FormatBytes(usage.CacheBytes)} · Total local footprint: {FormatBytes(usage.TotalBytes)}";
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
             _exceptions.Report("Settings.StorageUsage", ex);
             StorageUsageMessage = "Storage usage could not be measured safely.";
@@ -157,14 +174,19 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task ClearCacheAsync()
     {
-        var confirm = await Shell.Current.DisplayAlertAsync("Clear temporary cache?", "This removes CipherNest-managed temporary cache files such as completed plaintext export/share staging files when the operating system still allows access. It does not delete the encrypted vault, encrypted attachments, or backups stored in app data.", "Clear cache", "Cancel");
-        if (!confirm) return;
         IsBusy = true;
         try
         {
+            var confirm = await Shell.Current.DisplayAlertAsync("Clear temporary cache?", "This removes CipherNest-managed temporary cache files such as completed plaintext export/share staging files when the operating system still allows access. It does not delete the encrypted vault, encrypted attachments, or backups stored in app data.", "Clear cache", "Cancel");
+            if (!confirm) return;
             var deleted = await _storage.ClearCacheAsync();
             StatusMessage = $"Temporary cache cleanup completed. Approximately {FormatBytes(deleted)} was removed where permitted.";
             await RefreshStorageAsync();
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.ClearCache", ex);
+            StatusMessage = "Temporary cache cleanup could not be completed safely. The encrypted vault was not intentionally removed.";
         }
         finally { IsBusy = false; }
     }
@@ -209,13 +231,13 @@ public partial class SettingsViewModel : ObservableObject
                 BiometricSupportMessage = "Biometric unlock is configured. CipherNest stores an independent random secondary secret in OS secure storage; it does not store the master passphrase.";
                 StatusMessage = "Biometric unlock enabled.";
             }
-            catch (Exception ex) when (ex is InvalidOperationException or CryptographicException or CipherNest.Application.Exceptions.VaultAuthenticationException)
-            {
-                _exceptions.Report("Settings.BiometricEnable", ex);
-                BiometricUnlockEnabled = false;
-                StatusMessage = "Biometric unlock could not be enabled safely. Use the master passphrase and try again after checking device biometric availability.";
-            }
             finally { secret = string.Empty; IsBusy = false; }
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.BiometricEnable", ex);
+            BiometricUnlockEnabled = false;
+            StatusMessage = "Biometric unlock could not be enabled safely. Use the master passphrase and try again after checking device biometric availability.";
         }
         finally
         {
@@ -243,7 +265,15 @@ public partial class SettingsViewModel : ObservableObject
             BiometricSupportMessage = "Biometric unlock is disabled.";
             StatusMessage = "Biometric unlock disabled.";
         }
-        catch (CipherNest.Application.Exceptions.VaultAuthenticationException) { StatusMessage = "Master-passphrase confirmation failed."; }
+        catch (CipherNest.Application.Exceptions.VaultAuthenticationException)
+        {
+            StatusMessage = "Master-passphrase confirmation failed.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.BiometricDisable", ex);
+            StatusMessage = "Biometric unlock could not be disabled completely. Keep using the master passphrase and retry after checking secure-storage access.";
+        }
         finally { masterPassphrase = string.Empty; IsBusy = false; }
     }
 
@@ -251,7 +281,7 @@ public partial class SettingsViewModel : ObservableObject
     private async Task ExportBackupAsync()
     {
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
-        if (BackupPassphrase.Length < 12) { StatusMessage = "Use a backup passphrase of at least 12 characters."; return; }
+        if (BackupPassphrase.Length is < 12 or > MaximumPassphraseCharacters) { StatusMessage = $"Use a backup passphrase between 12 and {MaximumPassphraseCharacters:N0} characters."; return; }
 
         var backupPassphrase = BackupPassphrase;
         BackupPassphrase = string.Empty;
@@ -264,8 +294,9 @@ public partial class SettingsViewModel : ObservableObject
             try
             {
                 await _vault.LockAsync();
-                var directory = Path.Combine(FileSystem.Current.AppDataDirectory, "Backups"); Directory.CreateDirectory(directory);
-                var path = Path.Combine(directory, $"CipherNest-{DateTimeOffset.Now:yyyyMMdd-HHmmss}{AppConstants.BackupExtension}");
+                var directory = Path.Combine(FileSystem.Current.AppDataDirectory, "Backups");
+                Directory.CreateDirectory(directory);
+                var path = Path.Combine(directory, $"CipherNest-{DateTimeOffset.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}{AppConstants.BackupExtension}");
                 await _backup.ExportEncryptedAsync(path, backupPassphrase);
                 _loadedPreferences = (await _settings.LoadAsync()) with { LastSuccessfulBackupUtc = DateTimeOffset.UtcNow };
                 await _settings.SaveAsync(_loadedPreferences);
@@ -273,12 +304,12 @@ public partial class SettingsViewModel : ObservableObject
                 await Share.Default.RequestAsync(new ShareFileRequest("CipherNest encrypted backup", new ShareFile(path)));
                 await Shell.Current.GoToAsync("//unlock");
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
-            {
-                _exceptions.Report("Settings.BackupExport", ex);
-                StatusMessage = "Encrypted backup could not be completed safely. The vault remains protected; review storage access and try again.";
-            }
             finally { IsBusy = false; }
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.BackupExport", ex);
+            StatusMessage = "Encrypted backup or sharing could not be completed safely. The vault remains protected; review storage access and try again.";
         }
         finally
         {
@@ -289,7 +320,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task RestoreBackupAsync()
     {
-        if (BackupPassphrase.Length < 12) { StatusMessage = "Enter the backup passphrase before restoring."; return; }
+        if (BackupPassphrase.Length is < 12 or > MaximumPassphraseCharacters) { StatusMessage = $"Enter a backup passphrase between 12 and {MaximumPassphraseCharacters:N0} characters before restoring."; return; }
 
         var backupPassphrase = BackupPassphrase;
         BackupPassphrase = string.Empty;
@@ -317,19 +348,19 @@ public partial class SettingsViewModel : ObservableObject
                 StatusMessage = "Backup restored. Unlock the restored vault with its master passphrase or recovery key. Biometric unlock was disabled locally because restored vault metadata may not match this device's secure-storage entry.";
                 await Shell.Current.GoToAsync("//unlock");
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
-            {
-                _exceptions.Report("Settings.BackupRestore", ex);
-                StatusMessage = "Backup restore was rejected or could not be staged safely. The active vault was not intentionally replaced by this failed restore attempt.";
-            }
             finally { IsBusy = false; }
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.BackupRestore", ex);
+            StatusMessage = "Backup selection, confirmation, restore, or staging failed safely. The active vault was not intentionally replaced by this failed restore attempt.";
         }
         finally
         {
             if (tempPath is not null)
             {
                 try { if (File.Exists(tempPath)) File.Delete(tempPath); }
-                catch (IOException cleanupException) { _exceptions.Report("Settings.RestoreBackup.TempCleanup", cleanupException); }
+                catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException) { _exceptions.Report("Settings.RestoreBackup.TempCleanup", cleanupException); }
             }
             backupPassphrase = string.Empty;
         }
@@ -340,6 +371,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(CurrentMasterPassphrase)) { StatusMessage = "Enter the current master passphrase."; return; }
         if (!string.Equals(NewMasterPassphrase, ConfirmNewMasterPassphrase, StringComparison.Ordinal)) { StatusMessage = "The new passphrase confirmation does not match."; return; }
+        if (NewMasterPassphrase.Length > MaximumPassphraseCharacters) { StatusMessage = $"The new master passphrase cannot exceed {MaximumPassphraseCharacters:N0} characters."; return; }
         var strength = _passwordGenerator.Evaluate(NewMasterPassphrase); if (NewMasterPassphrase.Length < 12 || strength.Score < 3) { StatusMessage = $"Choose a stronger new master passphrase. Current estimate: {strength.Label}."; return; }
 
         var currentMasterPassphrase = CurrentMasterPassphrase;
@@ -360,10 +392,10 @@ public partial class SettingsViewModel : ObservableObject
         {
             StatusMessage = "Master passphrase was not changed because current-master authentication failed.";
         }
-        catch (ArgumentException ex)
+        catch (Exception ex)
         {
             _exceptions.Report("Settings.ChangeMasterPassphrase", ex);
-            StatusMessage = "Master passphrase was not changed because the requested passphrase could not be accepted safely.";
+            StatusMessage = "Master passphrase was not changed because the requested security transition could not be completed safely.";
         }
         finally
         {
@@ -395,13 +427,21 @@ public partial class SettingsViewModel : ObservableObject
                 StatusMessage = string.Empty;
                 await Shell.Current.GoToAsync("//onboarding");
             }
-            catch (CipherNest.Application.Exceptions.VaultAuthenticationException) { StatusMessage = "Vault deletion was cancelled because master-passphrase confirmation failed."; }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (CipherNest.Application.Exceptions.VaultAuthenticationException)
+            {
+                StatusMessage = "Vault deletion was cancelled because master-passphrase confirmation failed.";
+            }
+            catch (Exception ex)
             {
                 _exceptions.Report("Settings.DeleteVault", ex);
-                StatusMessage = "Vault deletion could not finish safely. CipherNest did not report the operation as complete.";
+                StatusMessage = "Vault deletion or local secure-storage cleanup could not finish safely. CipherNest did not report the operation as complete.";
             }
             finally { IsBusy = false; }
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.DeleteVault.Confirm", ex);
+            StatusMessage = "Vault-deletion confirmation could not be shown safely. No deletion was started.";
         }
         finally
         {
