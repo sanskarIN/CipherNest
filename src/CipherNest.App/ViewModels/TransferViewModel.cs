@@ -39,11 +39,11 @@ public partial class TransferViewModel : ObservableObject
     [RelayCommand]
     private async Task PickCsvAsync()
     {
-        var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CSV file to map and import" });
-        if (result is null) return;
         IsBusy = true;
         try
         {
+            var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CSV file to map and import" });
+            if (result is null) return;
             await using var stream = await result.OpenReadAsync();
             var headers = await _transfer.ReadHeadersAsync(stream);
             Headers.Clear();
@@ -60,10 +60,10 @@ public partial class TransferViewModel : ObservableObject
             TypeColumn = Guess(headers, "type");
             StatusMessage = "Review every mapping before importing. Unmapped columns are ignored.";
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
         {
             _exceptions.Report("Transfer.PickCsv", ex);
-            StatusMessage = "CSV could not be opened safely. Check file access and format, then try again.";
+            StatusMessage = "CSV could not be selected or opened safely. Check file access and format, then try again.";
             _selectedCsv = null;
         }
         finally { IsBusy = false; }
@@ -77,8 +77,20 @@ public partial class TransferViewModel : ObservableObject
             StatusMessage = "Select a CSV and map its title column first.";
             return;
         }
-        var confirmed = await Shell.Current.DisplayAlertAsync("Import plaintext CSV?", "The selected CSV is plaintext outside CipherNest. Imported fields will be encrypted in the vault, but CipherNest cannot remove the original source file. Review the mappings first.", "Import", "Cancel");
+
+        bool confirmed;
+        try
+        {
+            confirmed = await Shell.Current.DisplayAlertAsync("Import plaintext CSV?", "The selected CSV is plaintext outside CipherNest. Imported fields will be encrypted in the vault, but CipherNest cannot remove the original source file. Review the mappings first.", "Import", "Cancel");
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Transfer.ImportConfirm", ex);
+            StatusMessage = "Import confirmation could not be shown safely. No import was started.";
+            return;
+        }
         if (!confirmed) return;
+
         IsBusy = true;
         try
         {
@@ -103,15 +115,39 @@ public partial class TransferViewModel : ObservableObject
             return;
         }
 
-        var authenticated = await _vault.ReauthenticateAsync(ExportMasterPassphrase);
-        ExportMasterPassphrase = string.Empty;
+        bool authenticated;
+        try
+        {
+            authenticated = await _vault.ReauthenticateAsync(ExportMasterPassphrase);
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Transfer.ExportPlaintext.Reauthenticate", ex);
+            StatusMessage = "Master-passphrase confirmation could not be completed safely. The plaintext export was not started.";
+            return;
+        }
+        finally
+        {
+            ExportMasterPassphrase = string.Empty;
+        }
+
         if (!authenticated)
         {
             StatusMessage = "Master-passphrase confirmation failed. Recovery keys are not accepted for plaintext export confirmation.";
             return;
         }
 
-        var confirmed = await Shell.Current.DisplayAlertAsync("Create plaintext export?", "This file will contain readable vault fields and may be copied by the share target, backups, search indexing, antivirus, or the operating system. Encrypted backup is safer. Continue only if you need plaintext interoperability.", "Export plaintext", "Cancel");
+        bool confirmed;
+        try
+        {
+            confirmed = await Shell.Current.DisplayAlertAsync("Create plaintext export?", "This file will contain readable vault fields and may be copied by the share target, backups, search indexing, antivirus, or the operating system. Encrypted backup is safer. Continue only if you need plaintext interoperability.", "Export plaintext", "Cancel");
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Transfer.ExportPlaintext.Confirm", ex);
+            StatusMessage = "Plaintext-export confirmation could not be shown safely. No plaintext file was created.";
+            return;
+        }
         if (!confirmed)
         {
             ExportConfirmationPhrase = string.Empty;
