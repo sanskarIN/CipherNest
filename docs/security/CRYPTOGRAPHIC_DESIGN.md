@@ -11,7 +11,7 @@ This document describes the cryptographic design implemented by the current loca
 - Version every cryptographic envelope that must survive upgrades.
 - Reject malformed/tampered inputs before they replace active vault data.
 - Bound untrusted KDF/resource parameters before expensive work.
-- Bound vault-header, serialized-record, stored-envelope, archive-entry, and aggregate storage resources before large allocations where practical.
+- Bound passphrase inputs, vault-header, serialized-record, stored-envelope, archive-entry/chunk, and aggregate storage resources before large allocations where practical.
 - Cancel cancellable key-using work when the unlocked security session ends.
 - Minimize lifetime of owned sensitive byte/character buffers and zero them where practical.
 
@@ -30,11 +30,11 @@ Current cryptographic format version: `1`.
 
 CipherNest does not implement a custom cipher, MAC, password hash, or PRNG.
 
-## KDF safety bounds
+## Passphrase and KDF safety bounds
 
-KDF values can be read from encrypted-container metadata before authentication, so they are treated as untrusted resource requests.
+Passphrase/recovery/secondary/backup inputs passed to the cryptographic boundary must contain 12 through 4,096 characters. New setup/change UI surfaces enforce the same maximum before expensive strength/KDF work. Unwrap attempts outside that range are mapped to `VaultAuthenticationException` so interactive authentication follows the normal failure path rather than exposing an argument-validation distinction.
 
-The current implementation accepts:
+KDF values can be read from encrypted-container metadata before authentication, so they are treated as untrusted resource requests. The current implementation accepts:
 
 - memory: 16 MiB through 512 MiB;
 - iterations: 1 through 10;
@@ -53,7 +53,7 @@ Encrypted backup headers additionally require backup format version `2`, salt le
 4. The vault header stores only format/KDF metadata and authenticated wrapped-DEK material—not the master passphrase or plaintext DEK.
 5. Successful unlock derives a KEK, authenticates/decrypts the wrapped DEK, and installs an owned 32-byte DEK buffer for the unlocked session.
 6. Key-using work obtains a private 32-byte `VaultKeyLease` copy rather than retaining a reference to the mutable shared session array.
-7. Every key lease links the caller token with a per-unlock session cancellation token and zeroes its copied DEK on `Dispose`.
+7. Every key lease links the caller token with a per-unlock session cancellation token and zeroes its copied DEK on `Dispose`; if linked-token-source construction fails after accepting the key copy, that copy is zeroed before rethrow.
 8. Locking clears the shared session key, cancels the current per-unlock token, and disposes the session cancellation source.
 9. Replacing the unlocked session with a new unlock cancels the prior session token and zeroes the previous shared DEK before the new session becomes authoritative.
 
@@ -63,7 +63,9 @@ This lease model reduces races where a lock could otherwise zero the same array 
 
 Vault creation, master/recovery unlock, secondary unlock, public lock, and full-vault deletion acquire the same service transition gate. This prevents a late-finishing unlock from publishing a fresh session after an already-requested lock merely because KDF/key-unwrapping work completed later.
 
-Full-vault deletion additionally acquires a live authorization key lease after current-master re-authentication and waits for the transition gate with that lease token. If another lock/unlock invalidates that session while deletion is waiting, the destructive operation is cancelled instead of proceeding on stale authorization.
+Security-sensitive master-authenticated mutations retain a live authorization key lease from the authenticated session while waiting for that gate. If another lock/unlock invalidates the session, the old authorization token is cancelled rather than being carried into the replacement session.
+
+Full-vault deletion clears the active session before destructive disk I/O. After that commit point, caller cancellation does not interrupt managed database/attachment cleanup. Database and encrypted-attachment cleanup are attempted independently, with incomplete cleanup reported only after both sides have been attempted.
 
 ## Key-wrap associated data
 
@@ -73,11 +75,13 @@ Master/recovery/secondary wrappers authenticate context derived from:
 
 This binds the wrapper to the expected CipherNest vault-key purpose, cryptographic format version, and KDF parameters.
 
+Wrapped-key parsing also requires non-null salt/KDF/nonce/ciphertext/tag members, the expected nonce/tag lengths, and exactly 32 bytes of wrapped DEK ciphertext.
+
 ## Vault-header compatibility and resource bound
 
 The current vault-header document version is `2`; version `1` remains the minimum supported historical header. Any version outside the explicit supported range is rejected before key unwrap.
 
-Vault-header JSON is also bounded to 64 KiB UTF-8. The SQLite store checks byte length before materializing header text, and `VaultService` applies the same bound before deserialization for alternate store implementations. Future header expansion must fit that budget or deliberately version/review it.
+Vault-header JSON is also bounded to 64 KiB UTF-8. The SQLite store checks byte length before materializing header text, and `VaultService` applies the same bound before deserialization for alternate store implementations. Malformed JSON is mapped to vault authentication failure at the service boundary. Future header expansion must fit that budget or deliberately version/review it.
 
 ## Recovery key
 
@@ -105,11 +109,12 @@ Current resource budgets are:
 - serialized/decrypted item JSON: 16 MiB;
 - stored encrypted envelope: 24 MiB per row;
 - stored item count: 100,000;
-- aggregate stored encrypted-envelope bytes: 256 MiB.
+- aggregate stored encrypted-envelope bytes: 256 MiB;
+- local search query: 4,096 trimmed characters.
 
 The SQLite store checks count/sum and per-row `length(Envelope)` before BLOB materialization where possible, and enforces matching bounds on writes. `VaultService` independently applies the serialized/decrypted and stored-envelope limits so a custom `IVaultStore` cannot bypass them.
 
-After decryption CipherNest additionally requires payload ID equality with the authenticated SQLite row ID, valid item type/core metadata, supported tags/custom fields/attachments, and unique attachment identifiers/storage names. Owned plaintext JSON byte arrays are zeroed in `finally` after deserialization/validation.
+After decryption CipherNest additionally requires payload ID equality with the authenticated SQLite row ID, valid item type/core metadata, supported tags/custom fields/attachments, unique attachment identifiers/storage names, and attachment storage names bound to their actual attachment IDs. Owned plaintext JSON byte arrays are zeroed in `finally` after deserialization/validation.
 
 ## Secure-note bounds
 
@@ -119,13 +124,13 @@ Secure-note storage/import/editor/preview operations share `SafeNoteLimits`: max
 
 Attachments are stored as separately authenticated encrypted files and processed in bounded chunks rather than loaded as complete files.
 
-For each chunk AES-256-GCM uses a leased vault DEK copy and fresh nonce; associated data includes item ID, attachment ID, and chunk index; the container stores chunk length/nonce/tag/ciphertext; final plaintext length and structure are checked; truncation, invalid sizes, tampering, or trailing data are rejected.
+For each chunk AES-256-GCM uses a leased vault DEK copy and fresh nonce; associated data includes item ID, attachment ID, and chunk index; the container stores chunk length/nonce/tag/ciphertext; final plaintext length and structure are checked; truncation, invalid sizes, tampering, trailing data, or excessive chunk counts are rejected.
 
-The reusable plaintext encryption buffer is zeroed after each encrypted chunk and again on exit. Decrypted chunk plaintext arrays are also zeroed after writing. Encrypted attachment staging uses a unique sibling `CreateNew` file and final installation refuses overwrite; a generated-ID collision therefore fails closed instead of replacing an existing encrypted attachment.
+Normal encryption reads fill a 256 KiB chunk before encryption unless EOF is reached. The reusable plaintext encryption buffer is zeroed after each encrypted chunk and again on exit. Decrypted chunk plaintext arrays are also zeroed after writing. Encrypted attachment staging uses a unique sibling `CreateNew` file and final installation refuses overwrite; a generated-ID collision therefore fails closed instead of replacing an existing encrypted attachment.
 
-The current plaintext attachment size cap is 100 MiB per attachment and the item attachment-count cap is 25. The encrypted container exposes a minimum/maximum size envelope derived from this format so backup extraction can reject impossible attachment-entry sizes before staging them.
+The current plaintext attachment size cap is 100 MiB per attachment and the item attachment-count cap is 25. Attachment framing has an explicit maximum chunk count derived from the supported plaintext/chunk-size envelope. The encrypted container exposes a minimum/maximum size envelope derived from this format so backup extraction can reject impossible attachment-entry sizes before staging them.
 
-Encrypted attachment filesystem access accepts only an opaque GUID `N` stem plus `.cna`; names containing path separators, wrong extensions, or malformed identifiers are rejected before file access.
+Encrypted attachment filesystem access accepts only the canonical opaque GUID `N` stem plus `.cna` corresponding to the attachment's actual non-empty identifier. Names containing path separators, wrong extensions, malformed/empty identifiers, or mismatched identifiers are rejected before file access.
 
 Permanent item deletion deletes the authenticated database record first, then attempts best-effort encrypted attachment cleanup.
 
@@ -136,22 +141,24 @@ Backup format magic is `CNBK0002`; backup format version is `2`.
 1. CipherNest takes a consistent SQLite snapshot.
 2. The snapshot and encrypted attachment containers are packed into a bounded ZIP payload without plaintext vault-record extraction.
 3. A separate backup passphrase derives a backup key using Argon2id with a fresh salt and recorded KDF parameters.
-4. The archive is encrypted in 1 MiB AES-GCM chunks.
+4. The archive is encrypted in nominal 1 MiB AES-GCM chunks; normal reads fill a chunk unless EOF is reached.
 5. Backup chunk associated data includes SHA-256 of the serialized backup header, chunk index, and final-chunk flag.
-6. Export canonicalizes the requested destination and rejects the active database, WAL/SHM/recovery files, and encrypted attachment directory. Encrypted staging uses a unique sibling `CreateNew` file.
-7. Restore validates magic/header-size framing and backup version/salt/KDF/chunk bounds before Argon2, authenticates encrypted chunks, bounds total archive size/entry count/paths, rejects duplicate normalized ZIP paths, and rejects attachment entries outside the implemented encrypted-container size envelope.
-8. The staged `vault.db` must pass SQLite `PRAGMA quick_check`, exact database schema version, required table/column shape, required bounded vault header, canonical item IDs, item count, per-record envelope size, and aggregate envelope size before active DB/WAL/SHM mutation.
-9. Active SQLite DB/WAL/SHM files are staged into unique recovery names. Component-aware rollback restores only components that actually moved.
-10. Encrypted-backup rollback uses an uncancelled recovery token once active-state mutation begins, so caller cancellation cannot cancel the rollback database replacement. Secondary rollback errors remain best-effort and do not intentionally replace the original restore failure.
-11. Backup restore clears local biometric pairing after a successful restore because restored wrapper metadata may not correspond to the current device secure-storage secret.
+6. Backup framing rejects more than 65,536 encrypted chunks in addition to the aggregate archive-byte budget.
+7. The reusable plaintext archive buffer span is zeroed in `finally` after each chunk encryption/write attempt.
+8. Export canonicalizes the requested destination and rejects the active database, WAL/SHM/recovery files, and encrypted attachment directory. Encrypted staging uses a unique sibling `CreateNew` file.
+9. Restore validates magic/header-size framing and backup version/salt/KDF/chunk bounds before Argon2, authenticates encrypted chunks, enforces the chunk-count ceiling, bounds total archive size/entry count/paths, rejects duplicate normalized ZIP paths, and rejects attachment entries outside the implemented encrypted-container size envelope.
+10. The staged `vault.db` must pass SQLite `PRAGMA quick_check`, exact database schema version, valid migration history, required table/column shape, required bounded vault header, canonical item IDs, item count, per-record envelope size, and aggregate envelope size before active DB/WAL/SHM mutation.
+11. Active SQLite DB/WAL/SHM files are staged into unique recovery names. Component-aware rollback restores only components that actually moved.
+12. Encrypted-backup rollback uses an uncancelled recovery token once active-state mutation begins, so caller cancellation cannot cancel the rollback database replacement. Secondary rollback errors remain best-effort and do not intentionally replace the original restore failure.
+13. Backup restore clears local biometric pairing after a successful restore because restored wrapper metadata may not correspond to the current device secure-storage secret.
 
 Encrypted backup remains the recommended transfer mechanism. Plaintext CSV/attachment export is an interoperability escape hatch outside this cryptographic boundary.
 
 ## Database migration relationship
 
-Database schema versioning is independent from cryptographic-envelope and backup versions. `DatabaseMigrator` records ordered transactional migrations, rejects a future schema version, and validates the required current schema shape after migration/version resolution.
+Database schema versioning is independent from cryptographic-envelope and backup versions. `DatabaseMigrator` records ordered transactional migrations, rejects unsupported version metadata, and validates the required current schema shape after migration/version resolution.
 
-A forged current-version `MigrationHistory` row without required tables/columns is rejected. Migration rollback is best-effort with an uncancelled rollback token; a secondary rollback error is not intended to replace the original migration failure.
+Migration history must contain positive contiguous version rows with parseable round-trip timestamps. Validation work is bounded to the supported schema range plus one sentinel row, and extreme integer metadata is rejected before narrowing to an application version. A forged current-version history row without required tables/columns is still rejected. Migration rollback is best-effort with an uncancelled rollback token; a secondary rollback error is not intended to replace the original migration failure.
 
 ## Known-answer test
 
@@ -165,7 +172,7 @@ Changing a KDF library/runtime implementation must preserve supported vectors or
 
 ## Memory limitations
 
-CipherNest calls `CryptographicOperations.ZeroMemory` on owned sensitive byte buffers where feasible. Current examples include shared session DEKs, leased DEK copies, KDF/passphrase UTF-8 buffers, decrypted/encrypted attachment working plaintext, serialized record plaintext bytes, recovery-key random bytes, clipboard fingerprints/hashing buffers, and other owned crypto intermediates. Password-generator `char[]` and passphrase-selection arrays are cleared after use where practical.
+CipherNest calls `CryptographicOperations.ZeroMemory` on owned sensitive byte buffers where feasible. Current examples include shared session DEKs, leased DEK copies including constructor-failure cleanup, KDF/passphrase UTF-8 buffers, backup export plaintext chunk spans, decrypted/encrypted attachment working plaintext, serialized record plaintext bytes, recovery-key random bytes, clipboard fingerprints/hashing buffers, and other owned crypto intermediates. Password-generator `char[]` and passphrase-selection arrays are cleared after use where practical.
 
 .NET strings, serializer-created objects, JIT/runtime copies, OS buffers, UI controls, and garbage-collected memory cannot be guaranteed to be erased deterministically. Clearing a local string reference or array of string references does not erase the immutable managed string object that may still exist elsewhere.
 
@@ -176,11 +183,11 @@ AES-GCM security requires nonce uniqueness for a given key. CipherNest generates
 ## Versioning and review
 
 - `CryptoFormatVersion` controls record/key-wrapper encrypted-envelope compatibility.
-- Vault-header document versioning is separate and explicitly range/size checked.
+- Vault-header document versioning is separate and explicitly range/size/JSON checked.
 - Backup versioning is independent because backup framing differs from record envelopes.
 - Database schema versioning is independent and handled by transactional migrations plus current-shape/resource validation.
 - A cryptographic format change requires design review, known-answer/compatibility tests, tamper tests, migration/restore planning, changelog entries, and an update to this document/threat model before release.
-- Changes to key-lease/session transitions, storage budgets, backup-header/archive policy, or active-database replacement/recovery require focused concurrency/security tests even when `CryptoFormatVersion` itself does not change.
+- Changes to key-lease/session transitions, storage budgets, backup-header/archive/framing policy, attachment framing/storage identity, or active-database replacement/recovery require focused concurrency/security tests even when `CryptoFormatVersion` itself does not change.
 
 ## Audit status
 
