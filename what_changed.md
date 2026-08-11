@@ -1293,3 +1293,195 @@ The following remain separate future reviewed projects rather than being represe
 - pronounceable-password generation pending dedicated design review;
 - destructive automatic wipe after failed attempts;
 - complete Hindi/additional translation catalogs beyond the current English-first architecture.
+
+## 2026-08-11 — Continuation: framing, persistence, authentication, session, and platform-boundary hardening
+
+This continuation follows the bounded-storage/snapshot-recovery ledger above. It includes both the additional hardening commits created before the 2026-08-11 documentation pass and the 2026-08-11 source/platform review itself. Changes remain split into small signed-off commits. No build, test, workflow, device, signing, store, or audit result is implied merely because source is present.
+
+### Encrypted backup framing and memory lifetime
+
+- Added an explicit encrypted-backup chunk-count ceiling of 65,536 in addition to the existing one-gigabyte plaintext archive budget.
+- Backup restore validates chunk index/count before per-chunk work can grow without bound.
+- Backup export fills normal one-megabyte chunks before encryption unless EOF is reached rather than assuming one `ReadAsync` fills the requested buffer.
+- The reusable plaintext export span is zeroed in `finally` after every encryption/write attempt.
+- Added backup format/unit/source tests requiring the chunk-count, full-read, and buffer-zeroing invariants.
+
+### Encrypted attachment framing, identity, and preconditions
+
+- Added an explicit attachment encrypted-chunk ceiling derived from the 100 MiB plaintext / 256 KiB chunk envelope.
+- Attachment encryption fills normal chunks before encryption unless EOF is reached.
+- Opaque attachment names reject empty GUIDs and can be validated against the actual attachment ID.
+- Encryption/decryption validates non-empty item/attachment IDs, source/destination stream capabilities, 32-byte data keys, and the attachment-ID/storage-name relationship before filesystem work.
+- `VaultItemValidator` enforces the same opaque storage identity relationship before decrypted item metadata reaches application/UI code.
+- Added policy, unit, and source-regression coverage for the framing and identity boundary.
+
+### CSV parser and import resource bounds
+
+- CSV read/export boundaries validate readable/writable stream capabilities.
+- The parser enforces an aggregate row-character budget in addition to field/column limits.
+- Import checks the 100,000 logical-row ceiling before parsing another data row instead of materializing an unsupported extra row first.
+- Import skip warnings come from controlled item-validator output; an unexpected save-time argument failure receives fixed wording rather than raw exception text.
+- Added integration/source coverage for aggregate row and logical-row limits.
+
+### Passphrase and crypto-envelope hardening
+
+- Crypto-bound passphrase/recovery/secondary/backup inputs are bounded to 12–4,096 characters before KDF work.
+- Invalid-length unwrap attempts are mapped to `VaultAuthenticationException`, preserving the normal interactive authentication/rate-limit path for short/oversized guesses.
+- Malformed/null encrypted-envelope and wrapped-key members fail safely rather than causing null-reference failures.
+- Wrapped DEK ciphertext is required to be exactly 32 bytes.
+- Added direct unit coverage for passphrase bounds, invalid-length unwrap behavior, and malformed/null envelope members.
+
+### Vault header, search, and decrypted metadata boundaries
+
+- Malformed vault-header JSON now maps to vault authentication failure instead of leaking `JsonException` through unlock.
+- Existing explicit supported header version and 64 KiB UTF-8 bounds remain in force.
+- Local vault search rejects trimmed queries longer than 4,096 characters before matching decrypted fields.
+- Added malformed-header and search-bound integration tests.
+- Attachment storage metadata bound to the attachment ID remains part of the decrypted-item validation boundary.
+
+### Migration-history and SQLite deletion hardening
+
+- Migration history is validated as positive, contiguous, and timestamp-parseable.
+- Validation work is bounded to the supported schema range plus one sentinel row; extreme integer metadata such as `long.MaxValue` is rejected before narrowing/conversion.
+- Added integration coverage for zero/negative/extreme versions and malformed timestamps.
+- SQLite deletion attempts DB, WAL, SHM, legacy recovery, and generated recovery artifacts before reporting aggregate failure.
+- Updated stale source-regression tests so they assert the current helper-based full-cleanup strategy rather than obsolete direct-deletion strings.
+
+### Same-session authorization and key-lease failure cleanup
+
+- Master-authenticated security mutations retain an authorization key lease belonging to the same unlock session while waiting for transition serialization.
+- Enable/disable secondary unlock, master-passphrase change, and full-vault deletion therefore do not carry a successful re-authentication decision into a replacement session after an intervening lock/re-unlock.
+- `VaultKeyLease` now zeroes its accepted 32-byte key copy if linked cancellation-token creation throws, in addition to normal disposal zeroing.
+- Updated the key-lease source regression guard to the current `CancelAndDisposeSession` helper implementation.
+- Full-vault deletion attempts both managed database/recovery cleanup and encrypted attachment-root cleanup after the destructive session transition even if one side reports an I/O/access failure; incomplete deletion is reported generically only after both attempts.
+
+### Startup, transfer, item-editor, settings, and onboarding failure containment
+
+- Startup's fire-and-forget preference task now separately contains/reports fallback theme, language, and accessibility failures after a primary preference-application failure.
+- Transfer contains CSV picker, import confirmation, plaintext re-authentication, export confirmation, share, and staging-cleanup failures with fixed UI messages plus privacy-safe operation IDs.
+- Plaintext CSV staging names include a random GUID and the staging file is deleted in `finally` after sharing/failure where the OS permits it; cleanup failure is redacted and surfaced generically.
+- Item Editor contains/reports per-item re-authentication, secret-copy, attachment picker/export/share/removal, and move-to-trash failures. Its bound re-authentication passphrase is cleared before service work and the local reference is shortened afterward.
+- Settings contains/reports load/save, storage/cache, biometric enable/disable, encrypted-backup export/share, restore picker/confirmation/staging, passphrase rotation, and destructive-delete confirmation/cleanup failures.
+- Backup/master inputs in Settings enforce the 4,096-character ceiling before expensive work.
+- Onboarding enforces the 12–4,096 master-passphrase range before generator/vault work and uses fixed validation messages rather than raw argument exception text.
+
+### Source-regression maintenance
+
+- Repaired stale `VaultKeyLeaseSourceTests` expectations after session cancellation moved behind `CancelAndDisposeSession`.
+- Repaired stale `DatabaseReplacementSourceTests` deletion expectations after full managed-file cleanup became aggregate/best-effort.
+- Expanded `VaultSessionTransitionSourceTests`, `SensitiveErrorSurfaceSourceTests`, backup source tests, startup source tests, and onboarding source tests for the current implementation.
+
+### Documentation added/updated
+
+- Added `docs/verification/SECURITY_HARDENING_2026_08_11.md` with the exact new source/runtime gates.
+- Added `docs/verification/NEXT_EXECUTION_2026_08_11.md` with the post-hardening clean-build, hosted-CI, device-security, fault-matrix, accessibility, performance, release-engineering, and independent-review execution order.
+- Added `docs/releases/UNRELEASED_HARDENING_2026_08_11.md` as a dated release-note supplement without collapsing prior changelog history.
+- Updated `PROJECT_STATUS.md` with framing, authorization, cleanup, input-bound, and platform-boundary behavior.
+- Updated `docs/RELEASE_CHECKLIST.md` with the exact new verification gates.
+- Updated `docs/security/THREAT_MODEL.md` for hostile framing, attachment identity, passphrase/search/header bounds, bounded migration history, complete logical deletion attempts, startup/platform failure containment, and immediate plaintext staging cleanup.
+- Updated `docs/security/CRYPTOGRAPHIC_DESIGN.md` for 12–4,096 credential bounds, invalid-length unwrap authentication mapping, key-lease failure zeroing, backup/attachment chunk ceilings/full reads/zeroing, migration bounds, and same-session authorization.
+- Preserved the existing long `what_changed.md` history and appended this continuation rather than replacing earlier ledgers with a shorter summary.
+
+### Commits created in the framing/persistence continuation
+
+The continuation intentionally used many small commits. Relevant commit messages include:
+
+- `fix(backup): add encrypted chunk-count resource bound`
+- `test(backup): cover encrypted chunk-count resource bound`
+- `fix(backup): enforce chunk-count bound during restore`
+- `fix(backup): fill export chunks before encryption`
+- `test(backup): require full encrypted export chunk reads`
+- `feat(attachments): add encrypted chunk-count resource policy`
+- `test(attachments): cover encrypted chunk-count policy`
+- `fix(attachments): enforce encrypted chunk-count bound`
+- `fix(attachments): fill encryption chunks before framing`
+- `fix(attachments): reject empty opaque attachment identifiers`
+- `test(attachments): cover opaque attachment identifiers`
+- `fix(attachments): bind opaque storage names to attachment ids`
+- `test(attachments): enforce attachment storage security boundary`
+- `fix(validation): bind attachment storage name to attachment id`
+- `test(validation): align valid attachment storage identity`
+- `fix(import): validate CSV stream capabilities`
+- `fix(import): use controlled validation warnings`
+- `fix(import): bound aggregate CSV row size before allocation growth`
+- `test(import): cover aggregate CSV row bounds`
+- `test(import): enforce aggregate row parser source bounds`
+- `feat(security): bound passphrase inputs before KDF work`
+- `test(security): cover crypto passphrase bounds`
+- `fix(crypto): reject null envelope members safely`
+- `test(crypto): cover null encrypted envelope members`
+- `fix(database): attempt complete managed file cleanup`
+- `test(database): enforce complete database deletion attempts`
+- `fix(security): bind master-authenticated mutations to same session`
+- `test(security): require same-session master authorization`
+- `fix(database): validate migration history sequence`
+- `test(database): cover invalid migration history rows`
+
+### Commits created in the 2026-08-11 continuation
+
+- `fix(database): bound migration history validation work`
+- `test(database): cover extreme migration version metadata`
+- `fix(memory): zero backup export plaintext chunks`
+- `test(backup): enforce plaintext buffer zeroing`
+- `fix(memory): zero key lease copy on constructor failure`
+- `test(security): align key lease source invariants with session helper`
+- `test(database): align deletion guard with full cleanup strategy`
+- `fix(auth): map invalid unwrap passphrase lengths to auth failure`
+- `test(auth): cover invalid-length unwrap failures`
+- `fix(vault): harden header deletion and search boundaries`
+- `test(vault): map malformed header JSON to auth failure`
+- `test(vault): cover bounded search queries`
+- `test(vault): enforce complete destructive cleanup attempts`
+- `fix(startup): contain preference fallback failures`
+- `test(startup): enforce contained preference fallbacks`
+- `fix(transfer): contain picker dialog and reauth failures`
+- `fix(transfer): clean plaintext export staging after share`
+- `test(privacy): cover transfer platform and cleanup failures`
+- `fix(editor): contain platform and reauth command failures`
+- `test(privacy): cover protected item command failures`
+- `fix(settings): contain platform storage and backup failures`
+- `test(privacy): cover settings platform failure surfaces`
+- `fix(onboarding): enforce master passphrase input ceiling`
+- `test(onboarding): enforce master passphrase ceiling in UI`
+- `docs(verification): add August 11 hardening gates`
+- `docs(status): record framing auth and platform hardening`
+- `docs(release): add framing auth and platform hardening gates`
+- `docs(security): update threat model for framing and platform boundaries`
+- `docs(security): align crypto design with framing and passphrase bounds`
+- `docs(changelog): record August 11 security hardening`
+- `docs(roadmap): add post-hardening execution order`
+- this `docs(progress)` update.
+
+### Final indexed source hygiene check
+
+Immediately before this final progress-file write, indexed repository searches returned no matches for:
+
+- raw `ex.Message`;
+- combined `TODO FIXME NotImplementedException` unfinished markers;
+- `Debug.WriteLine`;
+- `Console.WriteLine`;
+- legacy `.DisplayAlert(`.
+
+These are additional source-review signals only. They are not substitutes for compilation, test execution, target-device behavior, or security review.
+
+### Verification limits retained
+
+This connector can inspect and write repository source but cannot execute the exact candidate's .NET 10/MAUI restore/build/test/format/analyzer runs, directly substitute for GitHub-hosted workflow execution, launch Android/iOS/macOS/Windows targets, exercise physical biometrics/clipboard/screenshot/lifecycle/secure-storage/file-picker/share behavior, sign store packages, or perform store review.
+
+The exact current candidate still requires:
+
+- committed core verification scripts and all UnitTests/IntegrationTests/UiTests;
+- Windows default and funding-disabled builds;
+- Android build;
+- iOS and Mac Catalyst builds on an appropriate Apple host;
+- CodeQL/dependency-review/vulnerability/secret-scan review on the exact commit;
+- device-level lock/clipboard/screenshot/biometric/lifecycle/file-picker/share and plaintext-cleanup testing;
+- backup/restore/database-replacement fault-matrix testing with disposable data;
+- accessibility/localization/responsive-layout and performance testing;
+- exact dependency/license reconciliation;
+- protected signing and current store-policy validation;
+- independent professional cryptographic/security review before stronger security claims.
+
+No signing key, certificate, store credential, API secret, private key, vault secret, recovery material, production analytics token, or production crash-reporting token was added to source control during this continuation.
+
+The current release remains local-first and English-first, and the deliberately deferred cloud sync/accounts/collaboration, autofill, TOTP, Windows Hello, rich binary/PDF scanning/preview, pronounceable-password mode, destructive automatic wipe, and complete additional translation catalogs remain future reviewed work rather than fake current features.
