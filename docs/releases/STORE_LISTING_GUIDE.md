@@ -1,5 +1,7 @@
 # Store Listing and Branding Guide
 
+Store metadata must be reviewed against the exact packaged candidate. Use `RELEASE_PROCESS.md`, `../verification/DOCUMENTATION_SUITE_2026_08_12.md`, and the canonical documentation hub `../README.md` before publishing claims/screenshots.
+
 ## Positioning
 
 Describe CipherNest as a local-first password, secure-note, credential, and encrypted-document vault. Do not claim that it is unhackable, military-grade, 100% secure, independently audited, or appropriate for high-risk use until evidence supports those statements.
@@ -20,6 +22,8 @@ Store copy and screenshots should accurately state:
 - plaintext export leaves the protected vault boundary;
 - independent professional security audit is still outstanding.
 
+Store wording should remain consistent with `../USER_GUIDE.md`, `../security/THREAT_MODEL.md`, `../security/SESSION_SECURITY.md`, `../security/DATA_LIFECYCLE.md`, and `../../PRIVACY.md` for the exact candidate.
+
 ## Project support link
 
 The open-source project support URL is `https://buymeacoffee.com/sanskarIN`. Repository surfaces may present it as optional voluntary support for continued development.
@@ -34,9 +38,11 @@ dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestEn
 
 `CipherNestEnableFundingLink` defaults to `true`. Setting it explicitly to `false` defines `CIPHERNEST_DISABLE_FUNDING_LINK`; `BuildFeatureFlags.IsFundingLinkEnabled` becomes `false`, and the About funding surfaces are hidden. The repository README, SUPPORT file, and `.github/FUNDING.yml` are source-repository metadata and remain unchanged by that app-build switch.
 
+Record the chosen build value in release provenance.
+
 ## Visual assets
 
-Use the original CipherNest nest/shield geometry from the repository. The icon must remain legible without text at small sizes.
+Use the original CipherNest nest/shield geometry from the repository. The icon must remain legible without text at small sizes. See `../branding/ASSETS.md` for canonical editable sources and generation rules.
 
 - App/store icon: square source, preserve clear space around the mark, no tiny words.
 - Android adaptive foreground: use the standalone foreground mark; keep critical geometry inside the safe zone.
@@ -47,8 +53,18 @@ Use the original CipherNest nest/shield geometry from the repository. The icon m
 
 ## Privacy screenshots
 
-Use synthetic sample records only. Avoid real email addresses, URLs, server names, card references, Wi-Fi credentials, recovery keys, or imported documents.
+Use synthetic sample records only. Avoid real email addresses, URLs, server names, card references, Wi-Fi credentials, recovery keys, imported documents, private attachments, or diagnostic paths.
 
-## Release asset gate
+If a screenshot shows a plaintext-export or destructive warning, keep the warning meaningful rather than cropping it to make the listing more visually attractive.
 
-Before publishing, verify each generated platform asset on a real target or official emulator/simulator. Confirm clipping, safe-zone placement, contrast, transparency, scaling, and store-specific size requirements against the current platform documentation.
+## Release asset and claims gate
+
+Before publishing:
+
+- verify each generated platform asset on a real target or official emulator/simulator;
+- confirm clipping, safe-zone placement, contrast, transparency, scaling, and store-specific size requirements against current platform documentation;
+- verify every feature shown in screenshots exists in the packaged candidate;
+- verify every privacy/security claim matches current docs/source and actual device behavior;
+- verify the independent-audit status remains accurate;
+- verify no deferred feature (cloud sync, autofill, TOTP, Windows Hello, rich PDF scanning, complete additional-language catalog, etc.) is implied to be complete;
+- complete the relevant `../RELEASE_CHECKLIST.md` and `RELEASE_PROCESS.md` evidence.
