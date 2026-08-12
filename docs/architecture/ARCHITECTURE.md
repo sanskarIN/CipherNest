@@ -27,6 +27,8 @@ Search/filter/audit therefore operates over decrypted authenticated objects only
 
 The random vault DEK is the key that protects records/attachments. Master, recovery, and optional biometric-secondary paths wrap the DEK rather than duplicating/re-encrypting every record for each credential. Lock zeroes owned DEK buffers where practical and drops the active key reference.
 
+Key-using operations receive private `VaultKeyLease` copies linked to the current unlock session and caller cancellation. Master/recovery unlock, secondary unlock, public lock, creation, and full-vault deletion coordinate through a serialized transition gate; destructive full-vault deletion binds authorization to a live session while waiting for that gate.
+
 Managed strings and garbage-collected copies cannot be deterministically erased; the design documents that limitation rather than claiming otherwise.
 
 ## UI and lifecycle boundary
@@ -42,3 +44,20 @@ MAUI ViewModels expose commands/state; Views contain presentation and semantic m
 ## Versioning
 
 Cryptographic envelope version and database schema version are explicit independent constants. Database changes pass through ordered transactional migrations. A future unsupported schema is rejected instead of guessed. Cryptographic format changes require focused compatibility/security review and test vectors before release.
+
+Vault-header document version, encrypted attachment magic/framing, and encrypted backup format version are also independent compatibility surfaces and must not be changed incompatibly under an existing version identifier.
+
+## Detailed architecture references
+
+- `DEPENDENCY_MAP.md` — project/package/DI/platform-target ownership.
+- `DATA_FLOW.md` — end-to-end sensitive data paths.
+- `SESSION_AND_CONCURRENCY.md` — key leases, transition/mutation gates, cancellation, destructive commit points, and recovery ordering.
+- `DATABASE.md` — SQLite schema/migration/replacement/snapshot/recovery details.
+- `LOCALIZATION.md` — resource/culture architecture.
+- `../API_REFERENCE.md` — Application contracts and Domain models.
+- `../LIMITS_AND_DEFAULTS.md` — current resource/default/version values.
+- `../formats/VAULT_RECORDS.md` — encrypted item records.
+- `../formats/ATTACHMENTS.md` — `.cna` encrypted attachment framing.
+- `../formats/ENCRYPTED_BACKUP.md` — `.cnbak` backup framing/restore.
+- `../formats/CSV_TRANSFER.md` — plaintext interoperability.
+- `../security/THREAT_MODEL.md`, `../security/CRYPTOGRAPHIC_DESIGN.md`, `../security/SESSION_SECURITY.md`, and `../security/DATA_LIFECYCLE.md` — security/privacy interpretation of these boundaries.
