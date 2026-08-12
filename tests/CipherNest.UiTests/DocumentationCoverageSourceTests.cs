@@ -112,18 +112,17 @@ public sealed class DocumentationCoverageSourceTests
     }
 
     [Fact]
-    public void Documentation_DoesNotClaimIndependentAuditCompletion()
+    public void SecurityEntryPoints_KeepIndependentAuditDisclaimer()
     {
-        foreach (var segments in RequiredDocumentation)
-        {
-            var path = PathAt(segments);
-            if (!File.Exists(path)) continue;
-            var content = File.ReadAllText(path);
-            Assert.DoesNotContain("CipherNest is independently audited", content, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("CipherNest is unhackable", content, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("100% secure", content, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("military-grade", content, StringComparison.OrdinalIgnoreCase);
-        }
+        var readme = File.ReadAllText(PathAt("README.md"));
+        var security = File.ReadAllText(PathAt("SECURITY.md"));
+        var threatModel = File.ReadAllText(PathAt("docs", "security", "THREAT_MODEL.md"));
+        var cryptoDesign = File.ReadAllText(PathAt("docs", "security", "CRYPTOGRAPHIC_DESIGN.md"));
+
+        Assert.Contains("has not yet undergone an independent professional security audit", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("has **not** completed an independent professional security audit", security, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("independent professional", threatModel, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not** completed an independent professional", cryptoDesign, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string PathAt(params string[] segments)
