@@ -55,6 +55,8 @@ All notable changes are documented here following Semantic Versioning principles
 - Source regression tests for shortened credential binding lifetime, fingerprint-only clipboard state, contained lifecycle fallback, sensitive error redaction, cross-platform CI gates, serialized/cancellation-safe vault session transitions, live-session vault-deletion authorization, backup/attachment staging, SQLite recovery/deletion ordering, storage budgets, attachment mutation serialization, and rejection of legacy `.DisplayAlert(` calls.
 - Splash wordmark/creator credit, monochrome icon source, and dark-surface logo source in addition to the existing original vector branding.
 - Third-party dependency notices, implemented cryptographic design specification, secure-note security documentation, passphrase-generator design notes, privacy-safe diagnostics policy, localization architecture guidance, packaging/reproducibility guidance, branding asset documentation, and store-listing guidance.
+- Complete canonical documentation suite with a documentation hub, end-user/developer/maintainer manuals, application API reference, limits/defaults/glossary, dependency/data-flow/session architecture, sensitive-data lifecycle/session-security references, exact vault/attachment/backup/CSV format documentation, testing/accessibility guidance, backup/recovery and security-response runbooks, expanded release process, and documentation-maintenance governance.
+- `DocumentationCoverageSourceTests` and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` to guard required documentation files, canonical entry-point links, and explicit independent-audit disclaimers.
 
 ### Changed
 - Vault master/recovery unlock, secondary unlock, public lock, and full-vault deletion transitions are serialized through the service transition gate so a late-finishing unlock cannot publish a new session after an already-requested lock.
@@ -96,6 +98,7 @@ All notable changes are documented here following Semantic Versioning principles
 - Redacted diagnostics delete their temporary app-cache file after the share request returns where permitted.
 - Store-listing guidance requires current policy verification before shipping an external funding/payment CTA; affected store builds must omit/disable the in-app CTA if the applicable policy does not permit it.
 - Release/test/database/architecture/security/privacy/legal documentation was expanded to match implemented behavior and remaining external-validation limits.
+- Root README, contribution/security/privacy/support, build/database/architecture, project-status, and documentation-hub entry points now cross-link the canonical user/developer/security/format/operations/release documentation so the complete documentation set is navigable rather than isolated files.
 
 ## [0.1.0] - 2026-08-09
 
