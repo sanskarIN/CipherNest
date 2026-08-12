@@ -64,7 +64,7 @@ public sealed class DocumentationCoverageSourceTests
         foreach (var segments in RequiredDocumentation)
         {
             var path = PathAt(segments);
-            Assert.True(File.Exists(path), $"Required documentation file is missing: {string.Join('/', segments)}");
+            Assert.True(File.Exists(path), $"Required documentation file is missing: {string.Join("/", segments)}");
             Assert.False(string.IsNullOrWhiteSpace(File.ReadAllText(path)));
         }
     }
