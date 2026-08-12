@@ -4,16 +4,17 @@ This roadmap starts from the current local-first CipherNest source tree. It deli
 
 ## Priority 0 — prove the current source on real build environments
 
-Repository source now contains repeatable verification scripts and configured CI compile gates for core tests/formatting, Windows, Android, iOS, Mac Catalyst, the funding-disabled Windows variant, CodeQL application analysis, and dependency review. The latest source-hardening pass added cancellation-safe backup rollback, protected backup export destinations, duplicate/pathological backup entry bounds, collision-resistant encrypted attachment/settings staging, SQLite DB/WAL/SHM recovery sets, 64 KiB vault-header limits, encrypted-record count/per-record/aggregate budgets, 16 MiB serialized item limits, 2,000,000-character aggregate item-text limits, and pre-swap resource validation. These gates still need passing evidence from the exact candidate commit.
+Repository source now contains repeatable verification scripts and configured CI compile gates for core tests/formatting, Windows, Android, iOS, Mac Catalyst, the funding-disabled Windows variant, CodeQL application analysis, and dependency review. The latest source-hardening pass added cancellation-safe backup rollback, protected backup export destinations, duplicate/pathological backup entry bounds, collision-resistant encrypted attachment/settings staging, SQLite DB/WAL/SHM recovery sets, 64 KiB vault-header limits, encrypted-record count/per-record/aggregate budgets, 16 MiB serialized item limits, 2,000,000-character aggregate item-text limits, and pre-swap resource validation. The complete documentation pass also added a canonical documentation hub, user/developer/maintainer/security/format/testing/operations/release manuals and `DocumentationCoverageSourceTests`; those source gates still need execution and semantic source-to-document review on the exact candidate. These gates still need passing evidence from the exact candidate commit.
 
-1. Run `scripts/verify-core.ps1` or `scripts/verify-core.sh` from a clean checkout with the selected .NET 10 SDK.
-2. Run the platform script on each appropriate host: `scripts/verify-windows.ps1`, `scripts/verify-android.sh`, and `scripts/verify-apple.sh`.
-3. Review the main GitHub Actions workflow for the exact candidate: core tests/format, Windows default/funding-disabled builds, Android build, and iOS/Mac Catalyst builds must all complete successfully.
-4. Review CodeQL after it builds both analyzable core code and the Android MAUI application target.
-5. Review dependency-review, secret-scanning, and vulnerability results for the exact candidate commit.
-6. Record exact SDK/workload/platform-toolchain versions used for every successful candidate.
-7. Treat any build warning, failed test, migration/restore failure, crypto-vector failure, unbounded parser/storage/resource condition, malformed stored metadata escaping validation, raw secret/path disclosure, or unexpected platform analyzer warning as release-blocking until resolved.
-8. Preserve the immutable candidate commit/tag and verification evidence. See `docs/verification/CI_GATES.md`.
+1. Run `scripts/verify-core.ps1` or `scripts/verify-core.sh` from a clean checkout with the selected .NET 10 SDK. This includes the UI/source project that contains the documentation-completeness regression test.
+2. Review `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`, execute `DocumentationCoverageSourceTests`, and manually compare changed contracts, formats, limits/defaults, session/destructive authorization, platform support, recovery/deletion limitations, and deferred features against the canonical documentation suite. File presence alone is not semantic correctness.
+3. Run the platform script on each appropriate host: `scripts/verify-windows.ps1`, `scripts/verify-android.sh`, and `scripts/verify-apple.sh`.
+4. Review the main GitHub Actions workflow for the exact candidate: core tests/format, Windows default/funding-disabled builds, Android build, and iOS/Mac Catalyst builds must all complete successfully.
+5. Review CodeQL after it builds both analyzable core code and the Android MAUI application target.
+6. Review dependency-review, secret-scanning, and vulnerability results for the exact candidate commit.
+7. Record exact SDK/workload/platform-toolchain versions used for every successful candidate.
+8. Treat any build warning, failed test, migration/restore failure, crypto-vector failure, unbounded parser/storage/resource condition, malformed stored metadata escaping validation, raw secret/path disclosure, materially stale security/recovery/format documentation, or unexpected platform analyzer warning as release-blocking until resolved.
+9. Preserve the immutable candidate commit/tag and verification evidence. See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_08_11.md`, and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`.
 
 ## Priority 1 — device security validation
 
@@ -93,6 +94,7 @@ Repository source now contains repeatable verification scripts and configured CI
 - Confirm restored biometric metadata is deliberately invalidated locally.
 - Verify backup passphrase UI state is cleared before file-picker/share work and restore staging cleanup failures remain redacted.
 - Periodically test restore using disposable data instead of assuming backups are valid.
+- Use `docs/operations/BACKUP_RECOVERY_RUNBOOK.md` as the operational validation record and compare behavior with `docs/formats/ENCRYPTED_BACKUP.md`.
 
 ### CSV import/export
 
@@ -137,6 +139,7 @@ Repository source now contains repeatable verification scripts and configured CI
 - Verify 44-DIP minimum touch targets and contrast in light/dark/system modes.
 - Continue migrating remaining user-facing literal strings into resource catalogs.
 - Add a complete Hindi catalog only when every security warning can be translated/reviewed without weakening meaning.
+- Execute and record the complete target/accessibility matrix in `docs/ACCESSIBILITY.md` rather than treating source semantic metadata as certification.
 
 ## Priority 5 — performance and scale
 
@@ -151,6 +154,7 @@ Repository source now contains repeatable verification scripts and configured CI
 
 ## Priority 6 — release engineering
 
+- Follow `docs/releases/RELEASE_PROCESS.md` as the end-to-end candidate/evidence/signing/provenance process and reconcile every applicable item in `docs/RELEASE_CHECKLIST.md`.
 - Lock exact release SDK/workload/package versions after successful validation.
 - Review every direct and transitive dependency license against the exact restored graph.
 - Review known vulnerabilities and document any accepted exception with rationale and expiry.
@@ -163,6 +167,7 @@ Repository source now contains repeatable verification scripts and configured CI
 - Verify the current policy for the optional `https://buymeacoffee.com/sanskarIN` in-app funding CTA on each exact store/region/distribution target.
 - If a target policy requires the funding CTA to be absent, build that app package with `-p:CipherNestEnableFundingLink=false` and record the chosen value in release provenance.
 - Use only synthetic/demo vault content in screenshots and marketing images.
+- Freeze the canonical documentation suite against the exact candidate: `docs/README.md`, user/developer/maintainer/security/format/testing/operations/release docs, root README/security/privacy/support/contributing surfaces, changelog/project status, and audit wording must match the shipped artifact.
 
 ## Priority 7 — security review before broader claims
 
@@ -175,14 +180,16 @@ Repository source now contains repeatable verification scripts and configured CI
 - Review parser fuzzing opportunities for CSV, backup archives/header metadata, attachment metadata/storage names, settings JSON, vault records, and vault-header deserialization.
 - Review rollback/downgrade behavior for future crypto/database/vault-header format versions.
 - Review dependency/supply-chain pinning and release provenance.
+- Review `docs/security/THREAT_MODEL.md`, `CRYPTOGRAPHIC_DESIGN.md`, `SESSION_SECURITY.md`, `DATA_LIFECYCLE.md`, and exact format documents against implementation as part of the independent/internal review scope.
 - Keep the product wording at “not independently audited” until an actual audit is completed and its scope is known.
 
 ## Priority 8 — launch and open-source operations
 
 - Publish release notes tied to an immutable commit/tag.
 - Publish checksums for distributable artifacts where practical.
-- Keep `SECURITY.md`, `SUPPORT.md`, `PRIVACY.md`, `TERMS.md`, `THIRD_PARTY_NOTICES.md`, `CHANGELOG.md`, and `PROJECT_STATUS.md` synchronized with the release.
+- Keep `docs/README.md`, `docs/USER_GUIDE.md`, `docs/MAINTAINER_GUIDE.md`, `docs/DOCUMENTATION_MAINTENANCE.md`, `SECURITY.md`, `SUPPORT.md`, `PRIVACY.md`, `TERMS.md`, `THIRD_PARTY_NOTICES.md`, `CHANGELOG.md`, and `PROJECT_STATUS.md` synchronized with the release.
 - Triage bug reports without asking users to upload vault contents, passphrases, recovery keys, decrypted backups, or secret-bearing diagnostics.
+- Use `docs/operations/SECURITY_RESPONSE.md` for security reports and `docs/operations/BACKUP_RECOVERY_RUNBOOK.md` for recovery/support validation.
 - Use GitHub issues/discussions for public feature planning where appropriate.
 - The optional development-support link is `https://buymeacoffee.com/sanskarIN`; support must remain voluntary and must not change security/privacy treatment, support priority, or GPL feature access.
 
@@ -200,21 +207,23 @@ The following should remain separate future-version projects rather than being r
 - additional complete translation catalogs;
 - destructive automatic wipe after failed attempts.
 
-Each one changes the attack surface materially and should receive its own architecture decision, threat-model update, privacy review, test plan, migration/compatibility plan, and release gate before implementation.
+Each one changes the attack surface materially and should receive its own architecture decision, threat-model update, privacy review, test plan, migration/compatibility plan, documentation/data-flow/format updates, and release gate before implementation.
 
 ## Recommended immediate execution order
 
-1. Run the committed core/platform verification scripts and inspect the exact GitHub CI/CodeQL/dependency-review results.
-2. Fix every compiler/analyzer/test/workload problem found; do not waive a security-sensitive failure just to package a candidate.
-3. Execute the new backup rollback/path/archive, SQLite resource/recovery, header/storage-budget, attachment staging, and settings staging tests on the exact candidate.
-4. Android + Windows smoke tests.
-5. Apple builds/smoke tests on an appropriate host.
-6. Real-device biometric, lifecycle, screenshot, clipboard, secure-storage, and lock-cancellation validation.
-7. Backup/restore/database-replacement and transfer compatibility/recovery matrix.
-8. Accessibility/localization/responsive-layout pass.
-9. Performance/large-vault measurements.
-10. Dependency/license/security review.
-11. Store-policy decision for the optional funding CTA and record the build setting.
-12. Signed release-candidate packaging.
-13. Independent security review before stronger marketing claims.
-14. Tag/release only after every applicable release-checklist gate has evidence.
+1. Run the committed core verification script and execute/review `DocumentationCoverageSourceTests` plus the semantic documentation review in `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`.
+2. Run the platform verification scripts and inspect the exact GitHub CI/CodeQL/dependency-review results.
+3. Fix every compiler/analyzer/test/workload/documentation mismatch found; do not waive a security-sensitive failure just to package a candidate.
+4. Execute the backup rollback/path/archive, SQLite resource/recovery, header/storage-budget, attachment staging, settings staging, framing/passphrase, and documentation source tests on the exact candidate.
+5. Android + Windows smoke tests.
+6. Apple builds/smoke tests on an appropriate host.
+7. Real-device biometric, lifecycle, screenshot, clipboard, secure-storage, lock-cancellation, share-sheet, and plaintext-cleanup validation.
+8. Backup/restore/database-replacement and transfer compatibility/recovery matrix using `docs/operations/BACKUP_RECOVERY_RUNBOOK.md`.
+9. Accessibility/localization/responsive-layout pass using `docs/ACCESSIBILITY.md`.
+10. Performance/large-vault measurements.
+11. Dependency/license/security review.
+12. Store-policy decision for the optional funding CTA and record the build setting.
+13. Freeze release documentation against the exact candidate and complete `docs/releases/RELEASE_PROCESS.md`/`docs/RELEASE_CHECKLIST.md` evidence.
+14. Signed release-candidate packaging.
+15. Independent security review before stronger marketing claims.
+16. Tag/release only after every applicable release-checklist gate has evidence.
