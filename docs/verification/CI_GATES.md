@@ -12,6 +12,8 @@ The `test-core` job on Ubuntu restores, builds, and runs:
 
 It also runs `dotnet format --verify-no-changes` against the Domain, Application, Infrastructure, Shared, and test projects. Repository build properties keep nullable analysis, analyzers, deterministic compilation, and warnings-as-errors enabled.
 
+`CipherNest.UiTests` now includes `DocumentationCoverageSourceTests`, which guards the required canonical documentation files, root/documentation-hub entry points, and explicit independent-audit disclaimers. This makes documentation-suite presence part of the core automated source gate. Semantic documentation accuracy still requires review against the exact source candidate; see `DOCUMENTATION_SUITE_2026_08_12.md`.
+
 Local equivalents:
 
 - PowerShell: `scripts/verify-core.ps1`
@@ -51,6 +53,21 @@ CodeQL analyzes C# source after building the integration-test/core path and the 
 
 Pull requests run GitHub dependency review with `fail-on-severity: high`. Release review must also inspect the exact restored direct/transitive package graph, license obligations, and any accepted vulnerability exception.
 
+## Documentation verification
+
+Two committed verification references complement the executable core gate:
+
+- `SECURITY_HARDENING_2026_08_11.md` — framing/resource/session/platform source hardening gates.
+- `DOCUMENTATION_SUITE_2026_08_12.md` — complete documentation-suite presence, link, disclaimer, semantic source-to-document, synthetic-data, and historical-preservation gates.
+
+For a release candidate:
+
+1. `CipherNest.UiTests` including `DocumentationCoverageSourceTests` must execute successfully.
+2. Reviewers must manually compare any changed public interfaces, models, format framing, limits/defaults, session/destructive authorization, platform support, recovery/deletion semantics, and deferred features against the canonical documentation.
+3. Root `README.md`, `docs/README.md`, security/privacy/support/contribution entry points, changelog, project status, release checklist, and affected format/security docs must all remain synchronized.
+
+A documentation source test proves required files/strings are present; it does not prove the prose accurately describes runtime behavior unless reviewers perform the source-to-document comparison.
+
 ## Workflow resource controls
 
 Primary CI, CodeQL, and dependency review use concurrency groups that cancel superseded runs and explicit job timeouts. This prevents stale commits from consuming unlimited hosted-runner time and makes stuck workload/install failures visible.
@@ -66,6 +83,7 @@ The configured workflows do not replace:
 - sleep/background/resume lifecycle validation;
 - accessibility testing with TalkBack, VoiceOver, Narrator, keyboard-only navigation, and OS large text;
 - file picker/share-provider plaintext-retention behavior;
+- semantic review that documentation exactly matches the current candidate beyond the automated presence/link/disclaimer checks;
 - signing, notarization, store package validation, or store policy review;
 - an independent cryptographic/security audit.
 
@@ -78,6 +96,7 @@ For every candidate, record:
 - installed workload versions;
 - runner/host OS and platform SDK versions;
 - CI/CodeQL/dependency-review results;
+- documentation-completeness test result and semantic documentation-review record;
 - selected `CipherNestEnableFundingLink` value for each distributed package;
 - device/simulator matrix and smoke-test results;
 - signing/store pipeline identity outside the repository;
