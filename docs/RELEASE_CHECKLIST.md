@@ -5,6 +5,8 @@
 - [ ] Platform verification scripts succeed on appropriate hosts where the release target is supported: `verify-windows.ps1`, `verify-android.sh`, and `verify-apple.sh`.
 - [ ] Unit, integration, and UI/source-structure tests pass with warnings-as-errors/analyzers enabled.
 - [ ] The additional 2026-08-11 framing/session/platform checks in `docs/verification/SECURITY_HARDENING_2026_08_11.md` pass on the exact candidate.
+- [ ] The documentation-completeness source gate in `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` passes: required canonical documents remain non-empty, root/hub entry-point links remain present, and primary security entry points retain the independent-audit disclaimer.
+- [ ] Documentation is reviewed semantically against the exact candidate for changed contracts, formats, resource limits/defaults, session/destructive-authorization behavior, platform support, recovery/deletion limitations, and deferred features; source-file presence alone is not accepted as proof of documentation correctness.
 - [ ] No legacy `.DisplayAlert(` call is present in MAUI C# source; current async alert APIs compile without warnings on each target workload.
 - [ ] Android and Windows smoke tests pass; iOS/MacCatalyst build and smoke tests pass on an appropriate Apple environment.
 - [ ] Manual lifecycle tests cover background, sleep/resume, timeout, manual lock, clock rollback, and fail-closed behavior, including a simulated cleanup failure that does not escape the native lifecycle callback.
@@ -71,7 +73,7 @@
 - [ ] Backup rollback after active mutation uses an uncancelled recovery token; cancellation of the original restore request does not cancel the rollback database replacement.
 - [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments, corrupted-container rejection, invalid staged-database rejection, cancellation during replacement, and preservation of the active vault after failure.
 - [ ] Large attachment streaming, plaintext-buffer zeroing, safe text preview, plaintext export warning, and temporary-cache cleanup are exercised.
-- [ ] Threat model, privacy notice, security design, diagnostics policy, third-party notices, changelog, support instructions, roadmap, CI-gate documentation, `SECURITY_HARDENING_2026_08_11.md`, and audit status are current.
+- [ ] Threat model, privacy notice, security design, session-security/data-lifecycle docs, exact format docs, diagnostics policy, third-party notices, changelog, support instructions, roadmap, CI/documentation verification docs, and audit status are current.
 - [ ] `docs/NEXT_STEPS.md` has been reviewed against the candidate and any completed/obsolete action has been reconciled before release notes are cut.
 - [ ] `AppConstants.BuyMeACoffeeUrl`, About, README, SUPPORT, and `.github/FUNDING.yml` still reference the intended `https://buymeacoffee.com/sanskarIN` project-support URL.
 - [ ] Financial support remains clearly optional and does not change security/privacy treatment, support priority, GPL feature access, or recovery behavior.
