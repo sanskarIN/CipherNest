@@ -7,6 +7,8 @@ This directory is the canonical navigation point for CipherNest project document
 - [`../README.md`](../README.md) — product overview, current capabilities, build entry points, repository/contact information, license, and high-level security status.
 - [`USER_GUIDE.md`](USER_GUIDE.md) — end-user workflow from first launch through daily use, backup, restore, import/export, lock, trash, settings, and recovery.
 - [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) — repository layout, dependency direction, local development workflow, extension rules, review boundaries, and contributor workflow.
+- [`MAINTAINER_GUIDE.md`](MAINTAINER_GUIDE.md) — day-to-day repository/security/release/support ownership rules.
+- [`DOCUMENTATION_MAINTENANCE.md`](DOCUMENTATION_MAINTENANCE.md) — documentation governance, source-of-truth, synchronization, wording, and historical-preservation rules.
 - [`API_REFERENCE.md`](API_REFERENCE.md) — application-layer public contracts and domain model reference.
 - [`LIMITS_AND_DEFAULTS.md`](LIMITS_AND_DEFAULTS.md) — implemented safety ceilings, defaults, format versions, identifiers, and operational bounds.
 - [`PROJECT_GLOSSARY.md`](PROJECT_GLOSSARY.md) — project-specific terminology used across code, UI, tests, and security documents.
