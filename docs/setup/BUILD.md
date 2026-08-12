@@ -1,122 +1,159 @@
 # Build and Run
 
+CipherNest targets .NET 10 MAUI for Android, iOS, Mac Catalyst, and Windows. Core source/test projects can be built on any supported .NET 10 host; MAUI platform builds require the corresponding workload/toolchain.
+
+For project architecture/dependency ownership before changing build inputs, see `../DEVELOPER_GUIDE.md` and `../architecture/DEPENDENCY_MAP.md`. The complete documentation index is `../README.md`.
+
 ## Prerequisites
 
-Install a current supported .NET 10 SDK and the .NET MAUI workload. Platform targets additionally require the platform SDK/toolchain: Android SDK/JDK for Android, Windows App SDK tooling on Windows, and Xcode on a supported Mac for iOS/Mac Catalyst.
+- .NET SDK family pinned by `global.json` (10.0.100 with `latestFeature` roll-forward).
+- .NET MAUI workload for platform builds.
+- Android SDK/JDK for Android.
+- Windows SDK/tooling on Windows for Windows target.
+- A supported Mac/Xcode environment for iOS and Mac Catalyst.
+
+Inspect the environment with:
 
 ```bash
 dotnet --info
-dotnet workload restore
+dotnet workload list
+```
+
+## Restore
+
+```bash
 dotnet restore CipherNest.slnx
 ```
 
-## Reproducible verification entry points
+Package versions are centrally managed in `Directory.Packages.props`.
 
-Use the committed scripts before hand-assembling local commands. They mirror the repository's current verification intent and fail on the first unsuccessful restore/build/test/format step.
+## Core build/test
 
-- PowerShell core verification: `scripts/verify-core.ps1`
-- POSIX core verification: `scripts/verify-core.sh`
-- Windows MAUI verification: `scripts/verify-windows.ps1`
-- Android MAUI verification: `scripts/verify-android.sh`
-- iOS + Mac Catalyst verification on macOS: `scripts/verify-apple.sh`
+Prefer the committed verification scripts because they encode the repository's intended core gate:
 
-The Windows script compiles both the normal app and the `CipherNestEnableFundingLink=false` variant. The platform scripts are compile gates; device behavior still requires the release test matrix. See `docs/verification/CI_GATES.md`.
+PowerShell:
 
-## Host-independent core tests
-
-The non-MAUI test projects can be restored/built/run on a normal .NET 10 host:
-
-```bash
-dotnet build tests/CipherNest.UnitTests/CipherNest.UnitTests.csproj -c Release
-dotnet build tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj -c Release
-dotnet build tests/CipherNest.UiTests/CipherNest.UiTests.csproj -c Release
-
-dotnet test tests/CipherNest.UnitTests/CipherNest.UnitTests.csproj -c Release --no-build
-dotnet test tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj -c Release --no-build
-dotnet test tests/CipherNest.UiTests/CipherNest.UiTests.csproj -c Release --no-build
+```powershell
+./scripts/verify-core.ps1
 ```
 
-The core CI gate also runs `dotnet format --verify-no-changes` for Domain, Application, Infrastructure, Shared, UnitTests, IntegrationTests, and UiTests.
+POSIX:
+
+```bash
+sh scripts/verify-core.sh
+```
+
+These cover the non-MAUI core/test projects and formatting verification. See `../TESTING_GUIDE.md` and `../verification/CI_GATES.md` for test/evidence semantics.
 
 ## Windows
 
-From Windows with the MAUI workload installed:
-
-```powershell
-dotnet restore src/CipherNest.App/CipherNest.App.csproj -p:TargetFramework=net10.0-windows10.0.19041.0
-dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-windows10.0.19041.0 --no-restore -p:WindowsPackageType=None
-```
-
-Or run:
+On Windows with the MAUI workload/tooling:
 
 ```powershell
 ./scripts/verify-windows.ps1
 ```
 
-Store/MSIX signing is a separate release step and requires signing material outside the repository.
+Direct build target:
+
+```powershell
+dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-windows10.0.19041.0
+```
+
+Current declared Windows minimum is `10.0.19041.0`.
 
 ## Android
 
-From a host with the supported Android toolchain:
-
-```bash
-dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-android
-```
-
-Or run:
+With Android MAUI workload/SDK/JDK:
 
 ```bash
 sh scripts/verify-android.sh
 ```
 
-Use an emulator or physical device for biometric, screenshot, clipboard, lifecycle, file-picker, sharing, and accessibility verification. Source compilation alone is not proof that those behaviors work on a specific Android device/OS build.
+Direct target:
+
+```bash
+dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-android
+```
+
+The app project declares Android minimum API 26. The optional native biometric convenience-unlock implementation uses the API-28 `BiometricPrompt` path and must fall back safely where that capability is unavailable.
 
 ## iOS and Mac Catalyst
 
-Use a supported Mac/Xcode environment:
+On a supported Mac/Xcode environment:
+
+```bash
+sh scripts/verify-apple.sh
+```
+
+Direct targets:
 
 ```bash
 dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-ios
 dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-maccatalyst
 ```
 
-Or run:
+The current project declares minimum version 15.0 for iOS and Mac Catalyst.
 
-```bash
-sh scripts/verify-apple.sh
-```
+## Funding-link build switch
 
-Provisioning/signing identities, App Store credentials, and certificates must be supplied through protected local/CI mechanisms and never committed.
+The in-app optional Buy Me a Coffee surface is enabled unless the property is explicitly set to `false`.
 
-## Optional project-support CTA build switch
-
-The repository's optional support URL is `https://buymeacoffee.com/sanskarIN`. Normal builds expose the voluntary support surface in About. If a target store/distribution policy does not permit that in-app external funding CTA, compile the app with it disabled rather than editing source:
+Example:
 
 ```bash
 dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestEnableFundingLink=false
 ```
 
-`CipherNestEnableFundingLink` defaults to `true`. Setting it explicitly to `false` defines `CIPHERNEST_DISABLE_FUNDING_LINK` for the MAUI app and `BuildFeatureFlags.IsFundingLinkEnabled` hides the in-app funding frame and metadata label. Other values leave the default UI behavior unchanged. This switch does not alter repository README/Support/Funding metadata. Verify the current policy for the exact store, region, distribution method, and app category before choosing the release value.
+This defines the app's disable symbol and hides the in-app funding CTA. It does not remove repository `.github/FUNDING.yml` metadata. Verify current policy for the exact store/distribution/region before choosing the release value, and record it in release provenance.
 
-## GitHub CI coverage
+## Build quality policy
 
-The main workflow is configured to run:
+`Directory.Build.props` applies:
 
-- core unit/integration/UI-structure tests and formatting on Ubuntu;
-- default and funding-disabled Windows Release compilation;
+- latest C# language version;
+- nullable reference analysis;
+- implicit usings;
+- warnings as errors;
+- latest analysis level;
+- code-style enforcement in build;
+- deterministic managed compilation;
+- `ContinuousIntegrationBuild=true` when `CI=true`.
+
+Resolve new warnings/errors instead of globally disabling these gates.
+
+## CI
+
+Main CI is configured for:
+
+- Ubuntu core restore/build/test/format;
+- Windows default Release compilation;
+- Windows funding-disabled Release compilation;
 - Android Release compilation;
-- iOS and Mac Catalyst Release compilation on macOS.
+- iOS and Mac Catalyst Release compilation on macOS;
+- timeouts and superseded-run cancellation.
 
-CodeQL builds both analyzable core code and the Android MAUI application target. Dependency review fails pull requests when introduced dependencies meet the configured high-severity threshold. Main CI, CodeQL, and dependency review use concurrency cancellation and explicit job timeouts.
+CodeQL is configured to analyze the MAUI Android application path plus core/integration code. Dependency review is configured separately.
 
-A configured workflow is not evidence that a particular commit passed. Review the checks for the exact release candidate.
+Configured workflow presence does **not** mean a candidate passed. Review the exact commit's run results according to `../verification/CI_GATES.md` and `../releases/RELEASE_PROCESS.md`.
 
-## Full solution
+## Debug versus Release
 
-`dotnet build CipherNest.slnx` evaluates all included projects and may require every target workload/toolchain represented by the MAUI app. Prefer the target-specific app commands above on a host that cannot build every platform.
+The App registers normal debug logging only under `DEBUG`. Developers must still avoid writing sensitive vault values, credentials, paths, or plaintext to debug logs.
 
-## Formatting and analysis
+Security/resource behavior must not depend on Debug-only checks; release builds require the same validation/authentication boundaries.
 
-Before a release candidate, use the core verification script or run formatting explicitly. Running `dotnet format` across the full solution can require workloads for every target, so on a host without all MAUI workloads prefer the project-scoped formatting commands encoded by `scripts/verify-core.*`.
+## Packaging/signing
 
-Repository build properties enable nullable analysis, current analyzers, deterministic builds, and warnings-as-errors. See `docs/TEST_PLAN.md`, `docs/RELEASE_CHECKLIST.md`, `docs/NEXT_STEPS.md`, and `docs/verification/CI_GATES.md` for the complete release gate and ordered follow-up plan.
+Compilation does not produce a distribution-ready claim by itself. Signing/provisioning/store packaging must happen in protected environments with credentials outside Git.
+
+See:
+
+- `../releases/PACKAGING.md`
+- `../releases/REPRODUCIBLE_BUILDS.md`
+- `../releases/STORE_LISTING_GUIDE.md`
+- `../releases/RELEASE_PROCESS.md`
+- `../RELEASE_CHECKLIST.md`
+
+## Troubleshooting
+
+See `../TROUBLESHOOTING.md`. When reporting build problems, provide SDK/workload/platform details and redacted error output; never include signing secrets, real vault data, passphrases, recovery material, or store tokens.
