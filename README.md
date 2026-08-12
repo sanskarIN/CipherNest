@@ -43,6 +43,24 @@ CipherNest is a local-first, open-source password, secure-note, identity, creden
 - Central exception reporting intentionally omits exception messages/stacks and vault content. No third-party analytics or crash-reporting service is enabled.
 - Original vector branding includes launcher/adaptive sources, a splash wordmark with `Made by the Sanskar`, a monochrome source, and a dark-surface logo variant.
 
+## Documentation
+
+The complete documentation suite is indexed at [`docs/README.md`](docs/README.md).
+
+Primary entry points:
+
+- [User Guide](docs/USER_GUIDE.md) — setup, unlock, items, attachments, backup/restore, CSV transfer, settings, trash, deletion, and recovery limitations.
+- [Developer Guide](docs/DEVELOPER_GUIDE.md) — architecture, DI, contracts, persistence, session rules, testing, review, and extension guidance.
+- [Maintainer Guide](docs/MAINTAINER_GUIDE.md) — repository/security/release/support ownership.
+- [API Reference](docs/API_REFERENCE.md) — current Application contracts and Domain models.
+- [Limits and Defaults](docs/LIMITS_AND_DEFAULTS.md) — implemented resource ceilings, defaults, versions, and timing bounds.
+- [Architecture and Data Flow](docs/architecture/ARCHITECTURE.md) · [Data Flow](docs/architecture/DATA_FLOW.md) · [Session/Concurrency](docs/architecture/SESSION_AND_CONCURRENCY.md) · [Dependency Map](docs/architecture/DEPENDENCY_MAP.md).
+- [Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [Session Security](docs/security/SESSION_SECURITY.md) · [Sensitive Data Lifecycle](docs/security/DATA_LIFECYCLE.md).
+- [Vault Records](docs/formats/VAULT_RECORDS.md) · [Encrypted Attachments](docs/formats/ATTACHMENTS.md) · [Encrypted Backup](docs/formats/ENCRYPTED_BACKUP.md) · [CSV Transfer](docs/formats/CSV_TRANSFER.md).
+- [Testing Guide](docs/TESTING_GUIDE.md) · [Accessibility](docs/ACCESSIBILITY.md) · [Release Process](docs/releases/RELEASE_PROCESS.md) · [Backup/Recovery Runbook](docs/operations/BACKUP_RECOVERY_RUNBOOK.md) · [Security Response Runbook](docs/operations/SECURITY_RESPONSE.md).
+
+Documentation is required to follow current source behavior rather than planned features; governance rules are in [`docs/DOCUMENTATION_MAINTENANCE.md`](docs/DOCUMENTATION_MAINTENANCE.md).
+
 ## Verification and build
 
 Requirements: a current .NET 10 SDK with the .NET MAUI workload and platform SDKs for the desired target.
