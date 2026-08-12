@@ -1,6 +1,6 @@
 # Platform Packaging
 
-Packaging is intentionally separated from source compilation because release signing credentials must never be committed.
+Packaging is intentionally separated from source compilation because release signing credentials must never be committed. The canonical end-to-end candidate/evidence/signing process is `RELEASE_PROCESS.md`; build prerequisites are in `../setup/BUILD.md`.
 
 ## Android
 
@@ -43,9 +43,11 @@ That switch hides the About funding frame and funding metadata label in the comp
 ## Before signing
 
 - Run the complete `docs/RELEASE_CHECKLIST.md` gate.
+- Follow `RELEASE_PROCESS.md` and retain the exact candidate/toolchain/test/device/provenance record.
 - Review `docs/NEXT_STEPS.md` and reconcile any release-blocking action applicable to the candidate.
 - Confirm `THIRD_PARTY_NOTICES.md` against the exact restored packages.
 - Confirm the audit status and threat model are current.
+- Execute/review the documentation-completeness gate in `../verification/DOCUMENTATION_SUITE_2026_08_12.md` so store/release wording matches the exact shipped candidate.
 - Confirm all screenshots/sample vaults contain synthetic data only.
 - Confirm the funding CTA build setting matches the verified policy for that exact distribution target.
 - Preserve the exact source commit/tag and environment metadata used for the candidate.
