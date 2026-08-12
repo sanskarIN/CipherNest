@@ -76,3 +76,14 @@ Each `VaultItems.Id` is included as associated data when the encrypted envelope 
 ## Search design
 
 CipherNest intentionally does not create a SQLite full-text index because that would require plaintext searchable terms at rest. Search decrypts authenticated item envelopes only while the vault is unlocked and filters in process. Key-using reads run through per-session cancellable key leases; locking cancels the active session token so cancellable reads/exports do not deliberately continue after the vault is locked. This trades database-level indexing performance for smaller plaintext metadata exposure.
+
+## Related canonical references
+
+- `../formats/VAULT_RECORDS.md` — logical/encrypted row representation and identity binding.
+- `../formats/ATTACHMENTS.md` — separately encrypted `.cna` files referenced from encrypted item payloads.
+- `../formats/ENCRYPTED_BACKUP.md` — snapshot/archive/restore framing and validation order.
+- `SESSION_AND_CONCURRENCY.md` — transition/mutation/recovery cancellation rules.
+- `DATA_FLOW.md` — end-to-end persistence paths.
+- `../LIMITS_AND_DEFAULTS.md` — current numeric storage/resource ceilings.
+- `../operations/BACKUP_RECOVERY_RUNBOOK.md` — operational backup/restore validation and interruption guidance.
+- `../TESTING_GUIDE.md` and `../TEST_PLAN.md` — migration/replacement/resource regression requirements.
