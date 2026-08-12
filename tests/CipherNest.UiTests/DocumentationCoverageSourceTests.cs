@@ -33,6 +33,8 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "formats", "ENCRYPTED_BACKUP.md"],
         ["docs", "formats", "CSV_TRANSFER.md"],
         ["docs", "verification", "CI_GATES.md"],
+        ["docs", "verification", "SECURITY_HARDENING_2026_08_11.md"],
+        ["docs", "verification", "DOCUMENTATION_SUITE_2026_08_12.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -102,6 +104,7 @@ public sealed class DocumentationCoverageSourceTests
                      "formats/CSV_TRANSFER.md",
                      "TESTING_GUIDE.md",
                      "ACCESSIBILITY.md",
+                     "verification/DOCUMENTATION_SUITE_2026_08_12.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
