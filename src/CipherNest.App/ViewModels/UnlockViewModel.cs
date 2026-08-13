@@ -14,10 +14,17 @@ public partial class UnlockViewModel : ObservableObject
     private readonly ISettingsStore _settings;
     private readonly SessionSecurityState _sessionSecurity;
 
-    [ObservableProperty] private string masterPassphrase = string.Empty;
-    [ObservableProperty] private string errorMessage = string.Empty;
-    [ObservableProperty] private bool isBusy;
-    [ObservableProperty] private bool biometricUnlockAvailable;
+    [ObservableProperty]
+    public partial string MasterPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ErrorMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial bool BiometricUnlockAvailable { get; set; }
 
     public UnlockViewModel(IVaultService vault, UnlockRateLimiter limiter, IBiometricUnlockService biometrics, ISettingsStore settings, SessionSecurityState sessionSecurity)
     {
