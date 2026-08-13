@@ -1,10 +1,15 @@
 # Support
 
 Support email: `supportramsandesh@gmail.com`  
-Business/project email: `sanskarin@outlook.in`  
-Optional project support: https://buymeacoffee.com/sanskarIN
+Business/project email: `sanskarin@outlook.in`
 
-Financial support is voluntary and does not change feature access, security handling, support priority, licensing, recovery behavior, or privacy treatment.
+## ☕ Support CipherNest development
+
+[![BMC — Support CipherNest](src/CipherNest.App/Resources/Images/bmc_support.svg)](https://buymeacoffee.com/sanskarIN)
+
+**Buy Me a Coffee:** https://buymeacoffee.com/sanskarIN
+
+Financial support is voluntary and does not change feature access, security handling, support priority, licensing, recovery behavior, privacy treatment, or open-source rights. The in-app funding surface can be disabled for a distribution build without removing repository funding metadata.
 
 ## Before requesting help
 
