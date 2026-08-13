@@ -11,9 +11,18 @@ The editable/vector-friendly sources live under the MAUI project resources:
 - `src/CipherNest.App/Resources/AppIcon/appicon-mono.svg` — monochrome system-surface source derived from the same geometry;
 - `src/CipherNest.App/Resources/Splash/splash.svg` — splash vector with the CipherNest wordmark and `Made by the Sanskar` creator credit;
 - `src/CipherNest.App/Resources/Images/ciphernest_logo.svg` — primary in-app logo source;
-- `src/CipherNest.App/Resources/Images/ciphernest_logo_dark.svg` — higher-contrast dark-surface logo source.
+- `src/CipherNest.App/Resources/Images/ciphernest_logo_dark.svg` — higher-contrast dark-surface logo source;
+- `src/CipherNest.App/Resources/Images/bmc_support.svg` — original CipherNest project-support badge using a coffee-cup/BMC motif and `Support CipherNest` text. It is intentionally a CipherNest-created support graphic, not a claim that it is the official Buy Me a Coffee brand logo.
 
 .NET MAUI generates configured platform-specific icon/splash assets from the project resources during target builds. Store-delivery icon sets still require inspection against the current Android, Apple, and Windows packaging rules before release.
+
+## BMC support badge usage
+
+The BMC support badge may be used on repository documentation and the optional in-app project-support surface. When it is interactive, it must open the canonical project-support URL from `AppConstants.BuyMeACoffeeUrl` rather than duplicating a second hard-coded in-app URL.
+
+Repository Markdown may link the badge directly to `https://buymeacoffee.com/sanskarIN`. The in-app support surface remains controlled by `BuildFeatureFlags.IsFundingLinkEnabled` so a distribution build can disable the external funding CTA without editing the shared branding asset.
+
+Keep the support badge visually distinct from security/status UI. Do not imply that payment changes feature access, security handling, privacy treatment, licensing rights, recovery behavior, or support priority.
 
 ## Rules
 
@@ -24,6 +33,7 @@ The editable/vector-friendly sources live under the MAUI project resources:
 - The splash may carry the product wordmark/creator credit, while the launcher icon itself should remain a simple text-free mark.
 - Preserve light/dark contrast and test system surfaces that mask/crop icons.
 - Do not add unverified security claims such as “unhackable”, “military-grade”, “100% secure”, or “audited”.
+- Do not present the custom `bmc_support.svg` asset as an official third-party trademark asset.
 
 ## Platform generation and inspection
 
@@ -33,8 +43,9 @@ The editable/vector-friendly sources live under the MAUI project resources:
 4. Inspect iOS/Mac icon rendering, opaque-background requirements, small-size legibility, and store asset acceptance.
 5. Inspect Windows app-list/taskbar/tile sizes and high-DPI scaling.
 6. Inspect the splash on small/large phones, tablets/foldables, desktop windows, light/dark system states, and localized startup environments where applicable.
-7. Generate store listing/feature graphics separately according to current store requirements; see `docs/releases/STORE_LISTING_GUIDE.md`.
-8. Keep signing/store credentials unrelated to asset generation and outside the repository.
+7. Inspect the BMC support badge on light/dark About-page backgrounds and GitHub rendering, including accessibility description and tap/click target behavior.
+8. Generate store listing/feature graphics separately according to current store requirements; see `docs/releases/STORE_LISTING_GUIDE.md`.
+9. Keep signing/store credentials unrelated to asset generation and outside the repository.
 
 ## Monochrome use
 
