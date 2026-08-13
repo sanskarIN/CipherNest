@@ -15,19 +15,45 @@ public partial class TransferViewModel : ObservableObject
     private FileResult? _selectedCsv;
 
     public ObservableCollection<string> Headers { get; } = [];
-    [ObservableProperty] private string? titleColumn;
-    [ObservableProperty] private string? usernameColumn;
-    [ObservableProperty] private string? secretColumn;
-    [ObservableProperty] private string? urlColumn;
-    [ObservableProperty] private string? notesColumn;
-    [ObservableProperty] private string? tagsColumn;
-    [ObservableProperty] private string? collectionColumn;
-    [ObservableProperty] private string? typeColumn;
-    [ObservableProperty] private string selectedFileName = "No CSV selected.";
-    [ObservableProperty] private string exportMasterPassphrase = string.Empty;
-    [ObservableProperty] private string exportConfirmationPhrase = string.Empty;
-    [ObservableProperty] private string statusMessage = string.Empty;
-    [ObservableProperty] private bool isBusy;
+
+    [ObservableProperty]
+    public partial string? TitleColumn { get; set; }
+
+    [ObservableProperty]
+    public partial string? UsernameColumn { get; set; }
+
+    [ObservableProperty]
+    public partial string? SecretColumn { get; set; }
+
+    [ObservableProperty]
+    public partial string? UrlColumn { get; set; }
+
+    [ObservableProperty]
+    public partial string? NotesColumn { get; set; }
+
+    [ObservableProperty]
+    public partial string? TagsColumn { get; set; }
+
+    [ObservableProperty]
+    public partial string? CollectionColumn { get; set; }
+
+    [ObservableProperty]
+    public partial string? TypeColumn { get; set; }
+
+    [ObservableProperty]
+    public partial string SelectedFileName { get; set; } = "No CSV selected.";
+
+    [ObservableProperty]
+    public partial string ExportMasterPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ExportConfirmationPhrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
 
     public TransferViewModel(IPlaintextTransferService transfer, IVaultService vault, IPrivacySafeExceptionReporter exceptions)
     {
@@ -66,7 +92,10 @@ public partial class TransferViewModel : ObservableObject
             StatusMessage = "CSV could not be selected or opened safely. Check file access and format, then try again.";
             _selectedCsv = null;
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -103,7 +132,10 @@ public partial class TransferViewModel : ObservableObject
             _exceptions.Report("Transfer.ImportCsv", ex);
             StatusMessage = "Import stopped safely. No additional rows will be imported from this file until you retry.";
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
