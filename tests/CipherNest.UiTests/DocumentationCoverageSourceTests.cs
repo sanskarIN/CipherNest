@@ -35,6 +35,7 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "CI_GATES.md"],
         ["docs", "verification", "SECURITY_HARDENING_2026_08_11.md"],
         ["docs", "verification", "DOCUMENTATION_SUITE_2026_08_12.md"],
+        ["docs", "verification", "SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -105,6 +106,7 @@ public sealed class DocumentationCoverageSourceTests
                      "TESTING_GUIDE.md",
                      "ACCESSIBILITY.md",
                      "verification/DOCUMENTATION_SUITE_2026_08_12.md",
+                     "verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
