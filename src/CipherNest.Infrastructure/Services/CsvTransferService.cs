@@ -142,10 +142,11 @@ public sealed class CsvTransferService : IPlaintextTransferService
         private readonly int _maxRows;
         private int _rowsRead;
         private bool _finished;
+        private bool _atStart = true;
 
         public CsvParser(Stream source, int maxRows)
         {
-            _reader = new StreamReader(source, StrictUtf8, detectEncodingFromByteOrderMarks: true, 64 * 1024, leaveOpen: true);
+            _reader = new StreamReader(source, StrictUtf8, detectEncodingFromByteOrderMarks: false, 64 * 1024, leaveOpen: true);
             _maxRows = maxRows > 0 ? maxRows : throw new ArgumentOutOfRangeException(nameof(maxRows));
         }
 
@@ -256,14 +257,24 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
         private async Task<int> ReadCharAsync(CancellationToken cancellationToken)
         {
-            try
+            while (true)
             {
-                var count = await _reader.ReadAsync(_charBuffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false);
-                return count == 0 ? -1 : _charBuffer[0];
-            }
-            catch (DecoderFallbackException ex)
-            {
-                throw new InvalidDataException("CSV contains invalid UTF-8 text.", ex);
+                try
+                {
+                    var count = await _reader.ReadAsync(_charBuffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false);
+                    if (count == 0) return -1;
+                    var value = _charBuffer[0];
+                    if (_atStart)
+                    {
+                        _atStart = false;
+                        if (value == '\uFEFF') continue;
+                    }
+                    return value;
+                }
+                catch (DecoderFallbackException ex)
+                {
+                    throw new InvalidDataException("CSV contains invalid UTF-8 text.", ex);
+                }
             }
         }
     }
