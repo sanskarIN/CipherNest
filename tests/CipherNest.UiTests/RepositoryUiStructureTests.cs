@@ -13,15 +13,18 @@ public sealed class RepositoryUiStructureTests
     }
 
     [Fact]
-    public void SensitiveScreens_ExposeSemanticLiveOrDescriptionMetadata()
+    public void SensitiveScreens_ExposeSupportedSemanticDescriptionMetadata()
     {
         var unlock = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "UnlockPage.xaml"));
         var vault = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "VaultPage.xaml"));
         var item = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "ItemEditorPage.xaml"));
 
         Assert.Contains("SemanticProperties.Description", unlock, StringComparison.Ordinal);
-        Assert.Contains("SemanticProperties.LiveSetting", vault, StringComparison.Ordinal);
-        Assert.Contains("SemanticProperties.LiveSetting", item, StringComparison.Ordinal);
+        Assert.Contains("SemanticProperties.Description", vault, StringComparison.Ordinal);
+        Assert.Contains("SemanticProperties.Description", item, StringComparison.Ordinal);
+        Assert.DoesNotContain("SemanticProperties.LiveSetting", unlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("SemanticProperties.LiveSetting", vault, StringComparison.Ordinal);
+        Assert.DoesNotContain("SemanticProperties.LiveSetting", item, StringComparison.Ordinal);
     }
 
     [Fact]
