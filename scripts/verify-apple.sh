@@ -12,9 +12,7 @@ cd "$REPO_ROOT"
 
 PROJECT="src/CipherNest.App/CipherNest.App.csproj"
 
-dotnet workload restore "$PROJECT"
+dotnet workload install maui-ios maui-maccatalyst --skip-manifest-update
 
-for framework in net10.0-ios net10.0-maccatalyst; do
-  dotnet restore "$PROJECT" -p:TargetFramework="$framework"
-  dotnet build "$PROJECT" -c Release -f "$framework" --no-restore
-done
+dotnet build "$PROJECT" -c Release -p:CipherNestTargetFrameworks=net10.0-ios -f net10.0-ios -r iossimulator-arm64
+dotnet build "$PROJECT" -c Release -p:CipherNestTargetFrameworks=net10.0-maccatalyst -f net10.0-maccatalyst -r maccatalyst-arm64
