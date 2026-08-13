@@ -67,8 +67,11 @@ public sealed class SafeNoteMarkupService : ISafeNoteMarkupService
     public string AppendChecklistItem(string? markdown, string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        if (text.Length > SafeNoteLimits.MaximumChecklistItemCharacters)
+            throw new ArgumentException("Checklist item is too long.", nameof(text));
+
         var cleanText = text.Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal).Trim();
-        if (cleanText.Length > 1_000) throw new ArgumentException("Checklist item is too long.", nameof(text));
+        if (cleanText.Length == 0) throw new ArgumentException("Checklist item is required.", nameof(text));
 
         var current = markdown ?? string.Empty;
         ValidateLength(current);
