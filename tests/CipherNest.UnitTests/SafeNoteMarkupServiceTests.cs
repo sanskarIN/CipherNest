@@ -1,5 +1,6 @@
 using CipherNest.Application.Models;
 using CipherNest.Application.Services;
+using CipherNest.Application.Validation;
 
 namespace CipherNest.UnitTests;
 
@@ -32,6 +33,17 @@ public sealed class SafeNoteMarkupServiceTests
 
         var reopened = _service.ToggleChecklistItem(toggled, 0);
         Assert.Contains("- [ ] Review recovery copy", reopened, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AppendChecklistItem_EnforcesCharacterBoundary()
+    {
+        var maximum = new string('x', SafeNoteLimits.MaximumChecklistItemCharacters);
+        var added = _service.AppendChecklistItem(string.Empty, maximum);
+        Assert.EndsWith(maximum, added, StringComparison.Ordinal);
+
+        Assert.Throws<ArgumentException>(() =>
+            _service.AppendChecklistItem(string.Empty, new string('x', SafeNoteLimits.MaximumChecklistItemCharacters + 1)));
     }
 
     [Fact]
