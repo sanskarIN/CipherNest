@@ -9,5 +9,6 @@
     <ProjectReference Include="../CipherNest.Shared/CipherNest.Shared.csproj" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
   </ItemGroup>
 </Project>
