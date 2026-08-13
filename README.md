@@ -70,6 +70,7 @@ Primary entry points:
 - [Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [Session Security](docs/security/SESSION_SECURITY.md) · [Sensitive Data Lifecycle](docs/security/DATA_LIFECYCLE.md).
 - [Vault Records](docs/formats/VAULT_RECORDS.md) · [Encrypted Attachments](docs/formats/ATTACHMENTS.md) · [Encrypted Backup](docs/formats/ENCRYPTED_BACKUP.md) · [CSV Transfer](docs/formats/CSV_TRANSFER.md).
 - [Testing Guide](docs/TESTING_GUIDE.md) · [Accessibility](docs/ACCESSIBILITY.md) · [Release Process](docs/releases/RELEASE_PROCESS.md) · [Backup/Recovery Runbook](docs/operations/BACKUP_RECOVERY_RUNBOOK.md) · [Security Response Runbook](docs/operations/SECURITY_RESPONSE.md).
+- [Hosted CI Evidence — 2026-08-13](docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md) — exact candidate/run evidence and remaining external validation limits.
 
 Documentation is required to follow current source behavior rather than planned features; governance rules are in [`docs/DOCUMENTATION_MAINTENANCE.md`](docs/DOCUMENTATION_MAINTENANCE.md).
 
@@ -84,7 +85,25 @@ Committed verification entry points:
 - `scripts/verify-android.sh`
 - `scripts/verify-apple.sh`
 
-GitHub CI is configured for core restore/build/test/format gates plus Windows, Android, iOS, and Mac Catalyst Release compilation. Windows CI also compiles the funding-disabled variant. CodeQL builds the MAUI Android application path in addition to core/integration code. These configured gates are not a claim that the current head passed until the exact checks execute successfully.
+GitHub CI is configured for core restore/build/test/format gates plus Windows, Android, iOS, and Mac Catalyst Release compilation. Windows CI also compiles the funding-disabled variant. CodeQL v4 builds the MAUI Android application path in addition to analyzable core code.
+
+For exact hosted candidate `2327abba1646082a4d94a689d452b1116701cc0b`, observed evidence is:
+
+- **106 UnitTests passed**;
+- **60 IntegrationTests passed**;
+- **74 UiTests/source tests passed**;
+- **240 total passed, 0 failed, 0 skipped**;
+- core formatting passed;
+- Windows default Release passed;
+- Windows funding-disabled Release passed;
+- Android `android-arm64` Release passed;
+- iOS `iossimulator-arm64` Release passed;
+- Mac Catalyst `maccatalyst-arm64` Release passed;
+- CodeQL v4 passed after analyzable core and Android MAUI builds.
+
+The Apple hosted build used `macos-26`, .NET SDK `10.0.302`, Xcode 26.5, and workload set `10.0.300.3`. Full run identifiers and limitations are recorded in [`docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`](docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md).
+
+These results are historical evidence for that exact commit; later candidates must rerun the gates. Compile/static-analysis evidence does not replace physical-device biometric/lifecycle/clipboard/screenshot/accessibility tests, signing/notarization/store validation, pull-request dependency review, or an independent professional security audit.
 
 The optional in-app Buy Me a Coffee surface is enabled by default. A distribution build that must omit the external funding CTA can use:
 
