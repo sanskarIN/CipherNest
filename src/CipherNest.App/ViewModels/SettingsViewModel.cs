@@ -25,31 +25,81 @@ public partial class SettingsViewModel : ObservableObject
     private AppPreferences _loadedPreferences = new();
 
     public IReadOnlyList<AppThemePreference> Themes { get; } = Enum.GetValues<AppThemePreference>();
-    [ObservableProperty] private AppThemePreference selectedTheme;
-    [ObservableProperty] private int lockTimeoutSeconds = 60;
-    [ObservableProperty] private bool lockOnBackground = true;
-    [ObservableProperty] private int clipboardClearSeconds = 30;
-    [ObservableProperty] private bool screenshotProtection = true;
-    [ObservableProperty] private bool biometricUnlockEnabled;
-    [ObservableProperty] private bool biometricAvailable;
-    [ObservableProperty] private bool reducedMotion;
-    [ObservableProperty] private bool largerInterface;
-    [ObservableProperty] private int trashRetentionDays = 30;
-    [ObservableProperty] private int backupReminderDays = 7;
-    [ObservableProperty] private bool reviewRemindersEnabled = true;
-    [ObservableProperty] private int reviewReminderLeadDays = 7;
-    [ObservableProperty] private int requireMasterPassphraseAfterHours = 24;
-    [ObservableProperty] private string backupPassphrase = string.Empty;
-    [ObservableProperty] private string currentMasterPassphrase = string.Empty;
-    [ObservableProperty] private string newMasterPassphrase = string.Empty;
-    [ObservableProperty] private string confirmNewMasterPassphrase = string.Empty;
-    [ObservableProperty] private string deletionMasterPassphrase = string.Empty;
-    [ObservableProperty] private string deletionConfirmationPhrase = string.Empty;
-    [ObservableProperty] private string statusMessage = string.Empty;
-    [ObservableProperty] private string screenshotSupportMessage = string.Empty;
-    [ObservableProperty] private string biometricSupportMessage = string.Empty;
-    [ObservableProperty] private string storageUsageMessage = "Calculating local storage…";
-    [ObservableProperty] private bool isBusy;
+
+    [ObservableProperty]
+    public partial AppThemePreference SelectedTheme { get; set; }
+
+    [ObservableProperty]
+    public partial int LockTimeoutSeconds { get; set; } = 60;
+
+    [ObservableProperty]
+    public partial bool LockOnBackground { get; set; } = true;
+
+    [ObservableProperty]
+    public partial int ClipboardClearSeconds { get; set; } = 30;
+
+    [ObservableProperty]
+    public partial bool ScreenshotProtection { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool BiometricUnlockEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool BiometricAvailable { get; set; }
+
+    [ObservableProperty]
+    public partial bool ReducedMotion { get; set; }
+
+    [ObservableProperty]
+    public partial bool LargerInterface { get; set; }
+
+    [ObservableProperty]
+    public partial int TrashRetentionDays { get; set; } = 30;
+
+    [ObservableProperty]
+    public partial int BackupReminderDays { get; set; } = 7;
+
+    [ObservableProperty]
+    public partial bool ReviewRemindersEnabled { get; set; } = true;
+
+    [ObservableProperty]
+    public partial int ReviewReminderLeadDays { get; set; } = 7;
+
+    [ObservableProperty]
+    public partial int RequireMasterPassphraseAfterHours { get; set; } = 24;
+
+    [ObservableProperty]
+    public partial string BackupPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CurrentMasterPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string NewMasterPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ConfirmNewMasterPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string DeletionMasterPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string DeletionConfirmationPhrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ScreenshotSupportMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string BiometricSupportMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StorageUsageMessage { get; set; } = "Calculating local storage…";
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
 
     public SettingsViewModel(
         ISettingsStore settings,
