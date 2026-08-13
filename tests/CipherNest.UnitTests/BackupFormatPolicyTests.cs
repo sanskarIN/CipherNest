@@ -37,4 +37,14 @@ public sealed class BackupFormatPolicyTests
             new KdfParameters(memoryKiB, iterations, parallelism),
             chunkSize));
     }
+
+    [Fact]
+    public void ChunkIndexBounds_AreEnforced()
+    {
+        BackupFormatPolicy.ValidateChunkIndex(0);
+        BackupFormatPolicy.ValidateChunkIndex(BackupFormatPolicy.MaximumChunkCount - 1);
+
+        Assert.Throws<InvalidDataException>(() => BackupFormatPolicy.ValidateChunkIndex(-1));
+        Assert.Throws<InvalidDataException>(() => BackupFormatPolicy.ValidateChunkIndex(BackupFormatPolicy.MaximumChunkCount));
+    }
 }
