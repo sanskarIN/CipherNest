@@ -14,6 +14,21 @@ public sealed class CsvSafetySourceTests
         Assert.DoesNotContain("ex.Message", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CsvTransfer_UsesStrictUtf8AndOneReadBoundary()
+    {
+        var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "CsvTransferService.cs"));
+
+        Assert.Contains("throwOnInvalidBytes: true", source, StringComparison.Ordinal);
+        Assert.Contains("detectEncodingFromByteOrderMarks: false", source, StringComparison.Ordinal);
+        Assert.Contains("if (value == '\\uFEFF') continue;", source, StringComparison.Ordinal);
+        Assert.Contains("private int? _pendingChar", source, StringComparison.Ordinal);
+        Assert.Contains("ConsumeOptionalLineFeedAsync", source, StringComparison.Ordinal);
+        Assert.Contains("CSV contains invalid UTF-8 text.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("_reader.Peek()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("_reader.Read()", source, StringComparison.Ordinal);
+    }
+
     private static string PathAt(params string[] segments)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
