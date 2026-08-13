@@ -61,9 +61,17 @@ public sealed class CsvTransferService : IPlaintextTransferService
             var now = _clock.UtcNow;
             var item = new VaultItem
             {
-                Id = Guid.NewGuid(), Title = title,
-                Username = Get(row, indexes, mapping.Username), Secret = Get(row, indexes, mapping.Secret), Url = Get(row, indexes, mapping.Url), Notes = Get(row, indexes, mapping.Notes), Collection = Get(row, indexes, mapping.Collection),
-                Tags = SplitTags(Get(row, indexes, mapping.Tags)), Type = ParseType(Get(row, indexes, mapping.Type)), CreatedUtc = now, ModifiedUtc = now
+                Id = Guid.NewGuid(),
+                Title = title,
+                Username = Get(row, indexes, mapping.Username),
+                Secret = Get(row, indexes, mapping.Secret),
+                Url = Get(row, indexes, mapping.Url),
+                Notes = Get(row, indexes, mapping.Notes),
+                Collection = Get(row, indexes, mapping.Collection),
+                Tags = SplitTags(Get(row, indexes, mapping.Tags)),
+                Type = ParseType(Get(row, indexes, mapping.Type)),
+                CreatedUtc = now,
+                ModifiedUtc = now
             };
             var validationErrors = VaultItemValidator.Validate(item);
             if (validationErrors.Count > 0)
