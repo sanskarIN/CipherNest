@@ -50,6 +50,7 @@ These format documents are implementation documentation, not promises of permane
 - [`verification/CI_GATES.md`](verification/CI_GATES.md) — configured CI/local verification gates and evidence requirements.
 - [`verification/SECURITY_HARDENING_2026_08_11.md`](verification/SECURITY_HARDENING_2026_08_11.md) — framing/resource/session/platform hardening verification addendum.
 - [`verification/DOCUMENTATION_SUITE_2026_08_12.md`](verification/DOCUMENTATION_SUITE_2026_08_12.md) — required documentation/source-link/audit-wording completeness gates.
+- [`verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md`](verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md) — highlighted BMC support surface plus authenticated-record, session-race, hostile-backup-header, and malformed-framing runtime gates.
 - [`TEST_PLAN.md`](TEST_PLAN.md) — complete automated/manual release test matrix.
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized, how to add tests, what source tests prove, and what still requires devices.
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
