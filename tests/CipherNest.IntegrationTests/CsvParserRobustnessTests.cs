@@ -38,6 +38,30 @@ public sealed class CsvParserRobustnessTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadHeaders_AcceptsOptionalUtf8Bom()
+    {
+        var service = CreateService();
+        var content = Encoding.UTF8.GetBytes("Title,Secret\nExample,value");
+        var bytes = Encoding.UTF8.GetPreamble().Concat(content).ToArray();
+        await using var stream = new MemoryStream(bytes, writable: false);
+
+        var headers = await service.ReadHeadersAsync(stream);
+
+        Assert.Equal(["Title", "Secret"], headers);
+    }
+
+    [Fact]
+    public async Task ReadHeaders_RejectsUtf16Input()
+    {
+        var service = CreateService();
+        var content = Encoding.Unicode.GetBytes("Title,Secret\nExample,value");
+        var bytes = Encoding.Unicode.GetPreamble().Concat(content).ToArray();
+        await using var stream = new MemoryStream(bytes, writable: false);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
+    }
+
+    [Fact]
     public async Task ReadHeaders_AcceptsQuotedHeaderWithEmbeddedComma()
     {
         var service = CreateService();
