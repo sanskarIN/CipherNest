@@ -8,7 +8,9 @@ namespace CipherNest.App.ViewModels;
 public partial class SettingsViewModel
 {
     public IReadOnlyList<AppLanguagePreference> Languages { get; } = Enum.GetValues<AppLanguagePreference>();
-    [ObservableProperty] private AppLanguagePreference selectedLanguage = AppLanguagePreference.System;
+
+    [ObservableProperty]
+    public partial AppLanguagePreference SelectedLanguage { get; set; } = AppLanguagePreference.System;
 
     public async Task LoadLanguageAsync()
     {
