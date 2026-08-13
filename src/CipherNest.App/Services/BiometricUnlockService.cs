@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
 
@@ -45,23 +46,7 @@ public sealed class BiometricUnlockService : IBiometricUnlockService
 #if ANDROID
         if (!OperatingSystem.IsAndroidVersionAtLeast(28)) return false;
         var activity = Platform.CurrentActivity;
-        if (activity is null) return false;
-
-        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var signal = new Android.OS.CancellationSignal();
-        using var registration = cancellationToken.Register(signal.Cancel);
-        var callback = new AndroidCallback(completion);
-
-        await MainThread.InvokeOnMainThreadAsync(() =>
-        {
-            var builder = new Android.Hardware.Biometrics.BiometricPrompt.Builder(activity)
-                .SetTitle("Unlock CipherNest")
-                .SetSubtitle(reason)
-                .SetNegativeButton("Use master passphrase", activity.MainExecutor, new NegativeButtonListener(completion));
-            builder.Build().Authenticate(signal, activity.MainExecutor, callback);
-        });
-
-        return await completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return activity is not null && await AuthenticateAndroid28Async(activity, reason, cancellationToken).ConfigureAwait(false);
 #elif IOS || MACCATALYST
         using var context = new LocalAuthentication.LAContext();
         if (!context.CanEvaluatePolicy(LocalAuthentication.LAPolicy.DeviceOwnerAuthenticationWithBiometrics, out _)) return false;
@@ -103,7 +88,29 @@ public sealed class BiometricUnlockService : IBiometricUnlockService
     }
 
 #if ANDROID
-    [Android.Runtime.Preserve(AllMembers = true)]
+    [SupportedOSPlatform("android28.0")]
+    private static async Task<bool> AuthenticateAndroid28Async(Android.App.Activity activity, string reason, CancellationToken cancellationToken)
+    {
+        var executor = activity.MainExecutor;
+        if (executor is null) return false;
+
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var signal = new Android.OS.CancellationSignal();
+        using var registration = cancellationToken.Register(signal.Cancel);
+        var callback = new AndroidCallback(completion);
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            var builder = new Android.Hardware.Biometrics.BiometricPrompt.Builder(activity)
+                .SetTitle("Unlock CipherNest")
+                .SetSubtitle(reason)
+                .SetNegativeButton("Use master passphrase", executor, new NegativeButtonListener(completion));
+            builder.Build().Authenticate(signal, executor, callback);
+        });
+
+        return await completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private sealed class AndroidCallback(TaskCompletionSource<bool> completion) : Android.Hardware.Biometrics.BiometricPrompt.AuthenticationCallback
     {
         public override void OnAuthenticationSucceeded(Android.Hardware.Biometrics.BiometricPrompt.AuthenticationResult? result) => completion.TrySetResult(true);
@@ -111,7 +118,6 @@ public sealed class BiometricUnlockService : IBiometricUnlockService
         public override void OnAuthenticationError([Android.Runtime.GeneratedEnum] Android.Hardware.Biometrics.BiometricErrorCode errorCode, Java.Lang.ICharSequence? errString) => completion.TrySetResult(false);
     }
 
-    [Android.Runtime.Preserve(AllMembers = true)]
     private sealed class NegativeButtonListener(TaskCompletionSource<bool> completion) : Java.Lang.Object, Android.Content.IDialogInterfaceOnClickListener
     {
         public void OnClick(Android.Content.IDialogInterface? dialog, int which) => completion.TrySetResult(false);
