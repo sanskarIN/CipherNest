@@ -22,9 +22,9 @@ This guide describes how the current source is organized and how to extend it wi
 
 ## 2. Build quality defaults
 
-`Directory.Build.props` currently enables:
+`Directory.Build.props` currently enables the shared solution policy:
 
-- latest C# language version;
+- latest shared C# language policy;
 - nullable reference analysis;
 - implicit usings;
 - warnings as errors;
@@ -33,7 +33,15 @@ This guide describes how the current source is organized and how to extend it wi
 - deterministic managed compilation;
 - CI build metadata when `CI=true`.
 
-Do not “fix” a build by globally disabling warnings-as-errors, nullable analysis, analyzers, deterministic builds, or security-sensitive tests. Resolve the underlying issue or document an explicit narrowly scoped reason.
+The MAUI App project has one deliberate project-local language override:
+
+```xml
+<LangVersion>preview</LangVersion>
+```
+
+That override exists because the current CommunityToolkit MVVM WinRT/AOT-safe partial `[ObservableProperty]` syntax used by CipherNest requires the preview language feature in the verified toolchain. It must remain scoped to `CipherNest.App` unless another project has a separately justified requirement. `ViewModelAotSourceTests` protects this rule.
+
+Do not “fix” a build by globally disabling warnings-as-errors, nullable analysis, analyzers, deterministic builds, CommunityToolkit WinRT/AOT diagnostics, or security-sensitive tests. Resolve the underlying issue or document an explicit narrowly scoped reason.
 
 ## 3. Dependency direction
 
@@ -293,7 +301,9 @@ File picker, share sheet, launcher, secure storage, biometrics, clipboard, scree
 - Do not reveal secret custom-field values merely to build a quick-action list.
 - Ensure protected items require re-authentication before revealing/changing protected content.
 - Keep navigation responsive and accessible on narrow and desktop windows.
-- Preserve semantic descriptions/live-region behavior for important state changes.
+- Preserve supported semantic descriptions/state announcements for important state changes without reintroducing unsupported MAUI XAML properties.
+- For CommunityToolkit observable state in MAUI ViewModels, use partial `[ObservableProperty]` properties rather than field-based generation. The Windows/WinRT build treats the field-based pattern as `MVVMTK0045` and release builds keep that analyzer active.
+- Preserve the App project's narrowly scoped preview-language setting while that partial-property syntax requires it; do not suppress `MVVMTK0045` as a shortcut.
 - Do not weaken security warnings for localization brevity.
 
 ## 17. Settings
@@ -348,15 +358,17 @@ Use to prevent structural regressions when a MAUI device is not required, for ex
 - source ordering/invariant checks;
 - redacted error handling;
 - forbidden legacy API patterns;
-- CI/workflow/script presence.
+- CI/workflow/script presence;
+- canonical documentation presence/link/audit wording;
+- WinRT/AOT-safe CommunityToolkit ViewModel source patterns.
 
-Source tests are regression signals, not proof of runtime platform behavior.
+`DocumentationCoverageSourceTests` and `ViewModelAotSourceTests` are current examples. Source tests are regression signals, not proof of runtime platform behavior.
 
 ### Device/manual tests
 
 Required for biometrics, screenshot protection, clipboard APIs/history behavior, secure storage, lifecycle callbacks, file picker/share sheet, accessibility readers, signing/packaging, and store behavior.
 
-## 21. Local verification
+## 21. Local and hosted verification
 
 Prefer committed scripts:
 
@@ -368,7 +380,11 @@ scripts/verify-android.sh
 scripts/verify-apple.sh
 ```
 
-Do not report a pass unless the script/workflow actually ran successfully for the exact candidate commit.
+Platform-specific MAUI builds use the App project's `CipherNestTargetFrameworks` property plus an appropriate target RID so a host does not evaluate unrelated MAUI target graphs.
+
+The hosted baseline for candidate `2327abba1646082a4d94a689d452b1116701cc0b` is recorded in `verification/HOSTED_CI_EVIDENCE_2026_08_13.md`: 240 tests passed, formatting passed, both Windows variants passed, Android passed, iOS simulator passed, Mac Catalyst passed, and CodeQL v4 passed. The Apple hosted pairing was `macos-26`, .NET SDK `10.0.302`, Xcode `26.5`, and workload set `10.0.300.3`.
+
+Do not report a pass unless the script/workflow actually ran successfully for the exact candidate commit. A later commit must rerun the relevant gates rather than inheriting historical evidence automatically.
 
 ## 22. Source-control and commit practice
 
@@ -402,6 +418,8 @@ Before merging a change, confirm:
 - no raw secret/path exception surface was introduced;
 - no plaintext persistent index/cache was introduced accidentally;
 - versioned format/schema compatibility is explicit;
+- MAUI ViewModel observable properties remain WinRT/AOT-safe and the Windows analyzer has not been suppressed;
+- platform build selection/toolchain changes are represented in verification/build docs and exercised on the exact candidate;
 - security/privacy docs are updated if the attack surface changed;
 - user docs are updated if behavior changed;
 - release checklist/test plan include the new gate;
