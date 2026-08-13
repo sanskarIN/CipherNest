@@ -47,11 +47,15 @@ All notable changes are documented here following Semantic Versioning principles
 - Privacy-safe centralized exception reporting that omits exception messages/stacks and decrypted vault context.
 - Runtime About version/build metadata plus license, privacy, terms, third-party notices, acknowledgements, repository/support details, and audit status.
 - Optional project-support metadata at `https://buymeacoffee.com/sanskarIN`, with a user-initiated About action, repository/Support references, GitHub `.github/FUNDING.yml` metadata, and a store-build disable switch.
+- Original CipherNest-created Buy Me a Coffee support badge at `Resources/Images/bmc_support.svg`, with a highlighted tappable About support card and linked README/Support surfaces while retaining the store-build funding switch.
 - Centralized About project/contact metadata bindings to prevent duplicated public URLs/emails from drifting away from `AppConstants`.
 - `docs/NEXT_STEPS.md` with ordered build, device-security, recovery, backup/transfer, accessibility/localization, performance, release-engineering, security-review, launch, and later-version work.
 - `docs/verification/CI_GATES.md` plus committed core/Windows/Android/Apple verification scripts.
 - Main CI compile gates for Windows, Android, iOS, and Mac Catalyst; Windows also compiles the funding-disabled variant.
 - Core CI formatting verification, CodeQL MAUI application analysis, bounded workflow timeouts, and superseded-run cancellation.
+- `ViewModelAotSourceTests` to prevent reintroduction of field-based CommunityToolkit observable properties that are not WinRT/AOT-safe for the Windows target.
+- Runtime integration coverage for authenticated decrypted-record row-ID/metadata rejection, serialized lock-vs-unlock transition behavior, and hostile backup-header rejection before key derivation.
+- `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md` recording exact observed hosted test/format/platform/CodeQL evidence for candidate `2327abba1646082a4d94a689d452b1116701cc0b`.
 - Source regression tests for shortened credential binding lifetime, fingerprint-only clipboard state, contained lifecycle fallback, sensitive error redaction, cross-platform CI gates, serialized/cancellation-safe vault session transitions, live-session vault-deletion authorization, backup/attachment staging, SQLite recovery/deletion ordering, storage budgets, attachment mutation serialization, and rejection of legacy `.DisplayAlert(` calls.
 - Splash wordmark/creator credit, monochrome icon source, and dark-surface logo source in addition to the existing original vector branding.
 - Third-party dependency notices, implemented cryptographic design specification, secure-note security documentation, passphrase-generator design notes, privacy-safe diagnostics policy, localization architecture guidance, packaging/reproducibility guidance, branding asset documentation, and store-listing guidance.
@@ -65,11 +69,13 @@ All notable changes are documented here following Semantic Versioning principles
 - Session cancellation callback failures are contained after key-state transition so they cannot reverse/mask an already-completed transition; cancellation sources are still disposed.
 - Key-using reads/writes/attachment operations use private 32-byte key copies that zero on disposal; locking zeroes the shared session key and cancels the per-unlock session token.
 - Restoring a backup clears the local biometric secure-storage secret and disables biometric unlock until it is deliberately configured again.
-- Backup restore validates untrusted header resource metadata before Argon2 work, rejects duplicate/pathological archive entries, and database replacement validates SQLite integrity/schema/resource budgets before active-file mutation.
+- Backup restore validates untrusted header resource metadata before Argon2 work, rejects duplicate/pathological archive entries, normalizes malformed/truncated framing to the invalid-backup boundary, and database replacement validates SQLite integrity/schema/resource budgets before active-file mutation.
 - Backup creation now applies the same archive count/aggregate-size policy as restore and materializes attachment-directory enumeration inside guarded filesystem handling.
 - Backup rollback uses an uncancelled recovery token after active mutation starts; caller cancellation can no longer cancel the recovery database replacement.
 - Backup export canonicalizes and protects live vault/attachment paths and uses unique collision-resistant encrypted staging.
 - SQLite replacement stages DB/WAL/SHM together in unique recovery names and restores only components that actually moved.
+- SQLite connections used for active database replacement no longer pool across file swaps, preventing a newly reopened store from observing a stale pre-replacement connection.
+- `Microsoft.Data.Sqlite` is updated to `10.0.10` and `SQLitePCLRaw.bundle_e_sqlite3` is explicitly pinned to `2.1.12` after hosted restore surfaced a high-severity `NU1903` finding for the older SQLitePCLRaw native package.
 - Full database deletion removes the primary SQLite file before WAL/SHM sidecars so a failed primary delete does not intentionally remove sidecars first.
 - Changing the master passphrase clears the bound credential fields before rotation, clears the remembered master-authentication session, locks the vault, attempts conditional clipboard cleanup, and requires the new master passphrase before biometric convenience unlock can resume.
 - Unlock, onboarding, plaintext export, Trash deletion, per-item re-authentication, biometric settings, backup/restore, passphrase rotation, and full-vault deletion clear bound credential fields earlier in their operation where practical; managed-memory limitations remain documented.
@@ -85,7 +91,7 @@ All notable changes are documented here following Semantic Versioning principles
 - Storage/cache enumeration is materialized inside guarded blocks so lazy enumeration errors do not bypass intended fail-soft handling.
 - Vault header, item JSON, stored-envelope, item-count, aggregate-envelope, total-attachment, and aggregate-text resource limits are enforced at persistence/service validation boundaries.
 - Trash retention cleanup runs during normal vault maintenance rather than depending on the user opening Trash.
-- Interactive failed-attempt rate limiting uses an explicit bounded exponential-backoff policy with test coverage.
+- Interactive failed-attempt rate limiting uses an explicit bounded exponential-backoff policy reaching the intended five-minute cap after repeated failures.
 - KDF metadata read from vault/backup containers is bounded before Argon2 work: salt 16–64 bytes, memory 16–512 MiB, iterations 1–10, and parallelism 1–16.
 - Settings distinguish biometric capability/configuration from master-passphrase recovery and sensitive-setting authentication.
 - Settings include generator defaults, local review reminders, storage/cache controls, security-audit navigation, privacy/threat information, language readiness, and About/legal navigation.
@@ -97,6 +103,10 @@ All notable changes are documented here following Semantic Versioning principles
 - Unlock biometric-capability errors use the privacy-safe exception reporter instead of writing exception messages through raw debug output.
 - Redacted diagnostics delete their temporary app-cache file after the share request returns where permitted.
 - Store-listing guidance requires current policy verification before shipping an external funding/payment CTA; affected store builds must omit/disable the in-app CTA if the applicable policy does not permit it.
+- Windows-facing CommunityToolkit `[ObservableProperty]` declarations in the MAUI ViewModels now use WinRT/AOT-safe partial properties rather than field-based generation; the app project explicitly enables C# preview for that toolchain-required partial-property syntax while the rest of the solution retains its existing language policy.
+- Platform CI uses app-only `CipherNestTargetFrameworks` selection and explicit target RIDs so host runtime identifiers do not leak into Android/Windows/Apple restore graphs.
+- Apple CI now uses the supported `macos-26` runner label, .NET SDK `10.0.302`, Xcode 26.5, and workload set `10.0.300.3`; exact hosted iOS simulator and Mac Catalyst builds completed successfully with that pairing.
+- CodeQL actions were migrated to v4 and the exact hosted candidate completed CodeQL analysis successfully after building core and the Android MAUI application path.
 - Release/test/database/architecture/security/privacy/legal documentation was expanded to match implemented behavior and remaining external-validation limits.
 - Root README, contribution/security/privacy/support, build/database/architecture, project-status, and documentation-hub entry points now cross-link the canonical user/developer/security/format/operations/release documentation so the complete documentation set is navigable rather than isolated files.
 
