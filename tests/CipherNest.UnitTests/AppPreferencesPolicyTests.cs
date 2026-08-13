@@ -34,6 +34,59 @@ public sealed class AppPreferencesPolicyTests
         Assert.Equal(16, normalized.GeneratorPassphraseWordCount);
     }
 
+    [Theory]
+    [InlineData(-1000)]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(300)]
+    [InlineData(365)]
+    [InlineData(3600)]
+    [InlineData(3601)]
+    [InlineData(1000000)]
+    public void Normalize_ProducesSupportedRangesAndIsIdempotent(int value)
+    {
+        var preferences = new AppPreferences
+        {
+            Theme = (AppThemePreference)value,
+            Language = (AppLanguagePreference)value,
+            LockTimeoutSeconds = value,
+            ClipboardClearSeconds = value,
+            TrashRetentionDays = value,
+            RequireMasterPassphraseAfterHours = value,
+            BackupReminderDays = value,
+            ReviewReminderLeadDays = value,
+            GeneratorPasswordLength = value,
+            GeneratorPassphraseWordCount = value,
+            GeneratorPassphraseMode = false,
+            GeneratorUppercase = false,
+            GeneratorLowercase = false,
+            GeneratorDigits = false,
+            GeneratorSymbols = false
+        };
+
+        var normalized = AppPreferencesPolicy.Normalize(preferences);
+
+        Assert.True(Enum.IsDefined(normalized.Theme));
+        Assert.True(Enum.IsDefined(normalized.Language));
+        Assert.InRange(normalized.LockTimeoutSeconds, 5, 3600);
+        Assert.InRange(normalized.ClipboardClearSeconds, 5, 300);
+        Assert.InRange(normalized.TrashRetentionDays, 1, 365);
+        Assert.InRange(normalized.RequireMasterPassphraseAfterHours, 1, 168);
+        Assert.InRange(normalized.BackupReminderDays, 1, 365);
+        Assert.InRange(normalized.ReviewReminderLeadDays, 0, 365);
+        Assert.InRange(normalized.GeneratorPasswordLength, 8, 256);
+        Assert.InRange(normalized.GeneratorPassphraseWordCount, 6, 16);
+        Assert.True(
+            normalized.GeneratorUppercase ||
+            normalized.GeneratorLowercase ||
+            normalized.GeneratorDigits ||
+            normalized.GeneratorSymbols);
+        Assert.Equal(normalized, AppPreferencesPolicy.Normalize(normalized));
+    }
+
     [Fact]
     public void Normalize_RestoresACharacterGroupWhenPasswordModeHasNone()
     {
