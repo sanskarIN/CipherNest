@@ -111,6 +111,8 @@ public sealed class DocumentationCoverageSourceTests
                      "verification/DOCUMENTATION_SUITE_2026_08_12.md",
                      "verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md",
                      "verification/HOSTED_CI_EVIDENCE_2026_08_13.md",
+                     "verification/CURRENT_HEAD_2026_08_13.md",
+                     "verification/POST_BASELINE_CHECKLIST_2026_08_13.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
