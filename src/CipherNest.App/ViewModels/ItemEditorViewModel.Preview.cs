@@ -37,7 +37,7 @@ public partial class ItemEditorViewModel
             text = SanitizePreviewText(text);
             if (text.Length > MaxDisplayedPreviewCharacters)
                 text = text[..MaxDisplayedPreviewCharacters] + Environment.NewLine + Environment.NewLine + "[Preview truncated. Export explicitly to inspect the complete file.]";
-            await Shell.Current.DisplayAlert($"Preview · {attachment.DisplayName}", text.Length == 0 ? "[Empty text file]" : text, "Close");
+            await Shell.Current.DisplayAlertAsync($"Preview · {attachment.DisplayName}", text.Length == 0 ? "[Empty text file]" : text, "Close");
             ErrorMessage = "Text preview stayed inside CipherNest and did not create a plaintext file. Managed strings cannot be guaranteed to be erased immediately from process memory.";
         }
         catch (DecoderFallbackException)
@@ -46,7 +46,8 @@ public partial class ItemEditorViewModel
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or InvalidOperationException or CryptographicException)
         {
-            ErrorMessage = $"Attachment preview failed safely: {ex.Message}";
+            _exceptions.Report("ItemEditor.PreviewAttachment", ex);
+            ErrorMessage = "Attachment preview failed safely. The encrypted attachment remains unchanged.";
         }
         finally
         {
