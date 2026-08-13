@@ -52,6 +52,8 @@ These format documents are implementation documentation, not promises of permane
 - [`verification/DOCUMENTATION_SUITE_2026_08_12.md`](verification/DOCUMENTATION_SUITE_2026_08_12.md) — required documentation/source-link/audit-wording completeness gates.
 - [`verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md`](verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md) — highlighted BMC support surface plus authenticated-record, session-race, hostile-backup-header, malformed-framing, Windows WinRT/AOT, SQLite dependency, and platform-toolchain gates.
 - [`verification/HOSTED_CI_EVIDENCE_2026_08_13.md`](verification/HOSTED_CI_EVIDENCE_2026_08_13.md) — exact candidate/run evidence for 240 passing tests, formatting, Windows default/funding-disabled, Android, iOS simulator, Mac Catalyst, and CodeQL, with remaining device/store/audit limitations.
+- [`verification/CURRENT_HEAD_2026_08_13.md`](verification/CURRENT_HEAD_2026_08_13.md) — explicitly marks the hosted baseline as historical after later source/test commits.
+- [`verification/POST_BASELINE_CHECKLIST_2026_08_13.md`](verification/POST_BASELINE_CHECKLIST_2026_08_13.md) — rerun checklist for every post-baseline release candidate.
 - [`TEST_PLAN.md`](TEST_PLAN.md) — complete automated/manual release test matrix.
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized, how to add tests, what source tests prove, and what still requires devices.
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
