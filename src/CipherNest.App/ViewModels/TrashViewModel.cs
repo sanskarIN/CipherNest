@@ -12,9 +12,15 @@ public partial class TrashViewModel : ObservableObject
     private readonly IVaultService _vault;
     private readonly ISettingsStore _settings;
     public ObservableCollection<VaultItem> Items { get; } = [];
-    [ObservableProperty] private bool isBusy;
-    [ObservableProperty] private string statusMessage = string.Empty;
-    [ObservableProperty] private string deletionPassphrase = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string DeletionPassphrase { get; set; } = string.Empty;
 
     public TrashViewModel(IVaultService vault, ISettingsStore settings)
     {
