@@ -115,6 +115,14 @@ public sealed class EncryptedBackupService : IBackupService
             await _store.CreateConsistentSnapshotAsync(rollbackDb, cancellationToken).ConfigureAwait(false);
             await ReplaceDatabaseAndAttachmentsAsync(staged, rollbackDb, cancellationToken).ConfigureAwait(false);
         }
+        catch (EndOfStreamException ex)
+        {
+            throw new InvalidDataException("Backup is truncated or incomplete.", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidDataException("Backup header is malformed.", ex);
+        }
         catch (CryptographicException ex)
         {
             throw new InvalidDataException("Backup authentication failed. The file may be damaged or the backup passphrase is incorrect.", ex);
