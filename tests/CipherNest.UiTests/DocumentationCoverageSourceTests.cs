@@ -37,6 +37,8 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "DOCUMENTATION_SUITE_2026_08_12.md"],
         ["docs", "verification", "SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md"],
         ["docs", "verification", "HOSTED_CI_EVIDENCE_2026_08_13.md"],
+        ["docs", "verification", "CURRENT_HEAD_2026_08_13.md"],
+        ["docs", "verification", "POST_BASELINE_CHECKLIST_2026_08_13.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
