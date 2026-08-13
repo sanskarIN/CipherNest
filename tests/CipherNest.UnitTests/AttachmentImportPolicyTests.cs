@@ -12,6 +12,8 @@ public sealed class AttachmentImportPolicyTests
 
         Assert.Throws<ArgumentException>(() => AttachmentImportPolicy.NormalizeDisplayName(null));
         Assert.Throws<ArgumentException>(() => AttachmentImportPolicy.NormalizeDisplayName("   "));
+        Assert.Throws<ArgumentException>(() => AttachmentImportPolicy.NormalizeDisplayName("."));
+        Assert.Throws<ArgumentException>(() => AttachmentImportPolicy.NormalizeDisplayName(".."));
         Assert.Throws<ArgumentException>(() => AttachmentImportPolicy.NormalizeDisplayName(new string('x', AttachmentImportPolicy.MaximumDisplayNameCharacters + 1)));
         Assert.Throws<ArgumentException>(() => AttachmentImportPolicy.NormalizeDisplayName("bad\nname.txt"));
     }
