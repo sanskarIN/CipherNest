@@ -18,28 +18,72 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
 
     public IReadOnlyList<VaultItemType> Types { get; } = Enum.GetValues<VaultItemType>();
     public ObservableCollection<AttachmentReference> Attachments { get; } = [];
-    [ObservableProperty] private VaultItemType selectedType = VaultItemType.Login;
-    [ObservableProperty] private string title = string.Empty;
-    [ObservableProperty] private string username = string.Empty;
-    [ObservableProperty] private string secret = string.Empty;
-    [ObservableProperty] private string url = string.Empty;
-    [ObservableProperty] private string notes = string.Empty;
-    [ObservableProperty] private string notePreview = string.Empty;
-    [ObservableProperty] private string checklistDraft = string.Empty;
-    [ObservableProperty] private bool showNotePreview;
-    [ObservableProperty] private string collection = string.Empty;
-    [ObservableProperty] private string tags = string.Empty;
-    [ObservableProperty] private string customFieldsText = string.Empty;
-    [ObservableProperty] private bool isFavorite;
-    [ObservableProperty] private bool isSecretVisible;
-    [ObservableProperty] private bool hasReviewDate;
-    [ObservableProperty] private DateTime reviewDate = DateTime.Today.AddMonths(6);
-    [ObservableProperty] private bool requiresReauthentication;
-    [ObservableProperty] private bool isReauthenticationRequired;
-    [ObservableProperty] private string reauthenticationPassphrase = string.Empty;
-    [ObservableProperty] private bool isBusy;
-    [ObservableProperty] private string errorMessage = string.Empty;
-    [ObservableProperty] private bool isExisting;
+
+    [ObservableProperty]
+    public partial VaultItemType SelectedType { get; set; } = VaultItemType.Login;
+
+    [ObservableProperty]
+    public partial string Title { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Username { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Secret { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Url { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Notes { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string NotePreview { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ChecklistDraft { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool ShowNotePreview { get; set; }
+
+    [ObservableProperty]
+    public partial string Collection { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Tags { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CustomFieldsText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsFavorite { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSecretVisible { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasReviewDate { get; set; }
+
+    [ObservableProperty]
+    public partial DateTime ReviewDate { get; set; } = DateTime.Today.AddMonths(6);
+
+    [ObservableProperty]
+    public partial bool RequiresReauthentication { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsReauthenticationRequired { get; set; }
+
+    [ObservableProperty]
+    public partial string ReauthenticationPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string ErrorMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsExisting { get; set; }
 
     public ItemEditorViewModel(IVaultService vault, IClipboardSecurityService clipboard, ISettingsStore settings, ISafeNoteMarkupService noteMarkup, IPrivacySafeExceptionReporter exceptions)
     {
@@ -56,7 +100,10 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     {
         if (!query.TryGetValue("id", out var raw) || !Guid.TryParse(raw?.ToString(), out var id))
         {
-            _existing = null; IsExisting = false; IsReauthenticationRequired = false; return;
+            _existing = null;
+            IsExisting = false;
+            IsReauthenticationRequired = false;
+            return;
         }
         await LoadAsync(id);
     }
@@ -64,7 +111,11 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task ReauthenticateAsync()
     {
-        if (string.IsNullOrWhiteSpace(ReauthenticationPassphrase)) { ErrorMessage = "Enter the current master passphrase."; return; }
+        if (string.IsNullOrWhiteSpace(ReauthenticationPassphrase))
+        {
+            ErrorMessage = "Enter the current master passphrase.";
+            return;
+        }
         IsBusy = true;
         var passphrase = ReauthenticationPassphrase;
         ReauthenticationPassphrase = string.Empty;
@@ -107,7 +158,10 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             ChecklistDraft = string.Empty;
             ErrorMessage = string.Empty;
         }
-        catch (ArgumentException ex) { ErrorMessage = ex.Message; }
+        catch (ArgumentException)
+        {
+            ErrorMessage = "Checklist item could not be added. Keep the secure note within the supported size and line limits.";
+        }
     }
 
     [RelayCommand]
@@ -129,9 +183,18 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (IsReauthenticationRequired) { ErrorMessage = "Re-authenticate before changing this protected item."; return; }
-        if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
-        IsBusy = true; ErrorMessage = string.Empty;
+        if (IsReauthenticationRequired)
+        {
+            ErrorMessage = "Re-authenticate before changing this protected item.";
+            return;
+        }
+        if (!_vault.IsUnlocked)
+        {
+            await Shell.Current.GoToAsync("//unlock");
+            return;
+        }
+        IsBusy = true;
+        ErrorMessage = string.Empty;
         try
         {
             _ = _noteMarkup.Parse(Notes);
@@ -140,23 +203,47 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             DateTimeOffset? reviewUtc = HasReviewDate ? new DateTimeOffset(ReviewDate.Date, TimeZoneInfo.Local.GetUtcOffset(ReviewDate.Date)).ToUniversalTime() : null;
             var item = new VaultItem
             {
-                Id = _existing?.Id ?? Guid.NewGuid(), Type = SelectedType, Title = Title, Username = Username, Secret = Secret, Url = Url, Notes = Notes,
-                Collection = Collection, Tags = Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), IsFavorite = IsFavorite,
-                CustomFields = customFields, Attachments = Attachments.ToArray(), CreatedUtc = _existing?.CreatedUtc ?? now, ModifiedUtc = now, ReviewAfterUtc = reviewUtc,
-                DeletedUtc = _existing?.DeletedUtc, RequiresReauthentication = RequiresReauthentication, LastAccessedUtc = _existing?.LastAccessedUtc
+                Id = _existing?.Id ?? Guid.NewGuid(),
+                Type = SelectedType,
+                Title = Title,
+                Username = Username,
+                Secret = Secret,
+                Url = Url,
+                Notes = Notes,
+                Collection = Collection,
+                Tags = Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                IsFavorite = IsFavorite,
+                CustomFields = customFields,
+                Attachments = Attachments.ToArray(),
+                CreatedUtc = _existing?.CreatedUtc ?? now,
+                ModifiedUtc = now,
+                ReviewAfterUtc = reviewUtc,
+                DeletedUtc = _existing?.DeletedUtc,
+                RequiresReauthentication = RequiresReauthentication,
+                LastAccessedUtc = _existing?.LastAccessedUtc
             };
             await _vault.SaveItemAsync(item);
             await Shell.Current.GoToAsync("..");
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException) { ErrorMessage = ex.Message; }
-        finally { IsBusy = false; }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
+        {
+            ErrorMessage = "The item contains invalid or unsupported data. Review field lengths, secure-note limits, dates, and custom fields.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
     private async Task AddAttachmentAsync()
     {
         if (IsReauthenticationRequired) return;
-        if (_existing is null) { ErrorMessage = "Save this item first, then reopen it to add encrypted attachments."; return; }
+        if (_existing is null)
+        {
+            ErrorMessage = "Save this item first, then reopen it to add encrypted attachments.";
+            return;
+        }
         IsBusy = true;
         try
         {
@@ -174,7 +261,10 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             _exceptions.Report("ItemEditor.AddAttachment", ex);
             ErrorMessage = "Attachment was not selected or added safely. Check file access, size, and supported metadata, then try again.";
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -194,7 +284,9 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             if (string.IsNullOrWhiteSpace(safeName)) safeName = $"attachment-{attachment.Id:N}";
             path = Path.Combine(exportRoot, $"{attachment.Id:N}-{Guid.NewGuid():N}-{safeName}");
             await using (var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
                 await _vault.ExportAttachmentAsync(_existing.Id, attachment.Id, stream);
+            }
             await Share.Default.RequestAsync(new ShareFileRequest("Export decrypted CipherNest attachment", new ShareFile(path, attachment.MediaType)));
             ErrorMessage = "The temporary plaintext export was deleted after the share request returned. CipherNest cannot delete copies retained by the operating system or destination app.";
         }
@@ -207,7 +299,10 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         {
             if (!string.IsNullOrWhiteSpace(path))
             {
-                try { if (File.Exists(path)) File.Delete(path); }
+                try
+                {
+                    if (File.Exists(path)) File.Delete(path);
+                }
                 catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
                 {
                     _exceptions.Report("ItemEditor.ExportAttachment.TempCleanup", cleanupException);
@@ -236,7 +331,10 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             _exceptions.Report("ItemEditor.RemoveAttachment", ex);
             ErrorMessage = "The encrypted attachment could not be removed safely. Refresh the item before retrying.";
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -256,7 +354,10 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             _exceptions.Report("ItemEditor.MoveToTrash", ex);
             ErrorMessage = "The item could not be moved to trash safely. Refresh the vault before retrying.";
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     private async Task LoadAsync(Guid id)
@@ -264,7 +365,11 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         try
         {
             _existing = await _vault.GetItemAsync(id);
-            if (_existing is null) { ErrorMessage = "This item no longer exists."; return; }
+            if (_existing is null)
+            {
+                ErrorMessage = "This item no longer exists.";
+                return;
+            }
             await _vault.MarkAccessedAsync(id);
             _existing = _existing with { LastAccessedUtc = DateTimeOffset.UtcNow };
             IsExisting = true;
@@ -286,11 +391,21 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
 
     private void Populate(VaultItem item)
     {
-        SelectedType = item.Type; Title = item.Title; Username = item.Username; Secret = item.Secret; Url = item.Url; Notes = item.Notes; Collection = item.Collection;
-        Tags = string.Join(", ", item.Tags); IsFavorite = item.IsFavorite; RequiresReauthentication = item.RequiresReauthentication;
+        SelectedType = item.Type;
+        Title = item.Title;
+        Username = item.Username;
+        Secret = item.Secret;
+        Url = item.Url;
+        Notes = item.Notes;
+        Collection = item.Collection;
+        Tags = string.Join(", ", item.Tags);
+        IsFavorite = item.IsFavorite;
+        RequiresReauthentication = item.RequiresReauthentication;
         CustomFieldsText = string.Join(Environment.NewLine, item.CustomFields.Select(static field => $"{(field.IsSecret ? "[secret]" : string.Empty)}{field.Name}={field.Value}"));
-        HasReviewDate = item.ReviewAfterUtc is not null; ReviewDate = item.ReviewAfterUtc?.ToLocalTime().Date ?? DateTime.Today.AddMonths(6);
-        Attachments.Clear(); foreach (var attachment in item.Attachments) Attachments.Add(attachment);
+        HasReviewDate = item.ReviewAfterUtc is not null;
+        ReviewDate = item.ReviewAfterUtc?.ToLocalTime().Date ?? DateTime.Today.AddMonths(6);
+        Attachments.Clear();
+        foreach (var attachment in item.Attachments) Attachments.Add(attachment);
     }
 
     private void RefreshNotePreview(string value)
@@ -300,10 +415,10 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
             NotePreview = _noteMarkup.Parse(value).ToAccessibleText();
             if (ErrorMessage.StartsWith("Secure note exceeds", StringComparison.Ordinal)) ErrorMessage = string.Empty;
         }
-        catch (ArgumentException ex)
+        catch (ArgumentException)
         {
             NotePreview = string.Empty;
-            ErrorMessage = ex.Message;
+            ErrorMessage = "Secure note exceeds the supported preview or storage limits.";
         }
     }
 
@@ -313,8 +428,11 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         var fields = new List<CustomField>();
         foreach (var raw in input.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
         {
-            var line = raw.Trim(); var isSecret = line.StartsWith("[secret]", StringComparison.OrdinalIgnoreCase); if (isSecret) line = line[8..];
-            var separator = line.IndexOf('='); if (separator <= 0) throw new FormatException("Each custom field must use name=value. Prefix a secret field with [secret].");
+            var line = raw.Trim();
+            var isSecret = line.StartsWith("[secret]", StringComparison.OrdinalIgnoreCase);
+            if (isSecret) line = line[8..];
+            var separator = line.IndexOf('=');
+            if (separator <= 0) throw new FormatException("Each custom field must use name=value. Prefix a secret field with [secret].");
             fields.Add(new CustomField(line[..separator].Trim(), line[(separator + 1)..], isSecret));
         }
         return fields;
