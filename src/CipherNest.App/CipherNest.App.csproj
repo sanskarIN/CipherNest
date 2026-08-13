@@ -11,6 +11,7 @@
     <ApplicationVersion>1</ApplicationVersion>
     <CipherNestEnableFundingLink Condition="'$(CipherNestEnableFundingLink)' == ''">true</CipherNestEnableFundingLink>
     <DefineConstants Condition="'$(CipherNestEnableFundingLink)' == 'false'">$(DefineConstants);CIPHERNEST_DISABLE_FUNDING_LINK</DefineConstants>
+    <RuntimeIdentifier Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android-arm64</RuntimeIdentifier>
     <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
