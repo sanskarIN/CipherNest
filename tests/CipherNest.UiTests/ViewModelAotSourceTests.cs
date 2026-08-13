@@ -25,6 +25,13 @@ public sealed class ViewModelAotSourceTests
     }
 
     [Fact]
+    public void AppProject_EnablesPreviewLanguageForPartialObservableProperties()
+    {
+        var project = File.ReadAllText(PathAt("src", "CipherNest.App", "CipherNest.App.csproj"));
+        Assert.Contains("<LangVersion>preview</LangVersion>", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MigratedViewModels_ContainPartialObservableProperties()
     {
         var requiredFiles = new[]
