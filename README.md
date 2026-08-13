@@ -4,6 +4,18 @@ CipherNest is a local-first, open-source password, secure-note, identity, creden
 
 > **Security status:** CipherNest has not yet undergone an independent professional security audit. It uses established primitives and a deliberately small security-sensitive core, but must not be described as “unhackable”, “military-grade”, or “100% secure”.
 
+## ☕ Support CipherNest development
+
+<p align="center">
+  <a href="https://buymeacoffee.com/sanskarIN" title="Support CipherNest on Buy Me a Coffee">
+    <img src="src/CipherNest.App/Resources/Images/bmc_support.svg" alt="BMC — Support CipherNest" width="560" />
+  </a>
+</p>
+
+<p align="center"><strong>Click the BMC badge above to open the CipherNest Buy Me a Coffee page.</strong></p>
+
+Project support is optional. It does not change feature access, security/privacy treatment, support priority, licensing, recovery behavior, or open-source rights. Store/distribution builds can disable the in-app funding surface while repository funding metadata remains separate.
+
 ## Current release
 
 - No account, email, phone number, application server, or cloud synchronization is required.
@@ -41,7 +53,7 @@ CipherNest is a local-first, open-source password, secure-note, identity, creden
 - Settings persistence normalizes supported enum/numeric bounds on load/save, falls back safely on malformed/unreadable files, and uses unique sibling staging with best-effort cleanup. Cache/storage enumeration is guarded and does not recurse through reparse-point directories.
 - English resources ship first with a persisted System/English language preference and resource-backed architecture ready for additional culture catalogs.
 - Central exception reporting intentionally omits exception messages/stacks and vault content. No third-party analytics or crash-reporting service is enabled.
-- Original vector branding includes launcher/adaptive sources, a splash wordmark with `Made by the Sanskar`, a monochrome source, and a dark-surface logo variant.
+- Original vector branding includes launcher/adaptive sources, a splash wordmark with `Made by the Sanskar`, a monochrome source, a dark-surface logo variant, and an original BMC project-support badge.
 
 ## Documentation
 
@@ -90,7 +102,7 @@ Source: https://github.com/sanskarIN/CipherNest
 Creator: https://www.github.com/sanskarIN  
 Business: sanskarin@outlook.in  
 Support: supportramsandesh@gmail.com  
-Support development: [https://buymeacoffee.com/sanskarIN](https://buymeacoffee.com/sanskarIN)
+Support development: [☕ Buy Me a Coffee](https://buymeacoffee.com/sanskarIN)
 
 Made by the Sanskar
 
