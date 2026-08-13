@@ -6,6 +6,7 @@
     <RootNamespace>CipherNest.App</RootNamespace>
     <UseMaui>true</UseMaui>
     <SingleProject>true</SingleProject>
+    <LangVersion>preview</LangVersion>
     <ApplicationTitle>CipherNest</ApplicationTitle>
     <ApplicationId>in.sanskar.ciphernest</ApplicationId>
     <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
