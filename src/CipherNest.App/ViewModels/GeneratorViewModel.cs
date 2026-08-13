@@ -12,17 +12,38 @@ public partial class GeneratorViewModel : ObservableObject
     private readonly IClipboardSecurityService _clipboard;
     private readonly ISettingsStore _settings;
 
-    [ObservableProperty] private bool passphraseMode;
-    [ObservableProperty] private int length = 20;
-    [ObservableProperty] private int wordCount = 8;
-    [ObservableProperty] private bool uppercase = true;
-    [ObservableProperty] private bool lowercase = true;
-    [ObservableProperty] private bool digits = true;
-    [ObservableProperty] private bool symbols = true;
-    [ObservableProperty] private bool excludeAmbiguous = true;
-    [ObservableProperty] private string generatedValue = string.Empty;
-    [ObservableProperty] private string strengthLabel = string.Empty;
-    [ObservableProperty] private string errorMessage = string.Empty;
+    [ObservableProperty]
+    public partial bool PassphraseMode { get; set; }
+
+    [ObservableProperty]
+    public partial int Length { get; set; } = 20;
+
+    [ObservableProperty]
+    public partial int WordCount { get; set; } = 8;
+
+    [ObservableProperty]
+    public partial bool Uppercase { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool Lowercase { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool Digits { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool Symbols { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ExcludeAmbiguous { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string GeneratedValue { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StrengthLabel { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     public GeneratorViewModel(IPasswordGenerator generator, IClipboardSecurityService clipboard, ISettingsStore settings)
     {
@@ -69,9 +90,9 @@ public partial class GeneratorViewModel : ObservableObject
                 : _generator.Evaluate(GeneratedValue).Label;
             ErrorMessage = string.Empty;
         }
-        catch (ArgumentException ex)
+        catch (ArgumentException)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = "The generator settings are invalid. Review the length, word count, and enabled character groups.";
         }
     }
 
