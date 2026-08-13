@@ -8,7 +8,7 @@ public sealed class DecryptedRecordValidationSourceTests
         var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "VaultService.cs"));
         var methodStart = source.IndexOf("private VaultItem DecryptItem", StringComparison.Ordinal);
         Assert.True(methodStart >= 0);
-        var methodEnd = source.IndexOf("private async Task<VaultItem> GetItemRequiredAsync", methodStart, StringComparison.Ordinal);
+        var methodEnd = source.IndexOf("private async Task<VaultHeaderDocument> ReadHeaderAsync", methodStart, StringComparison.Ordinal);
         Assert.True(methodEnd > methodStart);
         var method = source[methodStart..methodEnd];
 
