@@ -73,6 +73,18 @@ public sealed class CsvParserRobustnessTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadHeaders_AcceptsEscapedQuoteInsideQuotedHeader()
+    {
+        var service = CreateService();
+        const string csv = "\"Account \"\"name\"\"\",Secret\nExample,value";
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv), writable: false);
+
+        var headers = await service.ReadHeadersAsync(stream);
+
+        Assert.Equal(["Account \"name\"", "Secret"], headers);
+    }
+
+    [Fact]
     public async Task ReadHeaders_RejectsMoreThanMaximumColumns()
     {
         var service = CreateService();
