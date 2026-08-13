@@ -12,9 +12,14 @@ public partial class DeveloperViewModel : ObservableObject
     private readonly IVaultService _vault;
     private readonly ISettingsStore _settings;
 
-    [ObservableProperty] private string databaseInfo = string.Empty;
-    [ObservableProperty] private string storageInfo = string.Empty;
-    [ObservableProperty] private string statusMessage = string.Empty;
+    [ObservableProperty]
+    public partial string DatabaseInfo { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StorageInfo { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
 
     public string CryptoInfo => $"Cryptographic envelope version: {AppConstants.CryptoFormatVersion}";
     public string SchemaInfo => $"Database migration/schema version: {AppConstants.DatabaseSchemaVersion}";
