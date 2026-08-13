@@ -2,8 +2,8 @@ using System.Collections.ObjectModel;
 using CipherNest.Application.Abstractions;
 using CipherNest.Application.Services;
 using CipherNest.App.Services;
-using CipherNest.Domain.Models;
 using CipherNest.App.Views;
+using CipherNest.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -23,17 +23,39 @@ public partial class VaultViewModel : ObservableObject
     public ObservableCollection<VaultItem> Items { get; } = [];
     public IReadOnlyList<string> SortModes { get; } = ["Favorites & title", "Recently used", "Recently modified", "Title"];
     public IReadOnlyList<string> FilterModes { get; } = ["All", "Favorites", "Review due", .. Enum.GetNames<VaultItemType>()];
-    [ObservableProperty] private string searchText = string.Empty;
-    [ObservableProperty] private string selectedSortMode = "Favorites & title";
-    [ObservableProperty] private string selectedFilterMode = "All";
-    [ObservableProperty] private string collectionFilter = string.Empty;
-    [ObservableProperty] private bool isBusy;
-    [ObservableProperty] private string errorMessage = string.Empty;
-    [ObservableProperty] private string backupReminderMessage = string.Empty;
-    [ObservableProperty] private string reviewReminderMessage = string.Empty;
-    [ObservableProperty] private bool isEmpty;
-    [ObservableProperty] private bool canLoadMore;
-    [ObservableProperty] private string resultCountMessage = string.Empty;
+
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string SelectedSortMode { get; set; } = "Favorites & title";
+
+    [ObservableProperty]
+    public partial string SelectedFilterMode { get; set; } = "All";
+
+    [ObservableProperty]
+    public partial string CollectionFilter { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string ErrorMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string BackupReminderMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ReviewReminderMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsEmpty { get; set; }
+
+    [ObservableProperty]
+    public partial bool CanLoadMore { get; set; }
+
+    [ObservableProperty]
+    public partial string ResultCountMessage { get; set; } = string.Empty;
 
     public VaultViewModel(IVaultService vault, ISettingsStore settings, IClipboardSecurityService clipboard, IPrivacySafeExceptionReporter exceptions)
     {
@@ -59,7 +81,8 @@ public partial class VaultViewModel : ObservableObject
     public async Task LoadAsync()
     {
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
-        IsBusy = true; ErrorMessage = string.Empty;
+        IsBusy = true;
+        ErrorMessage = string.Empty;
         try
         {
             var preferences = await _settings.LoadAsync();
@@ -86,7 +109,11 @@ public partial class VaultViewModel : ObservableObject
                 ReviewReminderMessage = string.Empty;
             }
         }
-        catch (Exception ex) { ErrorMessage = $"Could not load the vault: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Vault.Load", ex);
+            ErrorMessage = "Could not load the vault safely. Lock and unlock again, then retry.";
+        }
         finally { IsBusy = false; }
     }
 
