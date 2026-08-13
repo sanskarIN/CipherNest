@@ -24,7 +24,7 @@ public sealed class VaultHeaderCompatibilityIntegrationTests : IDisposable
 
         var headerJson = await store.ReadHeaderAsync();
         Assert.NotNull(headerJson);
-        var header = JsonNode.Parse(headerJson!]?.AsObject() ?? throw new InvalidDataException("Header JSON could not be parsed in the test.");
+        var header = JsonNode.Parse(headerJson!)?.AsObject() ?? throw new InvalidDataException("Header JSON could not be parsed in the test.");
         header["version"] = 999;
         await store.WriteHeaderAsync(header.ToJsonString());
 
