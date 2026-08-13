@@ -1,12 +1,18 @@
 # Release Checklist
 
+- [ ] Exact candidate commit/tag is recorded before evidence collection; historical green runs are not reused after source/project/package/workflow changes.
+- [ ] `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md` is treated as historical evidence for its recorded commit only; later candidates have fresh CI/CodeQL evidence.
 - [ ] `scripts/verify-core.ps1` or `scripts/verify-core.sh` succeeds from a clean checkout with the intended .NET SDK.
 - [ ] Main GitHub CI passes on the exact candidate: core tests/formatting, Windows default/funding-disabled compilation, Android compilation, and iOS/Mac Catalyst compilation.
 - [ ] Platform verification scripts succeed on appropriate hosts where the release target is supported: `verify-windows.ps1`, `verify-android.sh`, and `verify-apple.sh`.
 - [ ] Unit, integration, and UI/source-structure tests pass with warnings-as-errors/analyzers enabled.
 - [ ] The additional 2026-08-11 framing/session/platform checks in `docs/verification/SECURITY_HARDENING_2026_08_11.md` pass on the exact candidate.
+- [ ] The 2026-08-13 support/runtime checks in `docs/verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md` pass on the exact candidate, including BMC metadata/link gating, runtime record/session/backup tests, WinRT/AOT observable-property rules, dependency remediation, and platform target/toolchain selection.
 - [ ] The documentation-completeness source gate in `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` passes: required canonical documents remain non-empty, root/hub entry-point links remain present, and primary security entry points retain the independent-audit disclaimer.
-- [ ] Documentation is reviewed semantically against the exact candidate for changed contracts, formats, resource limits/defaults, session/destructive-authorization behavior, platform support, recovery/deletion limitations, and deferred features; source-file presence alone is not accepted as proof of documentation correctness.
+- [ ] Documentation is reviewed semantically against the exact candidate for changed contracts, formats, resource limits/defaults, session/destructive-authorization behavior, platform support, recovery/deletion limitations, dependencies/toolchains, and deferred features; source-file presence alone is not accepted as proof of documentation correctness.
+- [ ] MAUI ViewModels do not reintroduce field-based CommunityToolkit `[ObservableProperty]` generation on Windows; `ViewModelAotSourceTests` passes, the app retains its narrowly scoped `<LangVersion>preview</LangVersion>` requirement, and Windows builds complete with `MVVMTK0045` enabled rather than suppressed.
+- [ ] Apple hosted builds use a mutually compatible .NET SDK/workload/Xcode combination. If the recorded baseline is used, verify `macos-26`, .NET SDK `10.0.302`, Xcode `26.5`, workload set `10.0.300.3`, `iossimulator-arm64`, and `maccatalyst-arm64`; otherwise record and prove the replacement pairing.
+- [ ] Android/Windows/Apple platform builds select only the requested app target framework through `CipherNestTargetFrameworks` and use an appropriate target RID so host/unrelated-platform restore properties do not leak into the graph.
 - [ ] No legacy `.DisplayAlert(` call is present in MAUI C# source; current async alert APIs compile without warnings on each target workload.
 - [ ] Android and Windows smoke tests pass; iOS/MacCatalyst build and smoke tests pass on an appropriate Apple environment.
 - [ ] Manual lifecycle tests cover background, sleep/resume, timeout, manual lock, clock rollback, and fail-closed behavior, including a simulated cleanup failure that does not escape the native lifecycle callback.
@@ -53,8 +59,9 @@
 - [ ] Stored item IDs remain canonical lower-case GUID `D` strings and empty/non-canonical IDs are rejected.
 - [ ] Secure-note storage/import/editor operations share the 200,000-character and 5,000-line limits; an imported/programmatic save cannot create a note that the bounded renderer rejects only because of size.
 - [ ] CSV malformed-input tests include excessive columns in data rows where the final field ends at newline/EOF, aggregate row character bounds, and the logical row ceiling before parsing an additional row; parser source retains the reusable character buffer rather than allocating one per character.
-- [ ] CodeQL passes after analyzing both core/integration code and the Android MAUI application target.
-- [ ] Dependency review, vulnerability review, and secret scanning pass or have documented, owned, expiring exceptions; workflow timeout/cancellation behavior remains configured.
+- [ ] CodeQL v4 passes after analyzing both analyzable core code and the Android MAUI application target.
+- [ ] `Microsoft.Data.Sqlite` and the explicit SQLitePCLRaw bundle pin are reviewed against current advisories. The earlier `NU1903` blocker for SQLitePCLRaw 2.1.11 must not reappear; the current central pins are `Microsoft.Data.Sqlite` 10.0.10 and `SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 until deliberately upgraded/reviewed.
+- [ ] Pull-request dependency review, vulnerability review, and secret scanning pass or have documented, owned, expiring exceptions; workflow timeout/cancellation behavior remains configured.
 - [ ] No signing keys, certificates, passwords, API keys, crash tokens, store credentials, or other production secrets exist in repository/history/artifacts.
 - [ ] Restored package metadata and license texts are checked against `THIRD_PARTY_NOTICES.md` for the exact resolved versions.
 - [ ] Database migration tests pass, including future-schema rejection, forged-current-history rejection, positive/contiguous/timestamp-valid history, bounded validation work, extreme integer rejection, required table/column shape validation, and compatibility with every supported prior schema.
@@ -66,6 +73,7 @@
 - [ ] Crypto known-answer, tamper, wrong-key, hostile-KDF-resource, null/malformed envelope, passphrase-bound, and format-version tests pass; every cryptographic-format change has focused review.
 - [ ] Backup header validation rejects unsupported version, invalid salt length, hostile KDF parameters, or chunk size outside supported bounds before Argon2 key derivation.
 - [ ] Backup encrypted framing enforces its chunk-count ceiling, normal export reads fill each chunk before encryption unless EOF is reached, and the reusable plaintext export span is zeroed in `finally` after every encrypted chunk.
+- [ ] Truncated/malformed backup framing maps to the invalid-backup boundary without reaching KDF work when the header is not valid/authenticated enough to proceed.
 - [ ] Backup export refuses destinations that collide with the active DB/WAL/SHM/recovery files or encrypted attachment directory and uses unique sibling encrypted staging.
 - [ ] Backup creation and restore share the same archive resource policy: at most 1 GiB aggregate plaintext archive content and at most `VaultStorageLimits.MaximumAttachmentCountTotal + 1` entries. The exporter must not intentionally produce a container this build refuses solely on those resource bounds.
 - [ ] Backup attachment enumeration is materialized under guarded filesystem access and deterministic path ordering is retained before ZIP entry creation.
@@ -73,13 +81,13 @@
 - [ ] Backup rollback after active mutation uses an uncancelled recovery token; cancellation of the original restore request does not cancel the rollback database replacement.
 - [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments, corrupted-container rejection, invalid staged-database rejection, cancellation during replacement, and preservation of the active vault after failure.
 - [ ] Large attachment streaming, plaintext-buffer zeroing, safe text preview, plaintext export warning, and temporary-cache cleanup are exercised.
-- [ ] Threat model, privacy notice, security design, session-security/data-lifecycle docs, exact format docs, diagnostics policy, third-party notices, changelog, support instructions, roadmap, CI/documentation verification docs, and audit status are current.
+- [ ] Threat model, privacy notice, security design, session-security/data-lifecycle docs, exact format docs, diagnostics policy, third-party notices, changelog, project status, support instructions, roadmap, CI/documentation verification docs, and audit status are current.
 - [ ] `docs/NEXT_STEPS.md` has been reviewed against the candidate and any completed/obsolete action has been reconciled before release notes are cut.
-- [ ] `AppConstants.BuyMeACoffeeUrl`, About, README, SUPPORT, and `.github/FUNDING.yml` still reference the intended `https://buymeacoffee.com/sanskarIN` project-support URL.
+- [ ] `AppConstants.BuyMeACoffeeUrl`, About, README, SUPPORT, `.github/FUNDING.yml`, and the original `bmc_support.svg` badge still reference/present the intended `https://buymeacoffee.com/sanskarIN` project-support path without being represented as an official Buy Me a Coffee trademark asset.
 - [ ] Financial support remains clearly optional and does not change security/privacy treatment, support priority, GPL feature access, or recovery behavior.
 - [ ] The current policy for any external funding/payment CTA has been checked for each target store, distribution method, app category, and region; any disallowed in-app CTA is omitted/disabled with `CipherNestEnableFundingLink=false`, and the chosen value is recorded in release provenance.
 - [ ] Store permissions/descriptions match actual app behavior and the store copy makes no unverified security claim.
-- [ ] Primary/adaptive/monochrome/dark branding sources and generated store icons/splash/feature-graphic screenshots are checked for safe-zone clipping, contrast, scaling, creator-credit placement, and synthetic-only demo data.
+- [ ] Primary/adaptive/monochrome/dark/BMC-support branding sources and generated store icons/splash/feature-graphic screenshots are checked for safe-zone clipping, contrast, scaling, creator-credit placement, and synthetic-only demo data.
 - [ ] Localization fallback and large-interface layout are smoke-tested; future translations must preserve the meaning of security warnings.
 - [ ] Reproducible-build guidance is checked where practical and build dependencies are pinned/reviewed.
 - [ ] Signed release artifacts are generated only from a protected release environment; signing material never enters the repository.
