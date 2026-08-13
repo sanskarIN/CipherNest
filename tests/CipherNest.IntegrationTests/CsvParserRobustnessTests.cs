@@ -26,6 +26,18 @@ public sealed class CsvParserRobustnessTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadHeaders_RejectsTruncatedUtf8Sequence()
+    {
+        var service = CreateService();
+        var malformed = new byte[] { (byte)'T', (byte)'i', (byte)'t', (byte)'l', (byte)'e', (byte)',', 0xC3 };
+        await using var stream = new MemoryStream(malformed, writable: false);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
+
+        Assert.Equal("CSV contains invalid UTF-8 text.", error.Message);
+    }
+
+    [Fact]
     public async Task ReadHeaders_AcceptsQuotedHeaderWithEmbeddedComma()
     {
         var service = CreateService();
