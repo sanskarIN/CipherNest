@@ -8,15 +8,32 @@ public partial class GeneratorDefaultsViewModel : ObservableObject
 {
     private readonly ISettingsStore _settings;
 
-    [ObservableProperty] private bool passphraseMode;
-    [ObservableProperty] private int passwordLength = 20;
-    [ObservableProperty] private int passphraseWordCount = 8;
-    [ObservableProperty] private bool uppercase = true;
-    [ObservableProperty] private bool lowercase = true;
-    [ObservableProperty] private bool digits = true;
-    [ObservableProperty] private bool symbols = true;
-    [ObservableProperty] private bool excludeAmbiguous = true;
-    [ObservableProperty] private string statusMessage = string.Empty;
+    [ObservableProperty]
+    public partial bool PassphraseMode { get; set; }
+
+    [ObservableProperty]
+    public partial int PasswordLength { get; set; } = 20;
+
+    [ObservableProperty]
+    public partial int PassphraseWordCount { get; set; } = 8;
+
+    [ObservableProperty]
+    public partial bool Uppercase { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool Lowercase { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool Digits { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool Symbols { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ExcludeAmbiguous { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
 
     public GeneratorDefaultsViewModel(ISettingsStore settings) => _settings = settings;
 
