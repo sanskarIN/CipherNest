@@ -2,19 +2,32 @@
 
 This roadmap starts from the current local-first CipherNest source tree. It deliberately distinguishes source work that can be completed in the repository from release gates that require platform SDKs, emulators/simulators, physical devices, signing identities, store accounts, or independent security review.
 
-## Priority 0 — prove the current source on real build environments
+## Priority 0 — preserve and rerun the proven hosted source baseline
 
-Repository source now contains repeatable verification scripts and configured CI compile gates for core tests/formatting, Windows, Android, iOS, Mac Catalyst, the funding-disabled Windows variant, CodeQL application analysis, and dependency review. The latest source-hardening pass added cancellation-safe backup rollback, protected backup export destinations, duplicate/pathological backup entry bounds, collision-resistant encrypted attachment/settings staging, SQLite DB/WAL/SHM recovery sets, 64 KiB vault-header limits, encrypted-record count/per-record/aggregate budgets, 16 MiB serialized item limits, 2,000,000-character aggregate item-text limits, and pre-swap resource validation. The complete documentation pass also added a canonical documentation hub, user/developer/maintainer/security/format/testing/operations/release manuals and `DocumentationCoverageSourceTests`; those source gates still need execution and semantic source-to-document review on the exact candidate. These gates still need passing evidence from the exact candidate commit.
+Hosted source verification is no longer only configured: candidate `2327abba1646082a4d94a689d452b1116701cc0b` completed the full configured core/platform matrix and CodeQL successfully. Exact evidence is recorded in `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`.
 
-1. Run `scripts/verify-core.ps1` or `scripts/verify-core.sh` from a clean checkout with the selected .NET 10 SDK. This includes the UI/source project that contains the documentation-completeness regression test.
-2. Review `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`, execute `DocumentationCoverageSourceTests`, and manually compare changed contracts, formats, limits/defaults, session/destructive authorization, platform support, recovery/deletion limitations, and deferred features against the canonical documentation suite. File presence alone is not semantic correctness.
-3. Run the platform script on each appropriate host: `scripts/verify-windows.ps1`, `scripts/verify-android.sh`, and `scripts/verify-apple.sh`.
-4. Review the main GitHub Actions workflow for the exact candidate: core tests/format, Windows default/funding-disabled builds, Android build, and iOS/Mac Catalyst builds must all complete successfully.
-5. Review CodeQL after it builds both analyzable core code and the Android MAUI application target.
-6. Review dependency-review, secret-scanning, and vulnerability results for the exact candidate commit.
-7. Record exact SDK/workload/platform-toolchain versions used for every successful candidate.
-8. Treat any build warning, failed test, migration/restore failure, crypto-vector failure, unbounded parser/storage/resource condition, malformed stored metadata escaping validation, raw secret/path disclosure, materially stale security/recovery/format documentation, or unexpected platform analyzer warning as release-blocking until resolved.
-9. Preserve the immutable candidate commit/tag and verification evidence. See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_08_11.md`, and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`.
+The observed baseline includes:
+
+1. 106 UnitTests, 60 IntegrationTests, and 74 UiTests/source tests: **240 passed, 0 failed, 0 skipped**.
+2. Analyzer builds and core formatting verification passed.
+3. Windows default Release and `CipherNestEnableFundingLink=false` Release builds passed.
+4. Android `android-arm64` Release build passed.
+5. iOS `iossimulator-arm64` Release build passed.
+6. Mac Catalyst `maccatalyst-arm64` Release build passed.
+7. CodeQL v4 completed successfully after analyzable core and Android MAUI application builds.
+8. The earlier SQLite `NU1903` restore blocker was remediated by the current `Microsoft.Data.Sqlite` 10.0.10 / `SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 pins.
+9. Windows WinRT/AOT CommunityToolkit diagnostics remain enabled; affected ViewModels now use partial observable properties and the MAUI App project narrowly enables C# preview for that syntax.
+10. Apple hosted CI uses the proven `macos-26` / .NET `10.0.302` / Xcode `26.5` / workload-set `10.0.300.3` pairing.
+
+This evidence is historical as soon as a later commit changes source, project files, dependencies, workflows, formats, migrations, resource limits, or security-sensitive behavior. For every release candidate:
+
+- rerun the full main CI and CodeQL gates on the immutable candidate;
+- run dependency review through the PR gate and inspect the exact restored advisory/license graph;
+- run `DocumentationCoverageSourceTests` and semantic source-to-document review;
+- record the exact candidate, SDK/workload/platform-toolchain versions, run identifiers, and conclusions;
+- treat any build warning, failed test, migration/restore failure, crypto-vector failure, unbounded parser/storage/resource condition, malformed stored metadata escaping validation, raw secret/path disclosure, materially stale security/recovery/format documentation, or unexpected platform analyzer warning as release-blocking until resolved.
+
+See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_08_11.md`, `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`, `docs/verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md`, and `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`.
 
 ## Priority 1 — device security validation
 
@@ -211,19 +224,16 @@ Each one changes the attack surface materially and should receive its own archit
 
 ## Recommended immediate execution order
 
-1. Run the committed core verification script and execute/review `DocumentationCoverageSourceTests` plus the semantic documentation review in `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`.
-2. Run the platform verification scripts and inspect the exact GitHub CI/CodeQL/dependency-review results.
-3. Fix every compiler/analyzer/test/workload/documentation mismatch found; do not waive a security-sensitive failure just to package a candidate.
-4. Execute the backup rollback/path/archive, SQLite resource/recovery, header/storage-budget, attachment staging, settings staging, framing/passphrase, and documentation source tests on the exact candidate.
-5. Android + Windows smoke tests.
-6. Apple builds/smoke tests on an appropriate host.
-7. Real-device biometric, lifecycle, screenshot, clipboard, secure-storage, lock-cancellation, share-sheet, and plaintext-cleanup validation.
-8. Backup/restore/database-replacement and transfer compatibility/recovery matrix using `docs/operations/BACKUP_RECOVERY_RUNBOOK.md`.
-9. Accessibility/localization/responsive-layout pass using `docs/ACCESSIBILITY.md`.
-10. Performance/large-vault measurements.
-11. Dependency/license/security review.
-12. Store-policy decision for the optional funding CTA and record the build setting.
-13. Freeze release documentation against the exact candidate and complete `docs/releases/RELEASE_PROCESS.md`/`docs/RELEASE_CHECKLIST.md` evidence.
-14. Signed release-candidate packaging.
-15. Independent security review before stronger marketing claims.
-16. Tag/release only after every applicable release-checklist gate has evidence.
+1. Preserve the green hosted source baseline and rerun full CI/CodeQL/documentation gates on the exact release candidate after any later source/project/package/workflow change.
+2. Execute Android + Windows smoke tests with disposable data.
+3. Execute Apple interactive simulator/device smoke tests on the proven-compatible toolchain or another explicitly verified toolchain.
+4. Perform real-device biometric, lifecycle, screenshot, clipboard, secure-storage, lock-cancellation, share-sheet, and plaintext-cleanup validation.
+5. Run the backup/restore/database-replacement and transfer compatibility/recovery matrix using `docs/operations/BACKUP_RECOVERY_RUNBOOK.md`.
+6. Run accessibility/localization/responsive-layout validation using `docs/ACCESSIBILITY.md`.
+7. Perform performance/large-vault measurements.
+8. Run pull-request dependency review, inspect the exact restored dependency/license/advisory graph, and complete secret/security review.
+9. Decide the optional funding-CTA value for each distribution/store target and record it in release provenance.
+10. Freeze release documentation against the exact candidate and complete `docs/releases/RELEASE_PROCESS.md`/`docs/RELEASE_CHECKLIST.md` evidence.
+11. Produce signed/notarized release-candidate packages in protected environments.
+12. Obtain independent security review before stronger marketing claims.
+13. Tag/release only after every applicable release-checklist gate has evidence.
