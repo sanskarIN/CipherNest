@@ -11,16 +11,35 @@ public partial class OnboardingViewModel : ObservableObject
     private readonly IVaultService _vault;
     private readonly IPasswordGenerator _generator;
 
-    [ObservableProperty] private string masterPassphrase = string.Empty;
-    [ObservableProperty] private string confirmation = string.Empty;
-    [ObservableProperty] private string strengthLabel = "Enter a long unique master passphrase.";
-    [ObservableProperty] private bool recoveryLimitAcknowledged;
-    [ObservableProperty] private bool recoveryKeyEnabled = true;
-    [ObservableProperty] private bool recoveryKeySaved;
-    [ObservableProperty] private string recoveryKey = string.Empty;
-    [ObservableProperty] private bool showRecoveryKey;
-    [ObservableProperty] private bool isBusy;
-    [ObservableProperty] private string errorMessage = string.Empty;
+    [ObservableProperty]
+    public partial string MasterPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Confirmation { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StrengthLabel { get; set; } = "Enter a long unique master passphrase.";
+
+    [ObservableProperty]
+    public partial bool RecoveryLimitAcknowledged { get; set; }
+
+    [ObservableProperty]
+    public partial bool RecoveryKeyEnabled { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool RecoveryKeySaved { get; set; }
+
+    [ObservableProperty]
+    public partial string RecoveryKey { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool ShowRecoveryKey { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     public OnboardingViewModel(IVaultService vault, IPasswordGenerator generator)
     {
