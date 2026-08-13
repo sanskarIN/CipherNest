@@ -4,6 +4,7 @@ public static class SafeNoteLimits
 {
     public const int MaximumCharacters = 200_000;
     public const int MaximumLines = 5_000;
+    public const int MaximumChecklistItemCharacters = 1_000;
 
     public static bool ExceedsLineLimit(string value)
     {
