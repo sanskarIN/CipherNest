@@ -142,7 +142,13 @@ public sealed class SqliteVaultStore : IVaultStore
             {
                 await using var source = await OpenAsync(cancellationToken).ConfigureAwait(false);
                 await ExecuteAsync(source, "PRAGMA wal_checkpoint(FULL);", cancellationToken).ConfigureAwait(false);
-                await using var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = destinationPath, Mode = SqliteOpenMode.ReadWriteCreate, Cache = SqliteCacheMode.Private }.ToString());
+                await using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
+                {
+                    DataSource = destinationPath,
+                    Mode = SqliteOpenMode.ReadWriteCreate,
+                    Cache = SqliteCacheMode.Private,
+                    Pooling = false
+                }.ToString());
                 await destination.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await Task.Run(() => source.BackupDatabase(destination), cancellationToken).ConfigureAwait(false);
             }
@@ -165,6 +171,7 @@ public sealed class SqliteVaultStore : IVaultStore
         try
         {
             await ValidateReplacementDatabaseAsync(sourceDatabasePath, cancellationToken).ConfigureAwait(false);
+            SqliteConnection.ClearAllPools();
             var recovery = CreateRecoveryFileSet();
             try
             {
@@ -186,6 +193,7 @@ public sealed class SqliteVaultStore : IVaultStore
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            SqliteConnection.ClearAllPools();
             var failures = new List<Exception>();
             TryDeleteManagedFile(DatabasePath, failures);
             TryDeleteManagedFile(DatabasePath + "-wal", failures);
@@ -221,7 +229,8 @@ public sealed class SqliteVaultStore : IVaultStore
             {
                 DataSource = sourceDatabasePath,
                 Mode = SqliteOpenMode.ReadOnly,
-                Cache = SqliteCacheMode.Private
+                Cache = SqliteCacheMode.Private,
+                Pooling = false
             }.ToString();
             await using var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -385,7 +394,13 @@ public sealed class SqliteVaultStore : IVaultStore
 
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
     {
-        var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = DatabasePath, Mode = SqliteOpenMode.ReadWriteCreate, Cache = SqliteCacheMode.Private }.ToString());
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = DatabasePath,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+            Cache = SqliteCacheMode.Private,
+            Pooling = false
+        }.ToString());
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         return connection;
     }
