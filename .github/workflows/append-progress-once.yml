@@ -1,0 +1,147 @@
+name: Append CipherNest progress ledger once
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  append-progress:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact main head
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Append continuation and remove one-shot workflow
+        shell: bash
+        run: |
+          cat >> what_changed.md <<'EOF'
+
+## 2026-08-13 — Post-baseline parser, metadata, note-boundary, documentation, and 259-test verification continuation
+
+This continuation followed the earlier August 13 hosted baseline and continued directly on `main` with additional parser, metadata, validation, note-boundary, verification-provenance, and documentation-regression work. Existing chronological content above was preserved append-only. Connector-created commits continued to include `Signed-off-by: Sanskar <sanskarin@outlook.in>`.
+
+### Post-baseline source and test changes already present on main
+
+The source/test candidate advanced beyond the earlier 240-test hosted baseline with the following focused commits:
+
+- `test(settings): expand preference normalization boundary coverage`
+- `test(backup): cover encrypted chunk index boundaries`
+- `test(validation): cover null elements inside item collections`
+- `fix(csv): reject malformed UTF-8 input deterministically`
+- `test(csv): reject malformed UTF-8 through public parser path`
+- `fix(csv): enforce UTF-8-only text decoding`
+- `test(csv): enforce UTF-8-only BOM contract`
+- `fix(csv): route all parser reads through strict decoder`
+- `test(csv): enforce strict decoder and unified parser reads`
+- `test(csv): preserve escaped quote parsing after read refactor`
+- `fix(attachments): normalize display names across path styles`
+- `test(attachments): reject pseudo attachment display names`
+- `feat(notes): centralize checklist item text limit`
+- `fix(notes): bound checklist text before normalization`
+- `test(notes): cover checklist item character boundary`
+
+These changes keep CSV decoding strictly UTF-8 with deterministic malformed-input rejection, normalize attachment display names across slash styles before persistence/encryption, and centralize/check secure-note checklist item bounds while expanding preference/backup/item-validation regression coverage.
+
+### Post-baseline verification provenance
+
+Added `docs/verification/CURRENT_HEAD_2026_08_13.md` so the earlier `2327abba1646082a4d94a689d452b1116701cc0b` hosted baseline is not silently inherited by later source commits.
+
+Added `docs/verification/POST_BASELINE_CHECKLIST_2026_08_13.md` with the exact rerun requirements for:
+
+- clean core restore/build/analyzer/test/formatting;
+- Windows default and funding-disabled builds;
+- Android Release build;
+- iOS simulator and Mac Catalyst builds;
+- CodeQL v4;
+- dependency/advisory review;
+- external physical-device, accessibility, signing, store-policy, and audit gates.
+
+Updated `docs/README.md` so both verification records are reachable from the canonical documentation hub.
+
+### Documentation regression protection
+
+Expanded `DocumentationCoverageSourceTests` in two atomic commits so the canonical documentation suite now requires:
+
+- `CURRENT_HEAD_2026_08_13.md`;
+- `POST_BASELINE_CHECKLIST_2026_08_13.md`;
+- links to both files from `docs/README.md`.
+
+Added `docs/changelog/2026-08-13-post-baseline.md` to record the strict UTF-8 CSV, attachment display-name, secure-note checklist, and regression-coverage changes without rewriting the long-lived changelog history.
+
+### Fresh exact-candidate hosted verification
+
+A complete hosted rerun was observed for exact candidate:
+
+- commit: `a54e030c3b2d80bfac3dc7d0d9322f258ed993dc`;
+- main CI run: `31705003517`;
+- CodeQL run: `31705003506`.
+
+Observed core results for that exact candidate:
+
+- UnitTests: **120 passed, 0 failed, 0 skipped**;
+- IntegrationTests: **64 passed, 0 failed, 0 skipped**;
+- UiTests/source regressions: **75 passed, 0 failed, 0 skipped**;
+- total: **259 passed, 0 failed, 0 skipped**;
+- analyzer builds: passed;
+- configured `dotnet format --verify-no-changes`: passed.
+
+Observed platform results for that exact candidate:
+
+- Windows Release with analyzers: passed;
+- Windows Release with `CipherNestEnableFundingLink=false`: passed;
+- Android Release with analyzers: passed;
+- iOS simulator Release with analyzers: passed;
+- Mac Catalyst Release with analyzers: passed.
+
+Observed CodeQL v4 results for that exact candidate:
+
+- initialization: passed;
+- analyzable core build: passed;
+- Android MAUI analyzable application build: passed;
+- analysis/finalization: passed.
+
+The immutable exact-candidate result is recorded in the updated `docs/verification/CURRENT_HEAD_2026_08_13.md` by commit `docs(verification): record 259-test post-baseline evidence`.
+
+### Commits created during this continuation after the source/test candidate
+
+- `docs(verification): record post-baseline head status`
+- `docs(verification): add post-baseline rerun checklist`
+- `docs(index): link post-baseline verification records`
+- `test(docs): require current-head verification records`
+- `test(docs): require post-baseline hub links`
+- `docs(changelog): record post-baseline hardening changes`
+- `docs(verification): record 259-test post-baseline evidence`
+- `chore(progress): stage one-shot append-only ledger update`
+- this final `docs(progress): append post-baseline 259-test continuation` commit.
+
+### Connector write constraint encountered during this continuation
+
+Several additional ordinary source/test and repository-template write attempts were rejected by the connector safety layer before reaching GitHub. Those rejected attempts did not modify the repository and are not represented here as implemented work. The committed source/test candidate above is the source of truth.
+
+### Verification interpretation and remaining gates
+
+The 259-test/platform/CodeQL evidence applies to exact candidate `a54e030c3b2d80bfac3dc7d0d9322f258ed993dc`. Documentation-only evidence/ledger commits after it do not change the source behavior that was executed, but any later source, dependency, project, workflow, migration, cryptographic-format, resource-limit, or platform-binding change requires affected gates to be rerun.
+
+This continuation does not claim physical-device biometric, clipboard, screenshot, lifecycle, secure-storage, share-sheet, accessibility, signing/notarization/provisioning, store-policy, forensic deletion, or independent professional security-audit completion.
+
+No master/backup passphrase, recovery material, biometric secondary secret, real vault, decrypted attachment, plaintext credential CSV, signing private key, certificate secret, store/API token, production analytics/crash token, or real user vault content was added to source control.
+
+Deferred product scope remains unchanged: cloud synchronization/accounts/collaboration, browser/app autofill, TOTP, Windows Hello convenience unlock, rich binary/PDF preview and scanning, pronounceable-password generation pending review, destructive automatic wipe after failed attempts, and complete additional language catalogs remain separate future reviewed work.
+
+This commit is the final repository write in this continuation. The temporary one-shot workflow used only to append this long ledger section removes itself in the same commit, so no append helper remains in the final tree.
+EOF
+
+          rm .github/workflows/append-progress-once.yml
+          git config user.name "Sanskar"
+          git config user.email "sanskarin@outlook.in"
+          git add what_changed.md .github/workflows/append-progress-once.yml
+          git commit -m "docs(progress): append post-baseline 259-test continuation" -m "Signed-off-by: Sanskar <sanskarin@outlook.in>"
+          git push origin HEAD:main
