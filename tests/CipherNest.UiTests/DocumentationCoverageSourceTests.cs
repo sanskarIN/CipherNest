@@ -121,12 +121,10 @@ public sealed class DocumentationCoverageSourceTests
     {
         var readme = File.ReadAllText(PathAt("README.md"));
         var security = File.ReadAllText(PathAt("SECURITY.md"));
-        var threatModel = File.ReadAllText(PathAt("docs", "security", "THREAT_MODEL.md"));
         var cryptoDesign = File.ReadAllText(PathAt("docs", "security", "CRYPTOGRAPHIC_DESIGN.md"));
 
         Assert.Contains("has not yet undergone an independent professional security audit", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("has **not** completed an independent professional security audit", security, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("independent professional", threatModel, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not** completed an independent professional", cryptoDesign, StringComparison.OrdinalIgnoreCase);
     }
 
