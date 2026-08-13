@@ -23,9 +23,9 @@ public partial class StartupPage : ContentPage
         catch (Exception ex)
         {
             try { ServiceProviderHelper.GetRequiredService<IPrivacySafeExceptionReporter>().Report("Startup.Initialize", ex); }
-            catch (Exception reporterFailure)
+            catch (InvalidOperationException)
             {
-                System.Diagnostics.Debug.WriteLine($"Privacy-safe startup reporter unavailable: {reporterFailure.GetType().Name}");
+                // If dependency resolution itself failed, keep the fallback user-facing and do not emit raw exception details.
             }
             await DisplayAlertAsync("CipherNest could not start", "Local storage initialization could not be completed safely. Close and reopen CipherNest, then review troubleshooting guidance if the problem continues.", "OK");
             _navigated = false;
