@@ -8,7 +8,7 @@
       <Button Text="Unlock with biometrics" Command="{Binding BiometricUnlockCommand}" IsVisible="{Binding BiometricUnlockAvailable}" SemanticProperties.Description="Authenticate with the device biometric system to unlock CipherNest"/>
       <Label Text="or use your master passphrase / recovery key" Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center" IsVisible="{Binding BiometricUnlockAvailable}"/>
       <Entry Text="{Binding MasterPassphrase}" IsPassword="True" Placeholder="Master passphrase or recovery key" ReturnType="Done" SemanticProperties.Description="Master passphrase or recovery key"/>
-      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" SemanticProperties.LiveSetting="Polite"/>
+      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" SemanticProperties.Description="Unlock error status"/>
       <Button Text="Unlock" Command="{Binding UnlockCommand}"/>
       <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
       <Label Text="Forgotten passphrases cannot be recovered unless you saved the optional recovery key during setup. Biometric unlock never replaces that recovery limitation." Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center"/>
