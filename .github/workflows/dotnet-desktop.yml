@@ -76,15 +76,15 @@ jobs:
         run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestTargetFrameworks=net10.0-android -f net10.0-android -r android-arm64
 
   build-apple:
-    runs-on: macos-latest
+    runs-on: macos-26-arm64
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '10.0.302'
       - name: Select compatible Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer
+        run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
       - name: Install .NET MAUI Apple workloads
         run: dotnet workload install maui-ios maui-maccatalyst --skip-manifest-update
       - name: Build iOS simulator app with analyzers
