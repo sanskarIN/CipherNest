@@ -13,8 +13,8 @@
         <CheckBox Grid.Row="1" IsChecked="{Binding Digits}"/><Label Grid.Row="1" Grid.Column="1" Text="Digits" VerticalTextAlignment="Center"/><CheckBox Grid.Row="1" Grid.Column="2" IsChecked="{Binding Symbols}"/><Label Grid.Row="1" Grid.Column="3" Text="Symbols" VerticalTextAlignment="Center"/>
       </Grid>
       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><CheckBox IsChecked="{Binding ExcludeAmbiguous}"/><Label Grid.Column="1" Text="Exclude ambiguous characters" VerticalTextAlignment="Center"/></Grid>
-      <Frame><VerticalStackLayout Spacing="8"><Label Text="Generated value" FontAttributes="Bold"/><Entry Text="{Binding GeneratedValue}" IsReadOnly="True"/><Label Text="{Binding StrengthLabel}" Style="{StaticResource SubtitleLabel}"/></VerticalStackLayout></Frame>
-      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" SemanticProperties.LiveSetting="Polite"/>
+      <Border><VerticalStackLayout Spacing="8"><Label Text="Generated value" FontAttributes="Bold"/><Entry Text="{Binding GeneratedValue}" IsReadOnly="True"/><Label Text="{Binding StrengthLabel}" Style="{StaticResource SubtitleLabel}"/></VerticalStackLayout></Border>
+      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" SemanticProperties.Description="Generator error status"/>
       <Grid ColumnDefinitions="*,*" ColumnSpacing="10"><Button Text="Generate" Command="{Binding GenerateCommand}"/><Button Grid.Column="1" Text="Copy" Command="{Binding CopyCommand}" Style="{StaticResource SecondaryButton}"/></Grid>
       <Label Text="Copied values are cleared after your configured interval where the platform allows reliable clipboard clearing. Clipboard history may retain data." Style="{StaticResource SubtitleLabel}"/>
     </VerticalStackLayout>
