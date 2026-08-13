@@ -84,25 +84,37 @@
 - Committed local verification scripts cover core PowerShell/POSIX, Windows, Android, and Apple-host compile gates; `docs/verification/CI_GATES.md` documents release evidence requirements.
 - Repository templates, contribution/security/support/privacy/terms files, architecture records, implemented cryptographic design, release/setup/packaging/reproducibility/troubleshooting/test documentation, third-party notices, release checklist, and executable `docs/NEXT_STEPS.md` roadmap are present.
 
+### Hosted verification evidence
+- Exact hosted candidate `2327abba1646082a4d94a689d452b1116701cc0b` completed `CipherNest CI` run `31697433940` successfully.
+- Core analyzer builds completed with 0 warnings / 0 errors for UnitTests, IntegrationTests, and UiTests.
+- Runtime tests completed with **106 Unit + 60 Integration + 74 UI/source = 240 passed, 0 failed, 0 skipped**.
+- Core `dotnet format --verify-no-changes` checks completed successfully.
+- Windows Release builds completed successfully for both the default funding-enabled configuration and `CipherNestEnableFundingLink=false`.
+- Android Release compilation completed successfully for `android-arm64`.
+- iOS simulator Release compilation completed successfully for `iossimulator-arm64`.
+- Mac Catalyst Release compilation completed successfully for `maccatalyst-arm64`.
+- Apple hosted verification used `macos-26`, .NET SDK `10.0.302`, Xcode `26.5`, and the Xcode-26.5-compatible .NET workload set `10.0.300.3`.
+- CodeQL v4 run `31697433730` completed successfully after building analyzable core and the Android MAUI application path.
+- Detailed exact-run evidence is recorded in `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`.
+
 ### Quality gate requiring external execution or hardware
-- The connected GitHub editing environment cannot execute the repository's .NET/MAUI builds, GitHub-hosted push workflow runs, emulator/simulator sessions, or physical-device smoke tests. Source completion is therefore not a claim that the current head has passed those external checks.
-- The main workflow is configured to restore/build/run UnitTests, IntegrationTests, UiTests, verify core formatting, compile Windows default/funding-disabled variants, compile Android, and compile iOS/Mac Catalyst. Passing evidence must be reviewed on the exact candidate commit.
-- The newly added framing/resource/session/platform-boundary tests and documentation-completeness source regression tests require execution on the exact current head before any passing claim.
-- Concurrency behavior around lock/unlock/delete transition ordering, attachment mutations, restore cancellation, and filesystem rollback timing requires execution/stress validation on the exact candidate; source serialization and source tests are not proof of all runtime interleavings.
+- The repository has exact hosted compile/test/format/CodeQL evidence for candidate `2327abba1646082a4d94a689d452b1116701cc0b`; later release candidates must rerun these gates rather than inheriting the result automatically.
+- The connected editing environment does not itself provide interactive target emulators/simulators, physical devices, store signing/notarization, store review, or an independent professional security audit.
+- Concurrency behavior around lock/unlock/delete transition ordering, attachment mutations, restore cancellation, and filesystem rollback timing has automated policy/integration coverage, but broader stress/interleaving validation remains required on the exact release candidate.
 - Android biometric bindings and runtime behavior must be exercised with the selected .NET Android workload on API-28+ devices/emulators covering enrollment, absence, cancellation, lockout, hardware availability, and secure-storage loss.
-- iOS and Mac Catalyst biometric behavior, Face ID/Touch ID enrollment changes, cancellation, secure-storage behavior, and packaging require an appropriate Apple build/test environment.
+- iOS and Mac Catalyst biometric behavior, Face ID/Touch ID enrollment changes, cancellation, secure-storage behavior, and packaging require interactive Apple simulator/device validation even though hosted compilation now passes.
 - Windows packaging needs its normal signing identity for store distribution; Windows biometric unlock is intentionally not enabled in this release.
 - Android/iOS/MacCatalyst/Windows store signing keys and credentials are intentionally absent from the repository and must be supplied through protected CI/store configuration.
 - Screenshot blocking, real clipboard/history behavior, background/sleep lifecycle callbacks, session-cancellation timing, attachment-mutation cancellation timing, share-sheet plaintext cleanup, in-memory preview behavior, accessibility behavior, language fallback, responsive layouts, incremental large-vault UX, large-file attachment behavior, and filesystem replacement/recovery behavior require final platform-by-platform validation.
 - The exact current policy for an external Buy Me a Coffee/funding call to action must be checked for every target store/distribution/region before packaging. If a store build cannot expose it, use `CipherNestEnableFundingLink=false` and record that build property in release provenance.
-- Dependency vulnerability/dependency-review/CodeQL results must be reviewed when GitHub services execute against the exact head.
+- Pull-request dependency review remains a separate configured gate; the exact candidate's hosted restores no longer surface the previously observed `NU1903` SQLite blocker, and CodeQL succeeded.
 - Third-party license notice families must be checked against the exact restored package metadata before distribution.
 - Exact platform asset/store requirements, including Android themed/monochrome icon wiring and Apple/Windows generated icon outputs, must be verified against current distribution documentation during release packaging.
 - Independent professional cryptographic/security audit remains outstanding; CipherNest must not be marketed as audited, unhackable, military-grade, 100% secure, or suitable for high-risk use until evidence supports those statements.
 
 ### Next steps
 
-The ordered release/development plan is maintained in `docs/NEXT_STEPS.md`; verification details are in `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_08_11.md`, and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`. The immediate sequence is execute the configured clean build/tests/format/analyzers and platform compile gates, fix every resulting issue, perform platform smoke/real-device security validation, stress session-transition/attachment-mutation/restore-cancellation/filesystem-recovery behavior, test backup/restore/database-replacement and transfer compatibility, complete accessibility/localization/responsive checks, measure performance/large-vault behavior against the current resource budgets, review dependencies/licenses/security, package signed candidates, obtain independent security review, and only then create an evidence-backed tagged release.
+The ordered release/development plan is maintained in `docs/NEXT_STEPS.md`; verification details are in `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_08_11.md`, `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`, `docs/verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md`, and `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`. The immediate sequence is preserve the green hosted source baseline while executing platform smoke/real-device security validation, stress session-transition/attachment-mutation/restore-cancellation/filesystem-recovery behavior, test backup/restore/database-replacement and transfer compatibility on target environments, complete accessibility/localization/responsive checks, measure performance/large-vault behavior against the current resource budgets, review dependencies/licenses/security, package signed candidates, obtain independent security review, and only then create an evidence-backed tagged release.
 
 ### Deliberately deferred pending dedicated security/platform review
 - Cloud synchronization, accounts, collaboration, server storage, and multi-device conflict resolution.
