@@ -3,8 +3,8 @@ namespace CipherNest.App.Services;
 public static class BuildFeatureFlags
 {
 #if CIPHERNEST_DISABLE_FUNDING_LINK
-    public const bool IsFundingLinkEnabled = false;
+    public static bool IsFundingLinkEnabled => false;
 #else
-    public const bool IsFundingLinkEnabled = true;
+    public static bool IsFundingLinkEnabled => true;
 #endif
 }
