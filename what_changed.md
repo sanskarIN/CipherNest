@@ -1388,7 +1388,7 @@ This continuation followed the storage/recovery hardening head and focused on pa
 
 ### Onboarding master-passphrase ceiling
 
-- First-run vault creation enforces the same maximum passphrase-character limit before generator-strength evaluation or vault creation.
+- First-run vault creation enforces the same maximum passphrase-character limit before strength evaluation or vault creation.
 - Added source coverage requiring the UI-side ceiling so the creation path cannot send oversized bound input into expensive work.
 
 ### Documentation and verification synchronization
@@ -1775,3 +1775,337 @@ Each future feature must receive its own architecture/data-flow/threat/privacy/f
 - this final `docs(progress): record complete project documentation suite` progress-file update.
 
 This `what_changed.md` commit is the final repository write in the documentation pass. All earlier chronological ledger content above was preserved while this 2026-08-12 continuation was appended.
+
+## 2026-08-13 — BMC support highlight, runtime integration hardening, dependency remediation, WinRT/AOT modernization, and proven cross-platform CI
+
+This continuation started by making the optional Buy Me a Coffee project-support path more visible, then continued through real hosted verification until the repository reached an evidence-backed cross-platform source baseline. The work was deliberately split into many small signed-off commits. Existing `what_changed.md` history above was preserved and this section was appended after source/documentation freeze.
+
+### Highlighted BMC project-support surface
+
+- Added `src/CipherNest.App/Resources/Images/bmc_support.svg`, an original CipherNest-created vector badge with a coffee/BMC motif and `Support CipherNest` wording.
+- The badge is not represented as the official Buy Me a Coffee logo or trademark asset.
+- Root `README.md` now displays the badge prominently and makes the image itself a direct link to `https://buymeacoffee.com/sanskarIN`.
+- `SUPPORT.md` highlights the same support destination.
+- About now uses the MAUI image inside a highlighted support card. The badge tap target and explicit action both use the canonical `AppConstants.BuyMeACoffeeUrl` path.
+- The existing `CipherNestEnableFundingLink=false` build policy remains authoritative for distributions where the in-app external funding surface must be omitted.
+- Voluntary project support does not change feature access, security/privacy treatment, support priority, recovery behavior, GPL rights, or open-source availability.
+- Added `BmcSupportSourceTests` so the original badge, canonical URL, About link handling, and store-build gating cannot silently drift.
+
+### Authenticated decrypted-record runtime validation
+
+- Added runtime integration coverage for the infrastructure boundary that validates authenticated decrypted record payloads.
+- A record whose authenticated SQLite row ID differs from the internal decrypted `VaultItem.Id` is rejected before it can leave Infrastructure.
+- A cryptographically authenticated record with invalid item metadata such as an unsupported `VaultItemType` is rejected before application/search/UI code receives it.
+- This converts an earlier source-wiring assertion into actual encrypted-record runtime evidence.
+
+### Serialized lock-vs-unlock transition runtime coverage
+
+- Added a real transition integration test that deliberately blocks master-key unwrap, starts `LockAsync` while unlock owns the transition gate, then releases the unwrap.
+- The test requires lock to remain pending until the serialized unlock transition leaves the gate and requires the final state to be locked.
+- Added explicit bounded waits so a concurrency regression fails instead of hanging a CI runner indefinitely.
+
+### Hostile and malformed backup-header runtime behavior
+
+- Added integration coverage building synthetic `.cnbak` framing with a derivation-guard crypto implementation.
+- Unsupported backup format metadata and KDF memory values above the allowed resource ceiling must fail before `ICryptoService.DeriveKey` is reached.
+- Truncated backup framing is normalized into the public invalid-backup `InvalidDataException` boundary instead of escaping as `EndOfStreamException`.
+- Malformed backup-header JSON is similarly normalized into the invalid-backup boundary instead of exposing parser exceptions directly.
+- Existing cryptographic authentication failures remain mapped to invalid backup data.
+
+### Unlock backoff correction
+
+- Hosted execution exposed a real policy/test mismatch: the implementation capped the exponential step one failure too early at 160 seconds even though the documented policy requires the five-minute ceiling after repeated failures.
+- `UnlockBackoffPolicy` was corrected so the schedule reaches the intended 300-second cap.
+- Unit tests then passed against the documented schedule rather than weakening the test to match the bug.
+
+### SQLite replacement connection-pooling fix
+
+- Integration execution exposed stale reads after a validated active database file replacement because a pooled SQLite connection could survive the file swap and continue observing the old database.
+- Active vault connections used by `SqliteVaultStore` no longer pool across replacement-sensitive operations.
+- Replacement integration tests now observe the newly installed validated database rather than stale pre-swap state.
+- Cryptographic tamper assertions were also made compatible with framework-specific authentication-tag exception subclasses without weakening the requirement that tampering fails.
+
+### SQLite dependency vulnerability remediation
+
+- A real hosted restore was blocked by `NU1903` because the resolved `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 native dependency had a known high-severity advisory.
+- Updated the central `Microsoft.Data.Sqlite` pin to `10.0.10`.
+- Explicitly pinned `SQLitePCLRaw.bundle_e_sqlite3` to `2.1.12` and referenced that bundle from Infrastructure so NuGet does not fall back to the vulnerable older transitive native bundle.
+- Updated `THIRD_PARTY_NOTICES.md` with the current direct runtime pins and the release-time exact restored graph/license/advisory requirement.
+- Later hosted restores/builds completed without the earlier `NU1903` blocker.
+- This does not replace pull-request dependency review or exact-release advisory/license inspection.
+
+### CodeQL v4 migration
+
+- GitHub-hosted logs surfaced the CodeQL Action v3 deprecation path.
+- Migrated CodeQL initialization/analysis actions to `github/codeql-action` v4 while preserving the existing manual analyzable core + Android MAUI build sequence.
+- Kept Android application code inside the CodeQL analysis path instead of reducing analysis to non-MAUI libraries.
+
+### Test-project compile cleanup discovered by hosted CI
+
+- Hosted analyzer compilation exposed missing xUnit namespace imports across all test projects.
+- Added a `tests/Directory.Build.props` layer that imports the repository root build-quality properties and supplies the xUnit global using, preserving nullable/analyzer/warnings-as-errors behavior instead of shadowing root properties.
+- Repaired xUnit API/overload compatibility in focused KDF/backup tests.
+- Repaired a syntax error in vault-header compatibility test parsing.
+- Formatter-reported source/test layout/final-newline issues were fixed in separate small commits until `dotnet format --verify-no-changes` passed.
+
+### App-only MAUI target-framework and RID isolation
+
+- Real Linux/Windows/macOS CI runs exposed restore-graph leakage when the MAUI App declared every platform target and platform build properties propagated too broadly.
+- Added app-only `CipherNestTargetFrameworks` selection so platform CI restores/evaluates only the requested App target while referenced core libraries remain ordinary `net10.0` projects.
+- Added/used explicit target RIDs:
+  - Android: `android-arm64`;
+  - Windows: `win-x64`;
+  - iOS simulator: `iossimulator-arm64`;
+  - Mac Catalyst: `maccatalyst-arm64`.
+- Updated CodeQL and local verification scripts to use the same app-only target-selection approach.
+- Android no longer inherits the host `linux-x64` runtime identifier.
+
+### MAUI API/accessibility compile hardening
+
+- Replaced obsolete MAUI `Frame` usage in the About surface with `Border` while preserving the highlighted support card design.
+- Removed unsupported `SemanticProperties.LiveSetting` XAML properties from affected pages after actual XAML compilation exposed them.
+- Retained supported semantic descriptions/status text and updated source regression tests to require supported metadata rather than obsolete/unsupported properties.
+- Modernized/redacted attachment-preview failure handling and startup failure handling so platform compile fixes did not reintroduce raw exception logging.
+- Adjusted the build-time funding-flag implementation to avoid compile-time constant-folded branch warnings while retaining the default-enabled/explicit-false behavior.
+- Aligned Android `BiometricPrompt` source with API-28 analyzer/nullability expectations rather than suppressing platform diagnostics.
+
+### Windows WinRT/AOT CommunityToolkit modernization
+
+- A real Windows Release build reached CommunityToolkit analyzer execution and surfaced 114 `MVVMTK0045` errors for field-based `[ObservableProperty]` generation.
+- The analyzer remained enabled; CipherNest did **not** add a blanket `NoWarn` or lower warnings-as-errors.
+- Migrated every affected MAUI ViewModel observable to WinRT/AOT-safe partial properties:
+  - `AuditViewModel`;
+  - `DeveloperViewModel`;
+  - `GeneratorDefaultsViewModel`;
+  - `GeneratorViewModel`;
+  - `ItemEditorViewModel`;
+  - `TransferViewModel`;
+  - `SettingsViewModel`;
+  - `SettingsViewModel.Localization`;
+  - `TrashViewModel`;
+  - `UnlockViewModel`;
+  - `OnboardingViewModel`;
+  - `VaultViewModel`.
+- The MAUI App project now explicitly uses `<LangVersion>preview</LangVersion>` because the CommunityToolkit partial-property syntax required by the current verified WinRT/AOT-safe toolchain needs the preview language feature.
+- The preview override is intentionally scoped to `CipherNest.App`; Domain/Application/Infrastructure/Shared/tests retain the repository's existing shared language policy.
+- Added `ViewModelAotSourceTests` to reject field-based observable generation and require the App-level preview setting.
+- Subsequent hosted Windows Release builds completed successfully with `MVVMTK0045` still active.
+
+### Apple hosted runner and workload-set alignment
+
+- Earlier Apple attempts identified three separate CI/toolchain problems rather than an application-format change:
+  1. `macos-26-arm64` was an image name, not the correct supported GitHub YAML label; the workflow now uses `macos-26`.
+  2. The Apple job now selects Xcode 26.5 explicitly.
+  3. The default workload install could still resolve an older .NET iOS SDK pack incompatible with Xcode 26.5, so the workflow now pins .NET SDK `10.0.302` and workload set `10.0.300.3`.
+- Hosted Apple configuration now uses:
+  - GitHub runner `macos-26`;
+  - .NET SDK `10.0.302`;
+  - Xcode `26.5`;
+  - workload set `10.0.300.3`;
+  - `iossimulator-arm64` for iOS compile;
+  - `maccatalyst-arm64` for Mac Catalyst compile.
+- Xcode compatibility validation was not disabled. The fix aligns the toolchain instead of suppressing compatibility checks.
+
+### Exact hosted source/toolchain evidence
+
+The first fully green cross-platform source/toolchain baseline recorded during this continuation is:
+
+- candidate commit: `2327abba1646082a4d94a689d452b1116701cc0b`;
+- main CI run: `31697433940`;
+- CodeQL run: `31697433730`.
+
+Observed exact results for that candidate:
+
+- UnitTests: **106 passed, 0 failed, 0 skipped**;
+- IntegrationTests: **60 passed, 0 failed, 0 skipped**;
+- UiTests/source regressions: **74 passed, 0 failed, 0 skipped**;
+- total: **240 passed, 0 failed, 0 skipped**;
+- analyzer builds: passed;
+- core `dotnet format --verify-no-changes`: passed;
+- Windows default Release: passed;
+- Windows `CipherNestEnableFundingLink=false` Release: passed;
+- Android `android-arm64` Release: passed;
+- iOS simulator `iossimulator-arm64` Release: passed;
+- Mac Catalyst `maccatalyst-arm64` Release: passed;
+- CodeQL v4 initialization/core build/Android MAUI build/analysis: passed.
+
+Detailed exact-run evidence is recorded in `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`.
+
+### Final pre-ledger documentation-head evidence
+
+After the exact hosted baseline was captured, status/changelog/license/build/verification/release/roadmap/README/developer documentation was synchronized and the documentation source regression was expanded to require the hosted-evidence file.
+
+The final pre-ledger documentation head was:
+
+- commit: `dddf5172da1c5045aa937e9466c976b433505368` — `docs(dev): document WinRT-safe MVVM and hosted evidence`;
+- main CI run: `31699468437`;
+- CodeQL run: `31699468246`.
+
+Observed final pre-ledger results:
+
+- core restore/analyzer builds/tests/formatting: passed;
+- Windows default Release: passed;
+- Windows funding-disabled Release: passed;
+- Android Release: passed;
+- iOS simulator Release: passed;
+- Mac Catalyst Release: passed;
+- CodeQL v4: passed.
+
+This establishes hosted compile/test/static-analysis evidence for the synchronized documentation head immediately before the append-only ledger write. The ledger commit itself contains documentation only and intentionally remains the final repository write in this continuation.
+
+### Documentation/evidence synchronization
+
+Added or updated during the final evidence pass:
+
+- `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md` with exact candidate/run IDs, test counts, platform build results, CodeQL result, dependency remediation, Windows WinRT/AOT fix, Apple toolchain pairing, and external limitations;
+- `PROJECT_STATUS.md` to replace stale configured-but-unexecuted wording with exact candidate evidence while retaining device/signing/store/audit limits;
+- `CHANGELOG.md` for BMC support, runtime tests, dependency remediation, WinRT/AOT migration, target/toolchain fixes, and hosted evidence;
+- `THIRD_PARTY_NOTICES.md` for the remediated SQLite direct package pins and exact restored-graph release gate;
+- `docs/verification/CI_GATES.md` for the proven Windows/Android/Apple target/toolchain strategy and hosted-evidence semantics;
+- `docs/setup/BUILD.md` for app-only target isolation, App-only preview language, explicit platform RIDs, and the proven Apple toolchain pairing;
+- `docs/verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md` for BMC/runtime/SQLite/WinRT/platform gates plus exact hosted evidence;
+- `docs/README.md` to link the hosted evidence document;
+- `DocumentationCoverageSourceTests` to require the hosted evidence file and hub link;
+- `docs/RELEASE_CHECKLIST.md` for exact candidate/toolchain/dependency/WinRT evidence gates;
+- `docs/NEXT_STEPS.md` to advance beyond configured source verification into physical-device/recovery/accessibility/performance/release/audit work;
+- root `README.md` to publish the exact 240-test and cross-platform compile/CodeQL evidence without converting it into a device/security-audit claim;
+- `docs/DEVELOPER_GUIDE.md` for WinRT/AOT partial-observable rules, App-only preview C#, app-target isolation, exact hosted evidence, and review obligations;
+- this append-only `what_changed.md` continuation.
+
+### Commits created during this August 13 continuation
+
+- `feat(branding): add original BMC support badge`
+- `feat(about): highlight BMC project support surface`
+- `docs(readme): highlight clickable BMC support badge`
+- `docs(support): highlight BMC project support link`
+- `docs(branding): document BMC project support badge`
+- `test(support): enforce highlighted linked BMC surface`
+- `test(vault): reject authenticated invalid record payloads at runtime`
+- `test(security): verify lock wins after in-flight unlock transition`
+- `test(backup): reject hostile header before key derivation`
+- `test(security): bound session transition race waits`
+- `fix(backup): normalize malformed framing failures`
+- `test(backup): cover truncated and malformed framing errors`
+- `docs(verification): add August 13 support and runtime gates`
+- `docs(index): link August 13 support and runtime verification`
+- `test(docs): require August 13 verification addendum`
+- `fix(deps): update SQLite packages past vulnerable native bundle`
+- `fix(deps): pin patched SQLite native bundle`
+- `ci(codeql): migrate analysis actions to v4`
+- `fix(tests): import xUnit globally across test projects`
+- `fix(android): declare valid target runtime identifiers`
+- `fix(tests): preserve repository build quality settings`
+- `fix(tests): align KDF bounds tests with current xUnit API`
+- `fix(tests): use direct suffix assertion for backup staging`
+- `fix(tests): repair vault header compatibility parse syntax`
+- `fix(security): reach documented five-minute unlock backoff cap`
+- `fix(android): select Android ARM64 as default active RID`
+- `fix(database): avoid stale pooled handles across vault replacement`
+- `fix(tests): accept cryptographic tamper exception subclasses`
+- `ci: let platform builds restore correct target graphs`
+- `ci(codeql): use explicit Android ARM64 analysis target`
+- `fix(build): allow app-only target framework isolation`
+- `ci: isolate MAUI app target frameworks per runner`
+- `ci(codeql): isolate Android app target graph`
+- `chore(verify): isolate Android app verification target`
+- `chore(verify): isolate Windows app verification target`
+- `chore(verify): isolate Apple app verification targets`
+- `fix(privacy): modernize and redact attachment preview failures`
+- `fix(build): avoid constant-folded funding branches`
+- `fix(startup): redact startup initialization failures`
+- `fix(maui): replace obsolete About frames with borders`
+- `fix(startup): keep reporter fallback free of raw logging`
+- `fix(android): align biometric prompt with API 28 analyzers`
+- `fix(tests): align decrypted-record source guard with current method order`
+- `fix(tests): keep audit disclaimer checks on canonical audit surfaces`
+- `ci(apple): select Xcode compatible with current .NET iOS SDK`
+- `fix(maui): remove unsupported generator live-setting property`
+- `fix(maui): modernize generator accessibility container`
+- `fix(maui): remove unsupported item-editor live setting`
+- `fix(maui): remove unsupported settings live setting`
+- `fix(maui): remove unsupported trash live setting`
+- `fix(maui): remove unsupported unlock live setting`
+- `fix(maui): remove unsupported vault live settings`
+- `fix(tests): require supported semantic descriptions`
+- `style: add final newline to attachment import policy`
+- `style: add final newline to backup archive policy`
+- `style: add final newline to CSV transfer service`
+- `style: format CSV import item initializer`
+- `fix(windows): migrate audit observables to partial properties`
+- `fix(windows): migrate developer observables to partial properties`
+- `fix(windows): migrate generator defaults observables to partial properties`
+- `fix(windows): migrate generator observables to partial properties`
+- `fix(windows): migrate item editor observables to partial properties`
+- `fix(windows): migrate transfer observables to partial properties`
+- `fix(windows): migrate settings observables to partial properties`
+- `fix(windows): migrate language observable to partial property`
+- `fix(windows): migrate trash observables to partial properties`
+- `fix(windows): migrate unlock observables to partial properties`
+- `fix(windows): migrate onboarding observables to partial properties`
+- `fix(windows): migrate vault observables to partial properties`
+- `test(windows): enforce WinRT-safe observable properties`
+- `ci(apple): align .NET workload with hosted Xcode runtime`
+- `fix(build): enable preview language for WinRT-safe MVVM properties`
+- `test(windows): require preview language for partial observables`
+- `style(tests): format security audit fixtures`
+- `style(tests): add attachment policy final newline`
+- `style(tests): add backup policy final newline`
+- `style(tests): add backup archive source final newline`
+- `ci(apple): use supported macOS 26 runner label`
+- `ci(apple): pin Xcode 26.5 compatible workload set`
+- `docs(verification): record exact hosted CI evidence`
+- `docs(status): record hosted cross-platform verification`
+- `docs(changelog): record hosted verification and platform fixes`
+- `docs(licenses): record remediated SQLite package pins`
+- `docs(verification): align CI gates with proven toolchains`
+- `docs(build): document exact MAUI target and Apple toolchains`
+- `docs(verification): add Windows SQLite and hosted evidence gates`
+- `docs(index): link hosted CI evidence`
+- `test(docs): require hosted verification evidence reference`
+- `docs(release): add hosted toolchain and dependency evidence gates`
+- `docs(roadmap): advance past hosted source verification`
+- `docs(readme): publish hosted cross-platform verification evidence`
+- `docs(dev): document WinRT-safe MVVM and hosted evidence`
+- this final `docs(progress): record BMC runtime and hosted verification continuation` ledger commit.
+
+### Final source hygiene signals
+
+Before the ledger append, indexed source searches were rechecked for unfinished markers, legacy alert usage, debug/console logging, the removed `BiometricManager` preflight, and the removed direct `RequireKey()` pattern. The repository's source regression tests remain the stronger guard because GitHub code-search indexing can lag a just-pushed commit.
+
+No signing key, certificate private material, store/API token, master/backup passphrase, recovery key/material, biometric secondary secret, real vault, decrypted attachment, plaintext credential CSV, production analytics/crash token, or real user content was added to source control in this continuation.
+
+### Remaining external release gates
+
+Hosted source/toolchain evidence is now materially stronger, but it does **not** establish the following:
+
+- real-device Android biometric enrollment/absence/cancellation/lockout/hardware/secure-storage-loss behavior;
+- real-device iOS/Mac Catalyst Face ID/Touch ID enrollment/cancellation/secure-storage behavior;
+- Windows Hello, which remains intentionally deferred;
+- clipboard-history behavior and timed cleanup on every target OS/version;
+- screenshot/app-switcher protection on every target OS/version;
+- background/sleep/resume lifecycle behavior on physical devices;
+- share-sheet/file-provider plaintext retention outside CipherNest's own temporary-file cleanup;
+- complete TalkBack/VoiceOver/Narrator/keyboard/OS-large-text accessibility validation;
+- signed Windows/Android/iOS/Mac Catalyst packaging, notarization, provisioning, or store submission;
+- current store-policy acceptance of the optional external funding CTA for each target/region/distribution;
+- pull-request dependency-review evidence for a later candidate that has not exercised that PR gate;
+- exact release-candidate third-party transitive license/advisory review;
+- independent professional cryptographic/security audit;
+- forensic or physical secure-deletion guarantees.
+
+The next execution order is maintained in `docs/NEXT_STEPS.md`: preserve and rerun the green hosted source baseline for the exact future release candidate, then execute interactive/physical-device security validation, recovery/compatibility, accessibility/localization, performance, dependency/license review, signed packaging/store policy, and independent security review before an evidence-backed release tag.
+
+### Deferred scope remains unchanged
+
+The following remain separate future reviewed projects and are not represented as completed current features:
+
+- cloud synchronization, accounts, collaboration, server storage, device enrollment, and conflict resolution;
+- browser/app autofill;
+- TOTP seed storage/generation;
+- Windows Hello convenience unlock;
+- rich binary/PDF preview and document scanning beyond bounded safe text preview;
+- pronounceable-password generation pending dedicated design review;
+- destructive automatic wipe after failed attempts;
+- complete Hindi/additional translation catalogs beyond the current English-first architecture.
+
+This `what_changed.md` commit is the final repository write in the August 13 continuation. All earlier chronological ledger content above was preserved while this section was appended.
