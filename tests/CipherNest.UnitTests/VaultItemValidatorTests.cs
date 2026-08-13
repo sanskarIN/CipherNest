@@ -101,6 +101,25 @@ public sealed class VaultItemValidatorTests
     }
 
     [Fact]
+    public void RejectsNullElementsInsideCollectionsWithoutThrowing()
+    {
+        var item = new VaultItem
+        {
+            Id = Guid.NewGuid(),
+            Title = "Malformed nested values",
+            Tags = [null!],
+            CustomFields = [null!],
+            Attachments = [null!]
+        };
+
+        var errors = VaultItemValidator.Validate(item);
+
+        Assert.Contains("Tags cannot be empty and cannot exceed 128 characters.", errors);
+        Assert.Contains("A custom field name or value is invalid.", errors);
+        Assert.Contains("An attachment contains invalid metadata.", errors);
+    }
+
+    [Fact]
     public void RejectsInvalidAndDuplicateAttachmentMetadata()
     {
         var id = Guid.NewGuid();
