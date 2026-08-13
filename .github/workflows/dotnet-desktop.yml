@@ -57,12 +57,10 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Install MAUI workload
         run: dotnet workload install maui --skip-manifest-update
-      - name: Restore Windows app
-        run: dotnet restore src/CipherNest.App/CipherNest.App.csproj -p:TargetFramework=net10.0-windows10.0.19041.0
       - name: Build Windows app with analyzers
-        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-windows10.0.19041.0 --no-restore -p:WindowsPackageType=None
+        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-windows10.0.19041.0 -r win-x64 -p:WindowsPackageType=None
       - name: Build Windows app with in-app funding disabled
-        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-windows10.0.19041.0 --no-restore -p:WindowsPackageType=None -p:CipherNestEnableFundingLink=false
+        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-windows10.0.19041.0 -r win-x64 --no-restore -p:WindowsPackageType=None -p:CipherNestEnableFundingLink=false
 
   build-android:
     runs-on: ubuntu-latest
@@ -74,10 +72,8 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Install .NET MAUI Android workload
         run: dotnet workload install maui-android --skip-manifest-update
-      - name: Restore Android app
-        run: dotnet restore src/CipherNest.App/CipherNest.App.csproj -p:TargetFramework=net10.0-android
       - name: Build Android app with analyzers
-        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-android --no-restore
+        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-android -r android-arm64
 
   build-apple:
     runs-on: macos-latest
@@ -89,11 +85,7 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Install .NET MAUI Apple workloads
         run: dotnet workload install maui-ios maui-maccatalyst --skip-manifest-update
-      - name: Restore iOS app
-        run: dotnet restore src/CipherNest.App/CipherNest.App.csproj -p:TargetFramework=net10.0-ios
-      - name: Build iOS app with analyzers
-        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-ios --no-restore
-      - name: Restore Mac Catalyst app
-        run: dotnet restore src/CipherNest.App/CipherNest.App.csproj -p:TargetFramework=net10.0-maccatalyst
+      - name: Build iOS simulator app with analyzers
+        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-ios -r iossimulator-arm64
       - name: Build Mac Catalyst app with analyzers
-        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-maccatalyst --no-restore
+        run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -f net10.0-maccatalyst -r maccatalyst-arm64
