@@ -143,6 +143,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
         private int _rowsRead;
         private bool _finished;
         private bool _atStart = true;
+        private int? _pendingChar;
 
         public CsvParser(Stream source, int maxRows)
         {
@@ -188,14 +189,18 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 {
                     if (ch == '"')
                     {
-                        var next = _reader.Peek();
+                        var next = await ReadCharAsync(cancellationToken).ConfigureAwait(false);
                         if (next == '"')
                         {
-                            _ = _reader.Read();
                             field.Append('"');
                             IncrementRowCharacters(ref rowCharacters);
                         }
-                        else { quoted = false; quoteClosed = true; }
+                        else
+                        {
+                            quoted = false;
+                            quoteClosed = true;
+                            PushBack(next);
+                        }
                     }
                     else
                     {
@@ -208,7 +213,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                     if (ch == ',') { AddField(fields, field); atFieldStart = true; quoteClosed = false; }
                     else if (ch == '\r' || ch == '\n')
                     {
-                        if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read();
+                        await ConsumeOptionalLineFeedAsync(ch, cancellationToken).ConfigureAwait(false);
                         AddField(fields, field);
                         _rowsRead++;
                         return fields;
@@ -227,7 +232,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 }
                 else if (ch == '\r' || ch == '\n')
                 {
-                    if (ch == '\r' && _reader.Peek() == '\n') _ = _reader.Read();
+                    await ConsumeOptionalLineFeedAsync(ch, cancellationToken).ConfigureAwait(false);
                     AddField(fields, field);
                     _rowsRead++;
                     return fields;
@@ -240,6 +245,20 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 }
                 if (field.Length > MaxFieldChars) throw new InvalidDataException("CSV field exceeds the safety limit.");
             }
+        }
+
+        private async Task ConsumeOptionalLineFeedAsync(char current, CancellationToken cancellationToken)
+        {
+            if (current != '\r') return;
+            var next = await ReadCharAsync(cancellationToken).ConfigureAwait(false);
+            if (next != '\n') PushBack(next);
+        }
+
+        private void PushBack(int value)
+        {
+            if (value < 0) return;
+            if (_pendingChar is not null) throw new InvalidOperationException("CSV parser pushback state is already occupied.");
+            _pendingChar = value;
         }
 
         private static void IncrementRowCharacters(ref int rowCharacters)
@@ -257,6 +276,12 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
         private async Task<int> ReadCharAsync(CancellationToken cancellationToken)
         {
+            if (_pendingChar is int pending)
+            {
+                _pendingChar = null;
+                return pending;
+            }
+
             while (true)
             {
                 try
