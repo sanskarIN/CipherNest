@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text;
 using System.Text.Json;
 using CipherNest.Application.Abstractions;
 using CipherNest.Infrastructure.Persistence;
@@ -54,9 +55,46 @@ public sealed class BackupHeaderValidationIntegrationTests : IDisposable
         Assert.Equal(0, crypto.DeriveKeyCalls);
     }
 
-    private static async Task WriteHeaderOnlyBackupAsync(string path, object header)
+    [Fact]
+    public async Task TruncatedHeader_IsNormalizedToInvalidData()
     {
-        var headerJson = JsonSerializer.SerializeToUtf8Bytes(header);
+        var source = Path.Combine(_directory, "truncated-header.cnbak");
+        await using (var stream = new FileStream(source, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+        {
+            await stream.WriteAsync(Magic);
+            var length = new byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32BigEndian(length, 64);
+            await stream.WriteAsync(length);
+            await stream.WriteAsync("{}"u8.ToArray());
+        }
+
+        var crypto = new DerivationGuardCryptoService();
+        var service = new EncryptedBackupService(new SqliteVaultStore(DatabasePath), crypto);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.RestoreEncryptedAsync(source, "Synthetic backup passphrase 2026!"));
+        Assert.Contains("truncated", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, crypto.DeriveKeyCalls);
+    }
+
+    [Fact]
+    public async Task MalformedHeaderJson_IsNormalizedToInvalidData()
+    {
+        var source = Path.Combine(_directory, "malformed-header.cnbak");
+        var malformed = Encoding.UTF8.GetBytes("{\"Version\":2,\"Salt\":");
+        await WriteRawHeaderAsync(source, malformed);
+
+        var crypto = new DerivationGuardCryptoService();
+        var service = new EncryptedBackupService(new SqliteVaultStore(DatabasePath), crypto);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.RestoreEncryptedAsync(source, "Synthetic backup passphrase 2026!"));
+        Assert.Contains("malformed", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, crypto.DeriveKeyCalls);
+    }
+
+    private static Task WriteHeaderOnlyBackupAsync(string path, object header) => WriteRawHeaderAsync(path, JsonSerializer.SerializeToUtf8Bytes(header));
+
+    private static async Task WriteRawHeaderAsync(string path, byte[] headerJson)
+    {
         var length = new byte[sizeof(int)];
         BinaryPrimitives.WriteInt32BigEndian(length, headerJson.Length);
 
