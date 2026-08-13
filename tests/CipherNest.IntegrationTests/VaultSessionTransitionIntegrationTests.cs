@@ -25,14 +25,13 @@ public sealed class VaultSessionTransitionIntegrationTests : IDisposable
         crypto.BlockNextUnwrap();
 
         var unlockTask = Task.Run(() => vault.UnlockAsync(master));
-        await crypto.WaitForBlockedUnwrapAsync();
+        await crypto.WaitForBlockedUnwrapAsync().WaitAsync(TimeSpan.FromSeconds(10));
 
         var lockTask = Task.Run(() => vault.LockAsync());
         Assert.False(lockTask.IsCompleted);
 
         crypto.ReleaseBlockedUnwrap();
-        await unlockTask;
-        await lockTask;
+        await Task.WhenAll(unlockTask, lockTask).WaitAsync(TimeSpan.FromSeconds(20));
 
         Assert.False(vault.IsUnlocked);
     }
