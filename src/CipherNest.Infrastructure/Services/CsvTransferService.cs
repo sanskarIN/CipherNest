@@ -136,6 +136,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
     private sealed class CsvParser
     {
+        private static readonly Encoding StrictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
         private readonly StreamReader _reader;
         private readonly char[] _charBuffer = new char[1];
         private readonly int _maxRows;
@@ -144,7 +145,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
         public CsvParser(Stream source, int maxRows)
         {
-            _reader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, 64 * 1024, leaveOpen: true);
+            _reader = new StreamReader(source, StrictUtf8, detectEncodingFromByteOrderMarks: true, 64 * 1024, leaveOpen: true);
             _maxRows = maxRows > 0 ? maxRows : throw new ArgumentOutOfRangeException(nameof(maxRows));
         }
 
@@ -255,8 +256,15 @@ public sealed class CsvTransferService : IPlaintextTransferService
 
         private async Task<int> ReadCharAsync(CancellationToken cancellationToken)
         {
-            var count = await _reader.ReadAsync(_charBuffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false);
-            return count == 0 ? -1 : _charBuffer[0];
+            try
+            {
+                var count = await _reader.ReadAsync(_charBuffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false);
+                return count == 0 ? -1 : _charBuffer[0];
+            }
+            catch (DecoderFallbackException ex)
+            {
+                throw new InvalidDataException("CSV contains invalid UTF-8 text.", ex);
+            }
         }
     }
 }
