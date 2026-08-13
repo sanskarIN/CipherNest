@@ -26,7 +26,7 @@ public sealed class AttachmentTamperIntegrationTests : IDisposable
             await File.WriteAllBytesAsync(encryptedPath, bytes);
 
             await using var output = new MemoryStream();
-            await Assert.ThrowsAsync<CryptographicException>(() => vault.ExportAttachmentAsync(itemId, attachment.Id, output));
+            await Assert.ThrowsAnyAsync<CryptographicException>(() => vault.ExportAttachmentAsync(itemId, attachment.Id, output));
         }
     }
 
