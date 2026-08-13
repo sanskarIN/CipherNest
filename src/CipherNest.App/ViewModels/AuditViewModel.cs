@@ -11,8 +11,12 @@ public partial class AuditViewModel : ObservableObject
     private readonly IVaultService _vault;
     private readonly ISecurityAuditService _audit;
     public ObservableCollection<SecurityAuditFinding> Findings { get; } = [];
-    [ObservableProperty] private bool isBusy;
-    [ObservableProperty] private string summary = "Run a local audit to find weak, reused, or overdue secrets.";
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string Summary { get; set; } = "Run a local audit to find weak, reused, or overdue secrets.";
 
     public AuditViewModel(IVaultService vault, ISecurityAuditService audit)
     {
