@@ -11,9 +11,15 @@ public static class AttachmentImportPolicy
         if (string.IsNullOrWhiteSpace(displayName))
             throw new ArgumentException("Attachment name is required.", nameof(displayName));
 
-        var normalized = Path.GetFileName(displayName.Trim());
-        if (string.IsNullOrWhiteSpace(normalized) || normalized.Length > MaximumDisplayNameCharacters)
+        var trimmed = displayName.Trim();
+        var lastSeparator = Math.Max(trimmed.LastIndexOf('/'), trimmed.LastIndexOf('\\'));
+        var normalized = lastSeparator >= 0 ? trimmed[(lastSeparator + 1)..] : trimmed;
+        if (string.IsNullOrWhiteSpace(normalized) ||
+            normalized is "." or ".." ||
+            normalized.Length > MaximumDisplayNameCharacters)
+        {
             throw new ArgumentException("Attachment name is invalid or too long.", nameof(displayName));
+        }
         if (normalized.Any(char.IsControl))
             throw new ArgumentException("Attachment name contains unsupported control characters.", nameof(displayName));
         return normalized;
