@@ -1,3 +1,4 @@
+using CipherNest.Application.Abstractions;
 using CipherNest.Application.Exceptions;
 using CipherNest.Infrastructure.Crypto;
 
@@ -19,7 +20,10 @@ public sealed class KdfResourceBoundsTests
         var service = new CryptoService();
         var parameters = new KdfParameters(memoryKiB, iterations, parallelism);
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => service.DeriveKey("Long enough passphrase".AsSpan(), Salt, parameters));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        {
+            _ = service.DeriveKey("Long enough passphrase".AsSpan(), Salt, parameters);
+        });
     }
 
     [Fact]
@@ -29,6 +33,9 @@ public sealed class KdfResourceBoundsTests
         var valid = service.CreateWrappedKey("Very Strong Master Passphrase 2026!".AsSpan());
         var hostile = valid with { Kdf = new KdfParameters(CryptoService.MaximumKdfMemoryKiB + 1, 3, 1) };
 
-        Assert.Throws<VaultAuthenticationException>(() => service.UnwrapKey("Very Strong Master Passphrase 2026!".AsSpan(), hostile));
+        Assert.Throws<VaultAuthenticationException>(() =>
+        {
+            _ = service.UnwrapKey("Very Strong Master Passphrase 2026!".AsSpan(), hostile);
+        });
     }
 }
