@@ -22,7 +22,12 @@ public partial class StartupPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("CipherNest could not start", $"Local storage initialization failed: {ex.Message}", "OK");
+            try { ServiceProviderHelper.GetRequiredService<IPrivacySafeExceptionReporter>().Report("Startup.Initialize", ex); }
+            catch (Exception reporterFailure)
+            {
+                System.Diagnostics.Debug.WriteLine($"Privacy-safe startup reporter unavailable: {reporterFailure.GetType().Name}");
+            }
+            await DisplayAlertAsync("CipherNest could not start", "Local storage initialization could not be completed safely. Close and reopen CipherNest, then review troubleshooting guidance if the problem continues.", "OK");
             _navigated = false;
         }
     }
