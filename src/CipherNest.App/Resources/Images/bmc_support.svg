@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-labelledby="title desc">
+  <title id="title">BMC Support CipherNest</title>
+  <desc id="desc">Original CipherNest project-support badge with a coffee cup, BMC initials, and Support CipherNest text.</desc>
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171717"/>
+      <stop offset="1" stop-color="#2A2210"/>
+    </linearGradient>
+    <linearGradient id="cup" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFE76A"/>
+      <stop offset="1" stop-color="#FFCA28"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="712" height="212" rx="42" fill="url(#panel)" stroke="#FFDD57" stroke-width="8"/>
+  <circle cx="116" cy="110" r="76" fill="#FFDD57"/>
+
+  <path d="M72 79h79v56c0 25-19 43-43 43h-1c-20 0-35-8-45-23-8-12-11-26-9-42l5-34h14z" fill="url(#cup)" stroke="#171717" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M151 92h13c22 0 38 15 38 35s-16 35-38 35h-18" fill="none" stroke="#171717" stroke-width="10" stroke-linecap="round"/>
+  <path d="M88 57c-10-13 8-20 1-33M116 57c-10-13 8-20 1-33M144 57c-10-13 8-20 1-33" fill="none" stroke="#171717" stroke-width="7" stroke-linecap="round"/>
+
+  <text x="232" y="105" fill="#FFDD57" font-family="Segoe UI, Arial, sans-serif" font-size="70" font-weight="800" letter-spacing="5">BMC</text>
+  <text x="235" y="154" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700">Support CipherNest</text>
+  <text x="236" y="187" fill="#D9D9D9" font-family="Segoe UI, Arial, sans-serif" font-size="20">Open-source development • optional support</text>
+
+  <path d="M635 85l25 25-25 25M660 110h-55" fill="none" stroke="#FFDD57" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
