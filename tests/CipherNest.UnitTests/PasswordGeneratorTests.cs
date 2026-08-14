@@ -26,6 +26,22 @@ public sealed class PasswordGeneratorTests
     }
 
     [Fact]
+    public void Generate_RejectsUnknownMode()
+    {
+        var options = new GeneratorOptions { Mode = (GeneratorMode)999 };
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => _generator.Generate(options));
+    }
+
+    [Fact]
+    public void Passphrase_RejectsNullSeparator()
+    {
+        var options = new GeneratorOptions { Mode = GeneratorMode.Passphrase, WordCount = 6, Separator = null! };
+
+        Assert.Throws<ArgumentException>(() => _generator.Generate(options));
+    }
+
+    [Fact]
     public void CommonPassword_IsNotRatedStrong()
     {
         var result = _generator.Evaluate("Password123456789!");
