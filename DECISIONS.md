@@ -17,8 +17,9 @@
 13. **Search is in-process while unlocked:** no plaintext FTS index is created. Local search/filter/audit runs over authenticated decrypted objects in memory.
 14. **Recent-use metadata stays encrypted:** `LastAccessedUtc` lives inside each encrypted item rather than a plaintext SQL index.
 15. **Schema changes are ordered migrations:** migration history is transactional, future unsupported schemas are rejected, and released migration versions are append-only.
-16. **Privacy-safe exception reporting:** centralized diagnostics omit exception messages/stacks and never intentionally log vault values, passphrases, keys, recovery material, clipboard content, or plaintext attachments.
-17. **English-first localization:** language preference and resource lookup are modeled now; neutral English resources ship first, with future culture catalogs added without touching cryptographic or vault formats.
-18. **No TOTP/autofill/cloud sync in this release:** each expands the security boundary and remains deferred until a dedicated design/threat review.
-19. **MVVM + DI:** UI depends on application abstractions; infrastructure remains replaceable/testable; platform behavior is isolated where practical.
-20. **Security honesty:** unsupported platform controls, external audit status, storage-erasure limits, and release-verification gaps are documented rather than simulated or marketed away.
+16. **Privacy-safe exception reporting:** centralized diagnostics omit exception messages/stacks and never intentionally log vault values, passphrases, keys, recovery material, clipboard content, TOTP seeds/codes, or plaintext attachments.
+17. **Reviewed staged localization:** neutral English remains the fallback catalog; explicit English and Hindi preferences are supported for the reviewed resource-backed surface, while untranslated UI is still documented honestly.
+18. **TOTP stays inside the existing encrypted-record boundary:** a `OneTimePassword` item stores its Base32 seed and parameters only in the authenticated encrypted record, generates RFC-compatible codes locally on explicit refresh, never persists generated codes, and uses the existing explicit timed clipboard policy when a code is copied. QR enrollment/import and autofill remain separate future designs.
+19. **Autofill/cloud sync remain deferred:** each expands the security boundary and requires a dedicated protocol/platform threat review before implementation.
+20. **MVVM + DI:** UI depends on application abstractions; infrastructure remains replaceable/testable; platform behavior is isolated where practical.
+21. **Security honesty:** unsupported platform controls, external audit status, storage-erasure limits, and release-verification gaps are documented rather than simulated or marketed away.
