@@ -61,6 +61,8 @@ The complete documentation suite is indexed at [`docs/README.md`](docs/README.md
 
 Primary entry points:
 
+- [Complete Project Documentation](docs/COMPLETE_PROJECT_DOCUMENTATION.md) — consolidated project reference covering architecture, security, storage, features, limits, build/test/release flow, support, and external validation gates.
+- [FAQ](docs/FAQ.md) — common user, security, platform, backup, build, CI, release, and support questions.
 - [User Guide](docs/USER_GUIDE.md) — setup, unlock, items, attachments, backup/restore, CSV transfer, settings, trash, deletion, and recovery limitations.
 - [Developer Guide](docs/DEVELOPER_GUIDE.md) — architecture, DI, contracts, persistence, session rules, testing, review, and extension guidance.
 - [Maintainer Guide](docs/MAINTAINER_GUIDE.md) — repository/security/release/support ownership.
