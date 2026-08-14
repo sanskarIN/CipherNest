@@ -22,32 +22,38 @@ public sealed class TotpService : ITotpService
             var counter = unixSeconds / periodSeconds;
             Span<byte> counterBytes = stackalloc byte[sizeof(long)];
             Span<byte> hash = stackalloc byte[64];
-            BinaryPrimitives.WriteInt64BigEndian(counterBytes, counter);
-
-            using HMAC hmac = algorithm switch
+            try
             {
-                TotpAlgorithm.Sha1 => new HMACSHA1(key),
-                TotpAlgorithm.Sha256 => new HMACSHA256(key),
-                TotpAlgorithm.Sha512 => new HMACSHA512(key),
-                _ => throw new ArgumentOutOfRangeException(nameof(algorithm), "Unsupported TOTP algorithm.")
-            };
+                BinaryPrimitives.WriteInt64BigEndian(counterBytes, counter);
 
-            if (!hmac.TryComputeHash(counterBytes, hash, out var hashLength))
-                throw new CryptographicException("Could not compute the TOTP authentication code.");
+                using HMAC hmac = algorithm switch
+                {
+                    TotpAlgorithm.Sha1 => new HMACSHA1(key),
+                    TotpAlgorithm.Sha256 => new HMACSHA256(key),
+                    TotpAlgorithm.Sha512 => new HMACSHA512(key),
+                    _ => throw new ArgumentOutOfRangeException(nameof(algorithm), "Unsupported TOTP algorithm.")
+                };
 
-            var offset = hash[hashLength - 1] & 0x0f;
-            if (offset + 4 > hashLength) throw new CryptographicException("TOTP hash truncation offset is invalid.");
+                if (!hmac.TryComputeHash(counterBytes, hash, out var hashLength))
+                    throw new CryptographicException("Could not compute the TOTP authentication code.");
 
-            var binary = BinaryPrimitives.ReadUInt32BigEndian(hash.Slice(offset, 4)) & 0x7fff_ffffu;
-            var modulus = digits == 8 ? 100_000_000u : 1_000_000u;
-            var code = (binary % modulus).ToString($"D{digits}", System.Globalization.CultureInfo.InvariantCulture);
-            var elapsed = (int)(unixSeconds % periodSeconds);
-            var remaining = periodSeconds - elapsed;
-            var validUntil = DateTimeOffset.FromUnixTimeSeconds(unixSeconds + remaining);
+                var offset = hash[hashLength - 1] & 0x0f;
+                if (offset + 4 > hashLength) throw new CryptographicException("TOTP hash truncation offset is invalid.");
 
-            CryptographicOperations.ZeroMemory(counterBytes);
-            CryptographicOperations.ZeroMemory(hash);
-            return new TotpCodeResult(code, remaining, validUntil);
+                var binary = BinaryPrimitives.ReadUInt32BigEndian(hash.Slice(offset, 4)) & 0x7fff_ffffu;
+                var modulus = digits == 8 ? 100_000_000u : 1_000_000u;
+                var code = (binary % modulus).ToString($"D{digits}", System.Globalization.CultureInfo.InvariantCulture);
+                var elapsed = (int)(unixSeconds % periodSeconds);
+                var remaining = periodSeconds - elapsed;
+                var validUntil = DateTimeOffset.FromUnixTimeSeconds(unixSeconds + remaining);
+
+                return new TotpCodeResult(code, remaining, validUntil);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(counterBytes);
+                CryptographicOperations.ZeroMemory(hash);
+            }
         }
         finally
         {
