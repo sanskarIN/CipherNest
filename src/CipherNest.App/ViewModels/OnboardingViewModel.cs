@@ -1,4 +1,5 @@
 using CipherNest.Application.Abstractions;
+using CipherNest.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -10,6 +11,7 @@ public partial class OnboardingViewModel : ObservableObject
     private const int MaximumMasterPassphraseCharacters = 4_096;
     private readonly IVaultService _vault;
     private readonly IPasswordGenerator _generator;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
 
     [ObservableProperty]
     public partial string MasterPassphrase { get; set; } = string.Empty;
@@ -41,10 +43,11 @@ public partial class OnboardingViewModel : ObservableObject
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
 
-    public OnboardingViewModel(IVaultService vault, IPasswordGenerator generator)
+    public OnboardingViewModel(IVaultService vault, IPasswordGenerator generator, IPrivacySafeExceptionReporter exceptions)
     {
         _vault = vault;
         _generator = generator;
+        _exceptions = exceptions;
     }
 
     partial void OnMasterPassphraseChanged(string value)
@@ -95,6 +98,11 @@ public partial class OnboardingViewModel : ObservableObject
         catch (InvalidOperationException)
         {
             ErrorMessage = "A local vault already exists or could not be initialized safely.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Onboarding.CreateVault", ex);
+            ErrorMessage = "The local vault could not be created safely. No successful setup is being reported; check local storage access and try again.";
         }
         finally
         {
