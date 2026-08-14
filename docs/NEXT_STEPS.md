@@ -50,7 +50,8 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Verify scheduled cleanup continues after the initiating UI operation's cancellation token is no longer relevant.
 - Verify only a fixed-size SHA-256 fingerprint is retained for delayed comparison rather than the copied plaintext secret.
 - Verify platform clipboard-history behavior is accurately described in UI/docs.
-- Verify username, primary-secret, and secret-custom-field copy actions all use the same bounded policy.
+- Verify username, primary-secret, secret-custom-field, and TOTP-code copy actions all use the same bounded policy.
+- Verify copying a TOTP seed/code never introduces a background clipboard lifetime and preserves unrelated newer clipboard content.
 
 ### Biometrics
 
@@ -70,7 +71,8 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 
 ## Priority 2 — destructive, validation, and recovery workflows
 
-- Create a disposable vault, enable recovery, add all item types, attachments, custom fields, reminders, and notes.
+- Create a disposable vault, enable recovery, add all item types including TOTP, attachments, custom fields, reminders, and notes.
+- Verify TOTP save/reopen, re-authentication-protected TOTP access, SHA-1/SHA-256/SHA-512, 6/8 digits, period bounds, malformed Base32 rejection, and device-clock correctness using synthetic seeds.
 - Exercise master-passphrase unlock and recovery-key unlock separately.
 - Verify recovery material cannot authorize actions that specifically require the current master passphrase.
 - Change the master passphrase and confirm the old passphrase no longer opens the master wrapper.
@@ -151,7 +153,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Test narrow phone width, portrait/landscape, tablet-sized surfaces, and resizable desktop windows.
 - Verify 44-DIP minimum touch targets and contrast in light/dark/system modes.
 - Continue migrating remaining user-facing literal strings into resource catalogs.
-- Add a complete Hindi catalog only when every security warning can be translated/reviewed without weakening meaning.
+- Continue migrating remaining user-facing literal strings into the neutral/Hindi resource catalogs; do not call the complete UI translated until every security warning and remaining literal is reviewed without weakening meaning.
 - Execute and record the complete target/accessibility matrix in `docs/ACCESSIBILITY.md` rather than treating source semantic metadata as certification.
 
 ## Priority 5 — performance and scale
@@ -190,7 +192,8 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Review backup destination canonicalization, duplicate ZIP handling, attachment-container size derivation, rollback cancellation semantics, and DB/WAL/SHM partial recovery.
 - Review memory-lifetime assumptions around managed strings and decrypted ViewModels; source clears bound credential properties earlier and zeroes several owned arrays, but managed string copies cannot be deterministically erased.
 - Review the SHA-256 clipboard-fingerprint approach, OS clipboard/history behavior, and plaintext export/share-sheet data remnants.
-- Review parser fuzzing opportunities for CSV, backup archives/header metadata, attachment metadata/storage names, settings JSON, vault records, and vault-header deserialization.
+- Review parser fuzzing opportunities for CSV, backup archives/header metadata, attachment metadata/storage names, settings JSON, TOTP Base32 input, vault records, and vault-header deserialization.
+- Independently review the local TOTP implementation against RFC 6238/HOTP truncation rules, Base32 normalization, seed memory lifetime, same-vault second-factor tradeoffs, clock assumptions, and clipboard exposure.
 - Review rollback/downgrade behavior for future crypto/database/vault-header format versions.
 - Review dependency/supply-chain pinning and release provenance.
 - Review `docs/security/THREAT_MODEL.md`, `CRYPTOGRAPHIC_DESIGN.md`, `SESSION_SECURITY.md`, `DATA_LIFECYCLE.md`, and exact format documents against implementation as part of the independent/internal review scope.
@@ -213,7 +216,7 @@ The following should remain separate future-version projects rather than being r
 - cloud synchronization and account/device protocols;
 - collaboration/sharing;
 - browser/app autofill;
-- TOTP seed storage and generation;
+- TOTP QR scanning/rendering, bounded `otpauth://` import/export, and provider/autofill integration;
 - Windows Hello convenience unlock;
 - rich PDF/binary preview and document scanning;
 - pronounceable-password generation;
