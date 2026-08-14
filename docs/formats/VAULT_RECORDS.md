@@ -21,6 +21,9 @@ Tags
 IsFavorite
 CustomFields
 Attachments
+TotpAlgorithm
+TotpDigits
+TotpPeriodSeconds
 CreatedUtc
 ModifiedUtc
 LastAccessedUtc
@@ -31,25 +34,47 @@ RequiresReauthentication
 
 All of these item fields are serialized into encrypted record plaintext. Searchable item content is not copied into a plaintext SQLite search/FTS index.
 
-## 2. Item types
+The three TOTP settings were added as ordinary encrypted JSON members rather than plaintext database columns. Older records that do not contain them use the domain defaults SHA-1 / 6 digits / 30 seconds.
 
-Current enum values:
+## 2. Item types and persisted numeric compatibility
+
+`VaultItemType` is serialized by the current `System.Text.Json` options using numeric enum values. Existing values are therefore part of encrypted-record compatibility and are explicitly fixed:
 
 ```text
-Login
-SecureNote
-Identity
-PaymentCardReference
-WifiCredential
-SoftwareLicense
-ServerSshReference
-Document
-Custom
+0  Login
+1  SecureNote
+2  Identity
+3  PaymentCardReference
+4  WifiCredential
+5  SoftwareLicense
+6  ServerSshReference
+7  Document
+8  Custom
+9  OneTimePassword
 ```
+
+New enum values must never be inserted by implicitly shifting an existing persisted value. `VaultItemTypeCompatibilityTests` locks these numbers in source tests.
 
 Type is part of serialized encrypted item JSON. Unknown runtime enum values are rejected by validation.
 
-## 3. Normalization before save
+## 3. TOTP item representation
+
+For `Type = OneTimePassword`:
+
+```text
+Secret             = Base32 TOTP seed
+TotpAlgorithm      = Sha1 | Sha256 | Sha512
+TotpDigits         = 6 | 8
+TotpPeriodSeconds  = 15..120
+```
+
+The issuer/account label can use existing encrypted fields such as `Title`, `Username`, `Url`, `Collection`, `Tags`, `Notes`, and custom fields. Generated one-time codes are transient editor presentation state and are **not** serialized into `VaultItem`.
+
+`VaultItemValidator` requires a valid bounded Base32 seed and supported settings for a `OneTimePassword` item. Non-TOTP items do not require a TOTP seed.
+
+See `../security/TOTP.md` for generation and threat details.
+
+## 4. Normalization before save
 
 `VaultItem.Normalize(now)` currently:
 
@@ -63,9 +88,11 @@ Type is part of serialized encrypted item JSON. Unknown runtime enum values are 
 - sorts tags case-insensitively;
 - updates `ModifiedUtc` to the supplied time.
 
+The TOTP seed is not rewritten during generic item normalization. TOTP generation performs its own bounded Base32 normalization so the encrypted stored value remains the value the user supplied.
+
 Normalization is not a substitute for validation.
 
-## 4. Validation before serialization
+## 5. Validation before serialization
 
 `VaultItemValidator` rejects invalid or resource-hostile item payloads.
 
@@ -75,7 +102,10 @@ Important rules:
 - item type must be defined;
 - title is required and at most 256 characters;
 - username/identifier at most 2,048 characters;
-- secret at most 100,000 characters;
+- secret at most 100,000 characters for the general item model;
+- a TOTP formatted seed is additionally capped at 4,096 characters before normalization and 1,024 normalized Base32 characters;
+- a TOTP normalized seed must contain at least 16 Base32 characters and use a structurally valid Base32 length/alphabet/padding form;
+- TOTP algorithm must be SHA-1, SHA-256, or SHA-512; digits must be 6 or 8; period must be 15..120 seconds;
 - URL at most 4,096 characters;
 - notes at most 200,000 characters / 5,000 lines;
 - collection at most 128 characters;
@@ -90,7 +120,7 @@ Important rules:
 
 Runtime-null members caused by malformed deserialization are treated defensively rather than assumed impossible because the CLR model uses non-nullable declarations.
 
-## 5. Plaintext serialization budget
+## 6. Plaintext serialization budget
 
 The normalized/validated item is serialized to UTF-8 JSON.
 
@@ -102,7 +132,7 @@ Current maximum serialized/decrypted item JSON size:
 
 This service-level bound exists even though ordinary item validation should normally reject pathological objects long before that ceiling.
 
-## 6. Record encryption
+## 7. Record encryption
 
 The serialized UTF-8 item JSON is encrypted using AES-256-GCM under a private `VaultKeyLease` copy of the active random vault DEK.
 
@@ -123,7 +153,9 @@ Current cryptographic envelope version:
 1
 ```
 
-## 7. Record associated data
+Adding the TOTP fields does not change this outer envelope version because framing, nonce/tag lengths, key use, and associated-data rules are unchanged; the encrypted JSON payload gains backward-compatible members with defaults.
+
+## 8. Record associated data
 
 The item's GUID bytes are supplied as AES-GCM associated data.
 
@@ -135,7 +167,7 @@ AAD = item.Id bytes
 
 This binds the encrypted payload to the authenticated storage row identity. Moving an encrypted envelope to a different item GUID is therefore not intended to produce a valid record.
 
-## 8. SQLite row representation
+## 9. SQLite row representation
 
 `VaultItems` stores a structural row identity plus an opaque encrypted envelope.
 
@@ -147,9 +179,9 @@ StoredVaultItem(Guid Id, byte[] Envelope)
 
 The SQLite store requires the stored ID to use the canonical lower-case GUID `D` string representation and rejects empty/non-canonical identifiers.
 
-Item title, username, secret, URL, notes, collection, tags, favorite state, custom fields, attachment display metadata, review/trash/recent-use timestamps remain inside encrypted payloads.
+Item title, username, secret/TOTP seed, URL, notes, collection, tags, favorite state, custom fields, attachment display metadata, TOTP settings, review/trash/recent-use timestamps remain inside encrypted payloads.
 
-## 9. Stored envelope resource limits
+## 10. Stored envelope resource limits
 
 Current storage resource boundaries:
 
@@ -161,7 +193,7 @@ Current storage resource boundaries:
 
 The SQLite store checks count/aggregate/per-row lengths before materializing large BLOB collections where practical. `VaultService` also enforces compatible service-level bounds so an alternate store cannot intentionally bypass every resource boundary.
 
-## 10. Read/decrypt validation order
+## 11. Read/decrypt validation order
 
 Conceptual record read:
 
@@ -187,11 +219,11 @@ deserialize VaultItem
 return decrypted domain object
 ```
 
-If authenticated decrypted metadata is malformed, the infrastructure boundary rejects it rather than allowing the object to reach search/UI code.
+If authenticated decrypted metadata is malformed, including malformed TOTP metadata on a TOTP item, the infrastructure boundary rejects it rather than allowing the object to reach search/UI code.
 
 Owned plaintext JSON byte arrays are zeroed in `finally` after deserialization/validation.
 
-## 11. Attachment references inside items
+## 12. Attachment references inside items
 
 Attachment files are stored separately, but their logical metadata is part of the encrypted item JSON. An `AttachmentReference` includes the attachment identity/display/media/size/storage information required by the application.
 
@@ -203,39 +235,40 @@ The encrypted storage name is required to be canonically bound to its attachment
 
 That metadata remains encrypted at rest because it resides inside the encrypted item payload.
 
-## 12. Trash state
+## 13. Trash state
 
 `DeletedUtc` is part of the encrypted record payload. Moving an item to Trash therefore does not create a plaintext “deleted” column for searchable item data.
 
 Retention cleanup uses the decrypted item state during normal vault maintenance and then deletes the encrypted record when expired.
 
-## 13. Recent-use/review metadata
+## 14. Recent-use/review metadata
 
 `LastAccessedUtc` and `ReviewAfterUtc` are encrypted payload fields.
 
 Opening an item can update `LastAccessedUtc` without changing the user-visible `ModifiedUtc` timestamp.
 
-## 14. Protected-item flag
+## 15. Protected-item flag
 
 `RequiresReauthentication` is stored inside encrypted item JSON. The Item Editor uses it to withhold protected content until current-master re-authentication succeeds.
 
-It is an application authorization policy flag, not a separate cryptographic layer per item.
+It is an application authorization policy flag, not a separate cryptographic layer per item. TOTP item code generation follows the same protected-item gate and does not generate/display a code before required re-authentication.
 
-## 15. No plaintext search index
+## 16. No plaintext search index
 
 Current local search/filter/audit decrypts authenticated objects while unlocked and operates in memory.
 
-CipherNest intentionally does not maintain a plaintext SQLite FTS/search index for vault titles/usernames/tags/collections/etc.
+CipherNest intentionally does not maintain a plaintext SQLite FTS/search index for vault titles/usernames/tags/collections/TOTP metadata/etc.
 
 A future encrypted-index redesign would require a separate privacy/security review.
 
-## 16. Compatibility rules
+## 17. Compatibility rules
 
 Any change that affects serialized `VaultItem` compatibility must consider:
 
 - JSON serializer behavior/defaults;
-- enum compatibility;
+- enum numeric compatibility;
 - required versus optional members;
+- defaults for newly added encrypted JSON fields;
 - item validation limits;
 - aggregate text accounting;
 - encrypted record versioning if framing/AAD changes;
@@ -243,9 +276,9 @@ Any change that affects serialized `VaultItem` compatibility must consider:
 - backup/restore compatibility;
 - known older releases that must remain readable.
 
-Do not silently reinterpret an older encrypted payload under incompatible semantics.
+Do not silently reinterpret an older encrypted payload under incompatible semantics. Existing enum numeric values are a compatibility contract unless an explicit migration/version boundary is introduced.
 
-## 17. Tampering/failure behavior
+## 18. Tampering/failure behavior
 
 Expected rejection cases include:
 
@@ -257,12 +290,13 @@ Expected rejection cases include:
 - payload ID mismatch;
 - malformed runtime-null item metadata;
 - unsupported item type;
+- malformed TOTP seed/settings for a TOTP item;
 - resource-limit violations.
 
-These failures must remain fixed/privacy-safe at user-facing surfaces; raw decrypted context should not be logged.
+These failures must remain fixed/privacy-safe at user-facing surfaces; raw decrypted context, TOTP seed, or generated code should not be logged.
 
-## 18. Managed-memory limitation
+## 19. Managed-memory limitation
 
-After successful deserialization, item strings/objects exist in managed process memory while the vault is unlocked/using them. Clearing ViewModels/references reduces lifetime but cannot guarantee deterministic erasure of immutable .NET strings or GC/runtime copies.
+After successful deserialization, item strings/objects—including a TOTP seed—exist in managed process memory while the vault is unlocked/using them. Clearing ViewModels/references reduces lifetime but cannot guarantee deterministic erasure of immutable .NET strings or GC/runtime copies.
 
-See `../security/DATA_LIFECYCLE.md`.
+See `../security/DATA_LIFECYCLE.md` and `../security/TOTP.md`.
