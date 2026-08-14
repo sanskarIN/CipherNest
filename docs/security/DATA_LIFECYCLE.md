@@ -321,3 +321,9 @@ For every new feature, identify:
 10. what the app can and cannot delete afterward.
 
 If any new network/server boundary is added, update the privacy notice and threat model before implementation is represented as complete.
+
+## TOTP seed and generated-code lifetime
+
+The Base32 TOTP seed is stored as an encrypted item secret at rest, but after decrypting a TOTP item the seed exists as a managed string while the item is in use. `TotpService` creates a temporary decoded byte-array key and temporary counter/hash spans; these owned byte buffers are zeroed on every normal/exceptional exit where the implementation controls them. The immutable managed seed string and runtime copies cannot be deterministically erased.
+
+Generated codes are not persisted to the vault record. The Item Editor keeps only the currently displayed code as managed presentation state and clears it whenever the seed, algorithm, digit count, period, or item type changes. Copying a code or seed crosses into the operating-system clipboard boundary and inherits the clipboard/history/synchronization limitations documented elsewhere in this file.
