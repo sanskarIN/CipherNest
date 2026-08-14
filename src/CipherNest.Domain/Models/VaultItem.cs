@@ -14,6 +14,9 @@ public sealed record VaultItem
     public bool IsFavorite { get; init; }
     public IReadOnlyList<CustomField> CustomFields { get; init; } = Array.Empty<CustomField>();
     public IReadOnlyList<AttachmentReference> Attachments { get; init; } = Array.Empty<AttachmentReference>();
+    public TotpAlgorithm TotpAlgorithm { get; init; } = TotpAlgorithm.Sha1;
+    public int TotpDigits { get; init; } = 6;
+    public int TotpPeriodSeconds { get; init; } = 30;
     public DateTimeOffset CreatedUtc { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset ModifiedUtc { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessedUtc { get; init; }
