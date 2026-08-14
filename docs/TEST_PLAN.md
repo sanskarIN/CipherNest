@@ -85,3 +85,25 @@ Device-specific biometric, screenshot, clipboard API behavior, lifecycle callbac
 Documentation-specific verification details are in `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`; the broader testing workflow/how-to is in `docs/TESTING_GUIDE.md`.
 
 A release is blocked by failing tests/builds/formatting/analyzers, unresolved high-severity dependency findings, known secret/path leakage, a broken migration/restore compatibility path, an unbounded untrusted resource parameter, stale destructive authorization surviving a session transition, malformed stored metadata escaping validation, a backup/export envelope that exceeds the build's restore budget, an unreviewed cryptographic format change, or documentation that materially misstates current security/recovery/format behavior.
+
+## TOTP and reviewed Hindi localization matrix
+
+### Automated TOTP
+- Run all RFC 6238 known-answer vectors for SHA-1/SHA-256/SHA-512 at the published timestamps.
+- Verify 6/8-digit output, validity-window calculation, formatted lowercase/grouped Base32 input, invalid alphabet, impossible encoded lengths, invalid supplied padding, non-zero residual bits, unsupported algorithms/digits/periods, pre-epoch time, and formatted/normalized resource ceilings.
+- Verify `VaultItemValidator` rejects malformed TOTP seed/settings before storage.
+- Verify legacy numeric `VaultItemType.Custom = 8` JSON remains Custom and missing TOTP members receive backward-compatible defaults.
+- Round-trip a synthetic TOTP item through real encrypted SQLite/VaultService storage and assert the encrypted envelope does not contain the synthetic seed as plaintext UTF-8 bytes.
+- Verify TOTP seeds are excluded from password weakness/reuse findings while duplicate detection includes algorithm/digits/period.
+- Verify source UI uses explicit refresh/copy and no background timer; sensitive input changes clear displayed code state.
+
+### Automated localization
+- Require exact key parity between neutral `AppStrings.resx` and `AppStrings.hi-IN.resx`.
+- Require non-empty Hindi values and reviewed translations for local-only, audit-status, recovery-limitation, and language-status keys.
+- Require System/English/Hindi normalization and explicit `hi-IN` runtime wiring.
+
+### Device/manual
+- Verify TOTP code layout/readability and semantic labels on Android, Windows, iOS, and Mac Catalyst.
+- Verify device clock/time-zone changes produce expected RFC time-counter behavior and that no code is generated while a protected item still requires re-authentication.
+- Verify TOTP copy uses the same real clipboard cleanup/history behavior as other secrets and preserves unrelated newer clipboard content.
+- Verify System/English/Hindi selection, restart, suspend/resume, fallback, large text, screen readers, and narrow-window layout; record which remaining literals still appear in English.
