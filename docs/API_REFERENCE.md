@@ -314,6 +314,32 @@ public sealed record PasswordStrengthResult(
 
 Strength evaluation is guidance, not a proof of resistance against a particular attacker.
 
+## `CipherNest.Application.Abstractions.ITotpService`
+
+Local time-based one-time-password generation boundary. It is not a network/authentication-provider API.
+
+```csharp
+TotpCodeResult Generate(
+    string base32Secret,
+    TotpAlgorithm algorithm,
+    int digits,
+    int periodSeconds,
+    DateTimeOffset utcNow);
+```
+
+`TotpCodeResult`:
+
+```csharp
+public sealed record TotpCodeResult(
+    string Code,
+    int SecondsRemaining,
+    DateTimeOffset ValidUntilUtc);
+```
+
+The current `TotpService` validates bounded Base32 input/settings, supports SHA-1/SHA-256/SHA-512 with 6 or 8 digits and 15..120-second periods, computes codes locally, and zeroes decoded seed/hash/counter byte buffers where practical. Generated codes are not persisted by the service.
+
+See `security/TOTP.md` for security/compatibility rules.
+
 ## `CipherNest.Application.Abstractions.ISecurityAuditService`
 
 ```csharp
@@ -322,7 +348,7 @@ IReadOnlyList<SecurityAuditFinding> Analyze(
     DateTimeOffset now);
 ```
 
-The current implementation analyzes decrypted items locally. The returned findings are application findings, not the result of an independent source-code security audit.
+The current implementation analyzes decrypted items locally. TOTP seeds are intentionally excluded from password weakness/reuse heuristics; exact duplicate detection still includes TOTP parameters. The returned findings are application findings, not the result of an independent source-code security audit.
 
 ## `CipherNest.Application.Abstractions.ISafeNoteMarkupService`
 
@@ -359,6 +385,9 @@ public sealed record VaultItem
     public bool IsFavorite { get; init; }
     public IReadOnlyList<CustomField> CustomFields { get; init; }
     public IReadOnlyList<AttachmentReference> Attachments { get; init; }
+    public TotpAlgorithm TotpAlgorithm { get; init; }
+    public int TotpDigits { get; init; }
+    public int TotpPeriodSeconds { get; init; }
     public DateTimeOffset CreatedUtc { get; init; }
     public DateTimeOffset ModifiedUtc { get; init; }
     public DateTimeOffset? LastAccessedUtc { get; init; }
@@ -370,21 +399,34 @@ public sealed record VaultItem
 
 `Normalize(DateTimeOffset now)` trims `Title`, `Username`, `Url`, and `Collection`; trims/removes empty tags; de-duplicates/sorts tags case-insensitively; and sets `ModifiedUtc` to the supplied time.
 
-### `VaultItemType`
+For `OneTimePassword` items, `Secret` is the encrypted Base32 seed and the three TOTP settings select HMAC algorithm, decimal digit count, and period. Generated codes are not `VaultItem` fields.
+
+### `TotpAlgorithm`
 
 ```csharp
-Login
-SecureNote
-Identity
-PaymentCardReference
-WifiCredential
-SoftwareLicense
-ServerSshReference
-Document
-Custom
+Sha1 = 0
+Sha256 = 1
+Sha512 = 2
 ```
 
-Changing enum ordering/serialization behavior requires compatibility review because item type is part of the encrypted serialized payload.
+### `VaultItemType`
+
+Persisted numeric values are explicit because the current encrypted JSON serializer writes enum values numerically:
+
+```csharp
+Login = 0
+SecureNote = 1
+Identity = 2
+PaymentCardReference = 3
+WifiCredential = 4
+SoftwareLicense = 5
+ServerSshReference = 6
+Document = 7
+Custom = 8
+OneTimePassword = 9
+```
+
+Do not renumber/reorder an existing persisted value without an explicit compatibility migration/version boundary.
 
 ## `CipherNest.Domain.Models.AppPreferences`
 
@@ -415,6 +457,8 @@ GeneratorSymbols
 GeneratorExcludeAmbiguous
 LastSuccessfulBackupUtc
 ```
+
+`Language` currently supports System, English, and Hindi. Hindi is a reviewed resource-backed catalog for migrated strings; it is not a claim that every UI literal is translated.
 
 Defaults/bounds are documented in `LIMITS_AND_DEFAULTS.md`. Do not treat settings as secret storage.
 
