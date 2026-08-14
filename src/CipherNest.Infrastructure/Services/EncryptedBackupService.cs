@@ -70,6 +70,7 @@ public sealed class EncryptedBackupService : IBackupService
             }
             await WriteInt32Async(output, -1, cancellationToken).ConfigureAwait(false);
             await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(tempOutput, destination, overwrite: true);
         }
         finally
