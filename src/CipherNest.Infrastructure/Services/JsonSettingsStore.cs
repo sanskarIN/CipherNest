@@ -61,6 +61,7 @@ public sealed class JsonSettingsStore : ISettingsStore
                     if (stream.Length > MaximumSettingsFileBytes)
                         throw new InvalidDataException("Serialized settings exceed the supported size limit.");
                 }
+                cancellationToken.ThrowIfCancellationRequested();
                 File.Move(temp, _path, overwrite: true);
             }
             finally
