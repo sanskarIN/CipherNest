@@ -11,6 +11,12 @@ public static class BackupFormatPolicy
     public const int MaximumChunkCount = 65_536;
     public const int MinimumSaltBytes = 16;
     public const int MaximumSaltBytes = 64;
+    public const int MaximumHeaderBytes = 16_384;
+    public const int EncryptedChunkOverheadBytes = sizeof(int) + 12 + 16;
+    public const long MaximumEncryptedContainerBytes =
+        BackupArchivePolicy.MaximumArchiveBytes +
+        ((long)MaximumChunkCount * EncryptedChunkOverheadBytes) +
+        8 + sizeof(int) + MaximumHeaderBytes + sizeof(int);
 
     public static void ValidateHeader(int version, int saltLength, KdfParameters kdf, int chunkSize)
     {
