@@ -248,7 +248,11 @@ public sealed class CsvTransferService : IPlaintextTransferService
             }
         }
 
-        public ValueTask DisposeAsync() => _reader.DisposeAsync();
+        public ValueTask DisposeAsync()
+        {
+            _reader.Dispose();
+            return ValueTask.CompletedTask;
+        }
 
         private async Task ConsumeOptionalLineFeedAsync(char current, CancellationToken cancellationToken)
         {
