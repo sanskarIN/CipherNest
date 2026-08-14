@@ -24,8 +24,9 @@ jobs:
           git config user.email "sanskarin@outlook.in"
 
       - name: Record changelog entry
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           p = Path("CHANGELOG.md")
           text = p.read_text(encoding="utf-8")
@@ -36,13 +37,15 @@ jobs:
                   raise SystemExit("CHANGELOG Added section not found")
               text = text.replace(marker, marker + entry, 1)
               p.write_text(text, encoding="utf-8")
+          PY
       - run: |
           git add CHANGELOG.md
           if ! git diff --cached --quiet; then git commit -m "docs(changelog): record complete documentation consolidation"; fi
 
       - name: Record project status entry
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           p = Path("PROJECT_STATUS.md")
           text = p.read_text(encoding="utf-8")
@@ -53,13 +56,15 @@ jobs:
                   raise SystemExit("PROJECT_STATUS completed section not found")
               text = text.replace(marker, marker + entry, 1)
               p.write_text(text, encoding="utf-8")
+          PY
       - run: |
           git add PROJECT_STATUS.md
           if ! git diff --cached --quiet; then git commit -m "docs(status): record consolidated documentation completion"; fi
 
       - name: Append implementation ledger
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           p = Path("what_changed.md")
           text = p.read_text(encoding="utf-8")
@@ -67,17 +72,19 @@ jobs:
           if marker not in text:
               addition = """
 
-## 2026-08-14 — Complete documentation consolidation
+          ## 2026-08-14 — Complete documentation consolidation
 
-- Added `docs/COMPLETE_PROJECT_DOCUMENTATION.md` as a consolidated end-to-end reference for project identity, supported targets, repository architecture, security/key/session design, records, SQLite, resource limits, attachments, backup/restore, CSV, clipboard, secure notes, generators, deletion, settings/privacy, accessibility/localization, build, CI, release, support, and external validation gates.
-- Added `docs/FAQ.md` covering common user, security, biometric, storage, backup, transfer, platform, build, CI, release, deletion, accessibility, and support questions without weakening the project's independent-audit or managed-memory limitations.
-- Updated `docs/README.md` so the consolidated reference and FAQ are first-class canonical navigation entries.
-- Updated root `README.md` so repository visitors can reach the complete documentation and FAQ directly.
-- Extended `tests/CipherNest.UiTests/DocumentationCoverageSourceTests.cs` to require both new files, require root/hub links, and preserve consolidated security/release disclaimers.
-- Updated `CHANGELOG.md` and `PROJECT_STATUS.md` to record the documentation consolidation.
-- All repository mutations in this continuation were committed directly to `main`; Git commit identity uses `Sanskar <sanskarin@outlook.in>`.
-"""
-              p.write_text(text.rstrip() + addition + "\n", encoding="utf-8")
+          - Added `docs/COMPLETE_PROJECT_DOCUMENTATION.md` as a consolidated end-to-end reference for project identity, supported targets, repository architecture, security/key/session design, records, SQLite, resource limits, attachments, backup/restore, CSV, clipboard, secure notes, generators, deletion, settings/privacy, accessibility/localization, build, CI, release, support, and external validation gates.
+          - Added `docs/FAQ.md` covering common user, security, biometric, storage, backup, transfer, platform, build, CI, release, deletion, accessibility, and support questions without weakening the project's independent-audit or managed-memory limitations.
+          - Updated `docs/README.md` so the consolidated reference and FAQ are first-class canonical navigation entries.
+          - Updated root `README.md` so repository visitors can reach the complete documentation and FAQ directly.
+          - Extended `tests/CipherNest.UiTests/DocumentationCoverageSourceTests.cs` to require both new files, require root/hub links, and preserve consolidated security/release disclaimers.
+          - Updated `CHANGELOG.md` and `PROJECT_STATUS.md` to record the documentation consolidation.
+          - All repository mutations in this continuation were committed directly to `main`; Git commit identity uses `Sanskar <sanskarin@outlook.in>`.
+          """
+              import textwrap
+              p.write_text(text.rstrip() + textwrap.dedent(addition) + "\n", encoding="utf-8")
+          PY
       - run: |
           git add what_changed.md
           if ! git diff --cached --quiet; then git commit -m "docs(ledger): append complete documentation continuation"; fi
