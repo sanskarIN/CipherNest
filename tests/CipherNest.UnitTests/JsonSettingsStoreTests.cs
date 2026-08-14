@@ -49,6 +49,43 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveAndLoad_BareRelativeFileName_Works()
+    {
+        var relativePath = $"ciphernest-settings-{Guid.NewGuid():N}.json";
+        var fullPath = Path.GetFullPath(relativePath);
+        try
+        {
+            var store = new JsonSettingsStore(relativePath);
+            var expected = new AppPreferences { Theme = AppThemePreference.Dark };
+
+            await store.SaveAsync(expected);
+            var actual = await store.LoadAsync();
+
+            Assert.Equal(AppThemePreference.Dark, actual.Theme);
+            Assert.True(File.Exists(fullPath));
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(fullPath)) File.Delete(fullPath);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void Constructor_RejectsWhitespacePath()
+    {
+        Assert.Throws<ArgumentException>(() => new JsonSettingsStore("   "));
+    }
+
+    [Fact]
     public async Task Load_NormalizesOutOfRangePersistedValues()
     {
         Directory.CreateDirectory(_directory);
