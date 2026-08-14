@@ -61,6 +61,10 @@ The immutable final candidate must receive its own successful GitHub Actions res
 
 Any failed test, warning-as-error build failure, formatting failure, platform compile failure, or CodeQL failure is release-blocking until corrected on a new exact-head candidate.
 
+## Direct final-candidate trigger
+
+After the source, compatibility, documentation, and append-only ledger reconciliation completed, this file is updated through a direct repository commit rather than a workflow-generated recursive push. That direct commit is the immutable current-head candidate that must satisfy every hosted gate listed above. No passing status is inferred merely from creating this trigger commit.
+
 ## Device/manual gates that remain external
 
 Repository-only automation cannot certify:
