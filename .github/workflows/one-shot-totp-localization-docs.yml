@@ -1,0 +1,334 @@
+name: One-shot TOTP and localization documentation reconciliation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-shot-totp-localization-docs.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure commit identity
+        run: |
+          git config user.name "Sanskar"
+          git config user.email "sanskarin@outlook.in"
+
+      - name: Reconcile consolidated documentation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('docs/COMPLETE_PROJECT_DOCUMENTATION.md')
+          t = p.read_text(encoding='utf-8')
+          old = 'Cloud synchronization, collaboration, browser/application autofill, TOTP generation, Windows Hello convenience unlock, rich PDF/binary preview/scanning, and complete additional-language catalogs are deferred future-version work unless and until they are implemented, reviewed, tested, and documented.'
+          new = 'Local RFC-compatible TOTP generation and a reviewed Hindi resource-backed catalog are now implemented. Cloud synchronization, collaboration, browser/application autofill, TOTP QR/`otpauth://` enrollment interoperability, Windows Hello convenience unlock, rich PDF/binary preview/scanning, and complete migration of the remaining user-facing UI into additional-language catalogs remain future-version work unless and until they are implemented, reviewed, tested, and documented.'
+          if old not in t: raise SystemExit('complete-doc deferred marker missing')
+          t = t.replace(old, new, 1)
+          old = 'English is the shipping resource catalog. A persisted System/English preference and resource-backed architecture are present so additional catalogs can be added without coupling language to encrypted formats. A complete Hindi catalog remains future work until all security warnings can be translated and reviewed without weakening meaning.'
+          new = 'Neutral English remains the fallback resource catalog. Persisted System/English/Hindi preferences are supported, and the reviewed `hi-IN` satellite catalog covers the currently resource-backed interface including security-critical local-only, audit-status, recovery-limitation, and language-status messages. CipherNest does not claim that every remaining literal UI string is translated; unmigrated strings may still appear in English.'
+          if old not in t: raise SystemExit('complete-doc localization marker missing')
+          t = t.replace(old, new, 1)
+          marker = '### 5.7 Managed-memory limitation\n\nCipherNest clears owned byte arrays and sensitive ViewModel properties where practical, but .NET strings and operating-system/application copies cannot be deterministically erased. Documentation and UI must not claim otherwise.\n'
+          addition = marker + '''\n### 5.8 Local TOTP generation\n\n`OneTimePassword` vault items store a Base32 TOTP seed plus algorithm/digit/period settings inside the same authenticated encrypted item payload used by other vault fields. `TotpService` generates RFC 6238-compatible codes locally using HMAC-SHA-1, HMAC-SHA-256, or HMAC-SHA-512, with 6/8-digit output and bounded 15–120-second periods. Generated codes are transient presentation state and are not persisted.\n\nSeed parsing is bounded before HMAC work, decoded seed/hash/counter buffers are zeroed where practical, and RFC 6238 known-answer vectors guard compatibility. The editor uses explicit manual refresh and explicit clipboard copy rather than a background timer. TOTP seeds are excluded from password-strength/reuse heuristics, while exact duplicate detection still includes the TOTP parameters. See `docs/security/TOTP.md`.\n'''
+          if marker not in t: raise SystemExit('complete-doc security marker missing')
+          t = t.replace(marker, addition, 1)
+          table = '| Passphrase input | 12–4,096 characters for crypto-bound passphrases |'
+          if table in t:
+              t = t.replace(table, table + '\n| TOTP formatted seed | 4,096 characters maximum before normalization |\n| TOTP normalized Base32 seed | 16–1,024 characters; algorithm SHA-1/SHA-256/SHA-512; 6/8 digits; 15–120 s period |', 1)
+          t = t.replace('passphrases, recovery keys, plaintext secrets, and full user file paths', 'passphrases, recovery keys, plaintext secrets, TOTP seeds/codes, and full user file paths', 1)
+          p.write_text(t, encoding='utf-8')
+          PY
+          git add docs/COMPLETE_PROJECT_DOCUMENTATION.md
+          git commit -m "docs: reconcile complete reference with TOTP and Hindi support"
+
+      - name: Reconcile user guide
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('docs/USER_GUIDE.md')
+          t = p.read_text(encoding='utf-8')
+          t = t.replace('- Document\n- Custom', '- Document\n- Custom\n- Time-Based One-Time Password (TOTP)', 1)
+          marker = 'The application normalizes title/username/URL/collection and tags before storage. Tags are trimmed, empty tags are removed, duplicate tags are collapsed case-insensitively, and tags are sorted.\n'
+          section = marker + '''\n### TOTP items\n\nChoose **Time-Based One-Time Password (TOTP)** when you are authorized to store an authentication seed in CipherNest. In this item type, the normal Secret field is the Base32 TOTP seed. Select the provider's algorithm (SHA-1/SHA-256/SHA-512), digit count (6 or 8), and period (15–120 seconds; commonly 30).\n\n- CipherNest stores the seed and TOTP settings inside the authenticated encrypted vault item.\n- Choose **Refresh code** to calculate the current code locally. There is no background refresh timer in this release.\n- Generated codes are not saved into the vault record.\n- **Copy code** refreshes immediately and then uses the same timed best-effort clipboard cleanup policy as other secrets.\n- A copied seed has longer-lived risk than a copied one-time code because the seed can generate future codes.\n- QR scanning/rendering and `otpauth://` import/export are not implemented by the current source. Enter only seed/settings you are authorized to use.\n- If password and TOTP seed for the same service are kept in one vault, compromise of the unlocked vault can expose both factors.\n\nSee `security/TOTP.md` for the precise security model and RFC compatibility details.\n'''
+          if marker not in t: raise SystemExit('user guide item marker missing')
+          t = t.replace(marker, section, 1)
+          t = t.replace('Audit results are local application findings, not an independent security audit of the CipherNest codebase.', 'TOTP seeds are deliberately excluded from password weakness/reuse findings because they are authentication seeds rather than user-chosen passwords; exact duplicate detection still applies.\n\nAudit results are local application findings, not an independent security audit of the CipherNest codebase.', 1)
+          t = t.replace('Username, primary-secret, and secret-custom-field copy actions are explicit.', 'Username, primary-secret, secret-custom-field, and TOTP-code copy actions are explicit.', 1)
+          t = t.replace('- System/English language readiness;', '- System/English/Hindi language preference for the reviewed resource-backed interface;', 1)
+          old = 'Current complete user-facing content is English-first. System/English preference exists; a complete Hindi/additional-language catalog is not claimed in the current release.'
+          new = 'Neutral English remains the fallback. System/English/Hindi preferences exist, and the reviewed Hindi (`hi-IN`) catalog covers the currently resource-backed interface. A completely translated application is not claimed because remaining literal UI strings may still appear in English.'
+          if old not in t: raise SystemExit('user guide localization marker missing')
+          t = t.replace(old, new, 1)
+          t = t.replace('- TOTP seed storage/generation;\n', '')
+          t = t.replace('- complete Hindi/additional translation catalogs.', '- complete migration/review of the remaining UI into Hindi/additional translation catalogs;\n- TOTP QR scanning/rendering, `otpauth://` import/export, and autofill/provider enrollment integration.')
+          p.write_text(t, encoding='utf-8')
+          PY
+          git add docs/USER_GUIDE.md
+          git commit -m "docs(user): document local TOTP and reviewed Hindi preference"
+
+      - name: Reconcile developer guide
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('docs/DEVELOPER_GUIDE.md')
+          t = p.read_text(encoding='utf-8')
+          t = t.replace('CSV parsing/transfer, password/passphrase generation, and local audit implementations.', 'CSV parsing/transfer, password/passphrase generation, local RFC-compatible TOTP generation, and local audit implementations.', 1)
+          t = t.replace('- `IPasswordGenerator -> PasswordGenerator`\n', '- `IPasswordGenerator -> PasswordGenerator`\n- `ITotpService -> TotpService`\n', 1)
+          t = t.replace('- secret max 100,000;\n', '- secret max 100,000;\n- TOTP item seeds additionally use bounded Base32 validation (4,096 formatted / 1,024 normalized characters, minimum 16) with SHA-1/SHA-256/SHA-512, 6/8 digits, and 15–120-second periods;\n', 1)
+          marker = 'When adding a new field, update aggregate resource accounting and tests. Do not add a field to `VaultItem` that escapes encrypted-at-rest storage without a documented privacy/security reason.\n'
+          addition = marker + '''\n### TOTP extension rules\n\nTOTP generation is an Application abstraction (`ITotpService`) with a platform-independent Infrastructure implementation (`TotpService`). Keep provider/network/UI concerns out of that implementation. RFC 6238 known-answer vectors are release-blocking compatibility tests.\n\nThe current encrypted JSON writes enums numerically. `VaultItemType.Custom = 8` is existing persisted compatibility and `OneTimePassword = 9` was intentionally appended rather than inserted. `VaultItemTypeCompatibilityTests` must stay green whenever item-type enums change. TOTP algorithm numeric values are also pinned.\n\nDo not add QR parsing, `otpauth://` URI parsing, automatic refresh timers, autofill, or provider enrollment as incidental changes: each needs bounded parsing, lifecycle/accessibility review, source/device tests, threat-model updates, and honest interoperability documentation.\n'''
+          if marker not in t: raise SystemExit('developer validation marker missing')
+          t = t.replace(marker, addition, 1)
+          t = t.replace('- clipboard plaintext.\n', '- clipboard plaintext;\n- TOTP seeds or generated one-time codes.\n', 1)
+          old = 'The current release is English-first with System/English preference. Do not claim a complete additional language until every user/security/error string in the supported surface has a reviewed resource translation.'
+          new = 'Neutral English remains the fallback, with System/English/Hindi preferences for the reviewed resource-backed surface. Do not claim a fully translated interface until every remaining user/security/error literal in that surface has been migrated to resources and reviewed.'
+          if old not in t: raise SystemExit('developer localization marker missing')
+          t = t.replace(old, new, 1)
+          p.write_text(t, encoding='utf-8')
+          PY
+          git add docs/DEVELOPER_GUIDE.md
+          git commit -m "docs(dev): add TOTP compatibility and localization extension rules"
+
+      - name: Reconcile root README
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('README.md')
+          t = p.read_text(encoding='utf-8')
+          marker = '- Local search, favorites, collections, item-type filters, review reminders, recent-use sorting, and weak/reused/duplicate-secret audit operate only over decrypted data while unlocked. Large matching result sets render incrementally in 50-item pages.\n'
+          addition = marker + '- Local TOTP items keep the Base32 seed and SHA-1/SHA-256/SHA-512 + 6/8-digit + period settings inside the authenticated encrypted record, generate RFC 6238-compatible codes only while unlocked, use explicit refresh/copy actions, and do not persist generated codes. QR/`otpauth://` enrollment and autofill integration are not claimed.\n'
+          if marker not in t: raise SystemExit('README feature marker missing')
+          t = t.replace(marker, addition, 1)
+          old = '- English resources ship first with a persisted System/English language preference and resource-backed architecture ready for additional culture catalogs.\n'
+          new = '- Neutral English remains the fallback resource catalog; persisted System/English/Hindi preferences are supported for the reviewed resource-backed interface, while not-yet-migrated UI literals may still appear in English.\n'
+          if old not in t: raise SystemExit('README localization marker missing')
+          t = t.replace(old, new, 1)
+          t = t.replace('[Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [Session Security]', '[Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [TOTP Security](docs/security/TOTP.md) · [Session Security]', 1)
+          p.write_text(t, encoding='utf-8')
+          PY
+          git add README.md
+          git commit -m "docs(readme): expose TOTP and Hindi capabilities"
+
+      - name: Reconcile roadmap
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('docs/NEXT_STEPS.md')
+          t = p.read_text(encoding='utf-8')
+          t = t.replace('- Verify username, primary-secret, and secret-custom-field copy actions all use the same bounded policy.\n', '- Verify username, primary-secret, secret-custom-field, and TOTP-code copy actions all use the same bounded policy.\n- Verify copying a TOTP seed/code never introduces a background clipboard lifetime and preserves unrelated newer clipboard content.\n', 1)
+          t = t.replace('- Create a disposable vault, enable recovery, add all item types, attachments, custom fields, reminders, and notes.\n', '- Create a disposable vault, enable recovery, add all item types including TOTP, attachments, custom fields, reminders, and notes.\n- Verify TOTP save/reopen, re-authentication-protected TOTP access, SHA-1/SHA-256/SHA-512, 6/8 digits, period bounds, malformed Base32 rejection, and device-clock correctness using synthetic seeds.\n', 1)
+          t = t.replace('- Add a complete Hindi catalog only when every security warning can be translated/reviewed without weakening meaning.\n', '- Continue migrating remaining user-facing literal strings into the neutral/Hindi resource catalogs; do not call the complete UI translated until every security warning and remaining literal is reviewed without weakening meaning.\n', 1)
+          t = t.replace('- Review parser fuzzing opportunities for CSV, backup archives/header metadata, attachment metadata/storage names, settings JSON, vault records, and vault-header deserialization.\n', '- Review parser fuzzing opportunities for CSV, backup archives/header metadata, attachment metadata/storage names, settings JSON, TOTP Base32 input, vault records, and vault-header deserialization.\n- Independently review the local TOTP implementation against RFC 6238/HOTP truncation rules, Base32 normalization, seed memory lifetime, same-vault second-factor tradeoffs, clock assumptions, and clipboard exposure.\n', 1)
+          t = t.replace('- TOTP seed storage and generation;\n', '- TOTP QR scanning/rendering, bounded `otpauth://` import/export, and provider/autofill integration;\n')
+          p.write_text(t, encoding='utf-8')
+          PY
+          git add docs/NEXT_STEPS.md
+          git commit -m "docs(roadmap): move TOTP core to implemented validation"
+
+      - name: Reconcile project status
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('PROJECT_STATUS.md')
+          t = p.read_text(encoding='utf-8')
+          marker = '- Item CRUD for all modeled vault types, encrypted custom fields, collections, tags, favorites, local search, review dates, per-item master re-authentication, trash retention, and encrypted last-accessed timestamps.\n'
+          addition = marker + '- Local TOTP vault items store Base32 seeds and SHA-1/SHA-256/SHA-512 + 6/8-digit + bounded period settings inside the authenticated encrypted record; generated codes are RFC 6238-verified, manual-refresh presentation state and are not persisted. TOTP seed/settings validation is bounded before HMAC/storage use, temporary decoded/hash/counter buffers are zeroed where practical, and code copy uses the existing timed conditional clipboard service.\n- Persisted `VaultItemType` numeric values are now explicit (`Custom = 8`, `OneTimePassword = 9`) with legacy JSON compatibility tests so adding TOTP cannot reinterpret older Custom records.\n'
+          if marker not in t: raise SystemExit('status item marker missing')
+          t = t.replace(marker, addition, 1)
+          old = '- English-first `.resx` resource catalog, persisted System/English preference, and localization service architecture ready for Hindi/additional catalogs without coupling language to vault formats.\n'
+          new = '- Neutral-English `.resx` fallback plus a reviewed `hi-IN` satellite catalog, persisted System/English/Hindi preference, parity/source tests, and explicit documentation that not-yet-migrated UI literals can still appear in English without coupling language to vault formats.\n'
+          if old not in t: raise SystemExit('status localization marker missing')
+          t = t.replace(old, new, 1)
+          marker2 = '### Hosted verification evidence\n'
+          section = '''### Current TOTP/localization release validation\n- RFC 6238 known-answer tests cover SHA-1, SHA-256, and SHA-512 at the published test timestamps.\n- TOTP unit tests cover formatted Base32 input, malformed alphabet/length/padding, code digit counts, period/algorithm bounds, and pre-epoch rejection.\n- Integration coverage round-trips a synthetic TOTP item through real SQLite + VaultService encryption and checks that the encrypted envelope does not contain the synthetic Base32 seed as plaintext UTF-8 bytes.\n- Source tests guard explicit TOTP refresh/copy UI, no background timer, documentation security claims, Hindi neutral/satellite key parity, and runtime language wiring.\n- Physical-device clipboard/history, clock correctness, accessibility, language layout, and lifecycle behavior remain release gates.\n\n'''
+          if marker2 not in t: raise SystemExit('status hosted marker missing')
+          t = t.replace(marker2, section + marker2, 1)
+          p.write_text(t, encoding='utf-8')
+          PY
+          git add PROJECT_STATUS.md
+          git commit -m "docs(status): record TOTP and Hindi source completion"
+
+      - name: Add architecture data-flow notes
+        run: |
+          cat >> docs/architecture/DATA_FLOW.md <<'EOF'
+
+## TOTP seed and code flow
+
+A `OneTimePassword` item's Base32 seed and algorithm/digit/period settings follow the normal authenticated encrypted `VaultItem` path. After the item is decrypted while unlocked, explicit **Refresh code** passes the seed/settings plus current UTC time to `ITotpService`. The Infrastructure implementation performs bounded Base32 validation/decoding, HMAC generation, and dynamic truncation locally; the returned decimal code exists only in ViewModel presentation state and is not written to SQLite or backup as a generated-code field.
+
+Changing the seed/settings/item type clears displayed code state. A re-authentication-protected item cannot generate/display its code until current-master re-authentication succeeds. Explicit **Copy code** recalculates before copying through `IClipboardSecurityService`, so the same conditional timed-cleanup and OS clipboard-history limitations apply as for other secrets.
+
+The encrypted backup path naturally carries the encrypted seed/settings because it carries the encrypted vault database. QR/`otpauth://` import/export and autofill/provider enrollment are outside this current flow.
+EOF
+          git add docs/architecture/DATA_FLOW.md
+          git commit -m "docs(architecture): document TOTP data flow"
+
+      - name: Add dependency map notes
+        run: |
+          cat >> docs/architecture/DEPENDENCY_MAP.md <<'EOF'
+
+## TOTP dependency path
+
+```text
+ItemEditorViewModel
+      |
+      v
+ITotpService (Application)
+      |
+      v
+TotpService (Infrastructure)
+      |
+      +--> TotpPolicy (Application validation)
+      +--> TotpAlgorithm / VaultItem (Domain)
+      +--> System.Security.Cryptography HMAC implementations
+```
+
+The MAUI composition root registers `ITotpService -> TotpService`. TOTP remains platform-independent; clipboard behavior stays behind the existing App clipboard-security service. No provider network SDK or additional TOTP package is required by the current implementation.
+EOF
+          git add docs/architecture/DEPENDENCY_MAP.md
+          git commit -m "docs(architecture): map TOTP service dependencies"
+
+      - name: Add threat model TOTP boundary
+        run: |
+          cat >> docs/security/THREAT_MODEL.md <<'EOF'
+
+## TOTP seed/code security boundary
+
+A TOTP seed is a long-lived authentication secret and a generated code is short-lived sensitive data. CipherNest keeps the seed in the authenticated encrypted item payload and does not persist generated codes, but storing an account password and its TOTP seed in the same vault means compromise of an unlocked vault can expose both factors. TOTP support therefore does not create cryptographic factor separation from the vault itself.
+
+The implementation partially mitigates accidental exposure with bounded seed parsing, local-only HMAC generation, temporary byte-buffer clearing where practical, protected-item re-authentication, explicit refresh/copy actions, privacy-safe diagnostics, and the existing conditional timed clipboard policy. It does not defend against a compromised OS, process-memory inspection while unlocked, screen capture outside supported controls, clipboard/history capture, a materially wrong device clock, provider recovery bypass, or a user deliberately exporting/copying a seed.
+
+QR/`otpauth://` parsing and provider/autofill enrollment remain out of scope until separately threat-modeled.
+EOF
+          git add docs/security/THREAT_MODEL.md
+          git commit -m "docs(security): add TOTP threat boundary"
+
+      - name: Add sensitive-data lifecycle TOTP notes
+        run: |
+          cat >> docs/security/DATA_LIFECYCLE.md <<'EOF'
+
+## TOTP seed and generated-code lifetime
+
+The Base32 TOTP seed is stored as an encrypted item secret at rest, but after decrypting a TOTP item the seed exists as a managed string while the item is in use. `TotpService` creates a temporary decoded byte-array key and temporary counter/hash spans; these owned byte buffers are zeroed on every normal/exceptional exit where the implementation controls them. The immutable managed seed string and runtime copies cannot be deterministically erased.
+
+Generated codes are not persisted to the vault record. The Item Editor keeps only the currently displayed code as managed presentation state and clears it whenever the seed, algorithm, digit count, period, or item type changes. Copying a code or seed crosses into the operating-system clipboard boundary and inherits the clipboard/history/synchronization limitations documented elsewhere in this file.
+EOF
+          git add docs/security/DATA_LIFECYCLE.md
+          git commit -m "docs(security): document TOTP sensitive-data lifetime"
+
+      - name: Add testing and release gates
+        run: |
+          cat >> docs/TEST_PLAN.md <<'EOF'
+
+## TOTP and reviewed Hindi localization matrix
+
+### Automated TOTP
+- Run all RFC 6238 known-answer vectors for SHA-1/SHA-256/SHA-512 at the published timestamps.
+- Verify 6/8-digit output, validity-window calculation, formatted lowercase/grouped Base32 input, invalid alphabet, impossible encoded lengths, invalid supplied padding, non-zero residual bits, unsupported algorithms/digits/periods, pre-epoch time, and formatted/normalized resource ceilings.
+- Verify `VaultItemValidator` rejects malformed TOTP seed/settings before storage.
+- Verify legacy numeric `VaultItemType.Custom = 8` JSON remains Custom and missing TOTP members receive backward-compatible defaults.
+- Round-trip a synthetic TOTP item through real encrypted SQLite/VaultService storage and assert the encrypted envelope does not contain the synthetic seed as plaintext UTF-8 bytes.
+- Verify TOTP seeds are excluded from password weakness/reuse findings while duplicate detection includes algorithm/digits/period.
+- Verify source UI uses explicit refresh/copy and no background timer; sensitive input changes clear displayed code state.
+
+### Automated localization
+- Require exact key parity between neutral `AppStrings.resx` and `AppStrings.hi-IN.resx`.
+- Require non-empty Hindi values and reviewed translations for local-only, audit-status, recovery-limitation, and language-status keys.
+- Require System/English/Hindi normalization and explicit `hi-IN` runtime wiring.
+
+### Device/manual
+- Verify TOTP code layout/readability and semantic labels on Android, Windows, iOS, and Mac Catalyst.
+- Verify device clock/time-zone changes produce expected RFC time-counter behavior and that no code is generated while a protected item still requires re-authentication.
+- Verify TOTP copy uses the same real clipboard cleanup/history behavior as other secrets and preserves unrelated newer clipboard content.
+- Verify System/English/Hindi selection, restart, suspend/resume, fallback, large text, screen readers, and narrow-window layout; record which remaining literals still appear in English.
+EOF
+          git add docs/TEST_PLAN.md
+          git commit -m "testplan: add TOTP and Hindi validation matrix"
+
+          cat >> docs/RELEASE_CHECKLIST.md <<'EOF'
+
+## TOTP and staged Hindi release gate
+
+- [ ] RFC 6238 SHA-1/SHA-256/SHA-512 known-answer tests pass on the exact candidate.
+- [ ] TOTP parser/settings bounds, malformed padding/alphabet/length tests, encrypted round-trip, audit semantics, and enum compatibility tests pass.
+- [ ] No real TOTP seed/code appears in tests, docs, screenshots, logs, diagnostics, issues, or release artifacts.
+- [ ] TOTP UI is verified on target platforms for manual refresh, protected-item re-authentication, 6/8-digit display, period controls, clipboard cleanup/history limitations, accessibility, and clock correctness.
+- [ ] Store/release wording states local TOTP generation accurately and does not claim QR/`otpauth://` import, autofill/provider enrollment, factor isolation from the unlocked vault, or independent security audit.
+- [ ] Neutral/Hindi resource key parity tests pass and security-critical translations retain equivalent meaning.
+- [ ] System/English/Hindi selection and fallback are tested on target platforms; release copy does not claim the entire UI is translated while unmigrated literals remain.
+EOF
+          git add docs/RELEASE_CHECKLIST.md
+          git commit -m "release: gate TOTP and reviewed Hindi behavior"
+
+      - name: Add maintainer and store guidance
+        run: |
+          cat >> docs/MAINTAINER_GUIDE.md <<'EOF'
+
+## TOTP maintenance rules
+
+Treat TOTP seed/settings as security-sensitive encrypted record semantics. Preserve the explicit persisted `VaultItemType` numeric values, RFC 6238 known-answer vectors, Base32/resource bounds, no-generated-code-persistence rule, audit exclusions, and explicit clipboard behavior. Any QR/`otpauth://` parser, background refresh, autofill/provider integration, or broader interoperability change requires dedicated threat, parser, lifecycle, accessibility, format, and release review rather than being folded into an unrelated UI patch.
+
+Never request a user's real TOTP seed or current code in support/security triage. Synthetic seeds only belong in tests/documentation.
+
+For localization, maintain neutral-English/satellite key parity and do not describe the complete UI as Hindi-translated until remaining literals are migrated and reviewed.
+EOF
+          git add docs/MAINTAINER_GUIDE.md
+          git commit -m "docs(maintainer): add TOTP and localization ownership rules"
+
+          cat >> docs/releases/STORE_LISTING_GUIDE.md <<'EOF'
+
+## TOTP and language listing claims
+
+Accurate current wording may state that CipherNest can store a TOTP seed inside the encrypted local vault and generate standard time-based one-time codes locally while unlocked. Do not imply that CipherNest currently scans/renders TOTP QR codes, imports/exports `otpauth://` enrollment URIs, autofills provider codes, isolates a TOTP seed from compromise of the same unlocked vault, or has independently audited TOTP security.
+
+Language/store metadata may state that reviewed Hindi resources are available for the resource-backed interface. Do not market the whole UI as fully translated while not-yet-migrated literals can still fall back/remain in English.
+EOF
+          git add docs/releases/STORE_LISTING_GUIDE.md
+          git commit -m "docs(store): constrain TOTP and Hindi marketing claims"
+
+      - name: Record changelog
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('CHANGELOG.md')
+          t = p.read_text(encoding='utf-8')
+          marker = '### Added\n'
+          entry = '- Local RFC 6238-compatible TOTP vault items with encrypted Base32 seed/settings, SHA-1/SHA-256/SHA-512, 6/8-digit output, bounded periods/input parsing, explicit refresh/copy UI, RFC known-answer tests, real encrypted SQLite round-trip coverage, audit semantics, and persisted-enum compatibility protection.\n- Reviewed Hindi (`hi-IN`) resource catalog for the current resource-backed interface, System/English/Hindi preference wiring, catalog-parity/security-translation tests, and explicit English fallback for not-yet-migrated UI literals.\n'
+          if entry not in t:
+              if marker not in t: raise SystemExit('changelog Added marker missing')
+              t = t.replace(marker, marker + entry, 1)
+          p.write_text(t, encoding='utf-8')
+          PY
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): record TOTP and Hindi implementation"
+
+      - name: Append implementation ledger
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('what_changed.md')
+          t = p.read_text(encoding='utf-8')
+          marker = '## 2026-08-14 — Reviewed Hindi localization and local TOTP implementation\n'
+          if marker not in t:
+              addition = '''\n\n## 2026-08-14 — Reviewed Hindi localization and local TOTP implementation\n\n- Expanded the neutral English localization catalog and added a reviewed `hi-IN` satellite catalog with exact key-parity/security-message source tests.\n- Added persisted `AppLanguagePreference.Hindi`, explicit `hi-IN` culture application, Settings status messages, and normalization tests while retaining neutral English fallback and documenting that not-yet-migrated UI literals may still appear in English.\n- Added `VaultItemType.OneTimePassword`, `TotpAlgorithm`, encrypted TOTP settings on `VaultItem`, `ITotpService`, `TotpCodeResult`, bounded `TotpPolicy`, and the local `TotpService` HMAC implementation without a new third-party package.\n- Added SHA-1/SHA-256/SHA-512 RFC 6238 Appendix B known-answer vectors, 6/8-digit tests, period/input/alphabet/length/padding/pre-epoch rejection, and temporary decoded-key/hash/counter buffer zeroing where practical.\n- Added Item Editor TOTP controls with explicit manual refresh/copy, no background timer, protected-item re-authentication gating, transient generated-code state, and the existing conditional timed clipboard cleanup service.\n- Added TOTP-specific vault validation and changed local password audit semantics so TOTP seeds are not incorrectly scored as weak/reused passwords while exact-duplicate signatures include TOTP settings.\n- Found and fixed a persisted-enum compatibility hazard before finalization: existing `VaultItemType.Custom` remains numeric value `8` and the new `OneTimePassword` is appended as `9`; regression tests deserialize a legacy numeric Custom JSON payload and require backward-compatible TOTP defaults.\n- Added a real encrypted SQLite/VaultService round-trip test for a synthetic TOTP item and verified the encrypted envelope does not contain the synthetic Base32 seed as plaintext UTF-8 bytes.\n- Added `docs/security/TOTP.md` and reconciled the consolidated/user/developer/architecture/security/format/API/limits/roadmap/status/testing/release/maintainer/store documentation so TOTP core is implemented while QR/`otpauth://` enrollment, autofill/provider integration, and complete UI translation remain explicitly separate future work.\n- Added release/source guards for TOTP documentation, explicit-refresh UI shape, Hindi catalog parity, security claims, enum compatibility, and the required current-head CI/CodeQL rerun.\n'''
+              p.write_text(t.rstrip() + addition + '\n', encoding='utf-8')
+          PY
+          git add what_changed.md
+          git commit -m "docs(ledger): append TOTP and Hindi continuation"
+
+      - name: Remove one-shot workflow
+        run: |
+          git rm .github/workflows/one-shot-totp-localization-docs.yml
+          git commit -m "chore(docs): remove one-shot TOTP localization reconciler"
+
+      - name: Push reconciliation commits
+        run: git push origin HEAD:main
