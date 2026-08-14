@@ -150,7 +150,7 @@ public sealed class DocumentationCoverageSourceTests
         var verification = File.ReadAllText(PathAt("docs", "verification", "DOCUMENTATION_CONSOLIDATION_2026_08_14.md"));
 
         Assert.Contains("not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("managed strings", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cannot be deterministically erased", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("historical evidence", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not** completed an independent professional security audit", faq, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cannot deterministically erase", faq, StringComparison.OrdinalIgnoreCase);
