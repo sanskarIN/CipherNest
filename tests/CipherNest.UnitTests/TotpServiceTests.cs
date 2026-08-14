@@ -64,6 +64,8 @@ public sealed class TotpServiceTests
         Assert.Throws<ArgumentException>(() => service.Generate("NOT*BASE32*SECRET", TotpAlgorithm.Sha1, 6, 30, DateTimeOffset.UtcNow));
         Assert.Throws<ArgumentException>(() => service.Generate(new string('A', 4097), TotpAlgorithm.Sha1, 6, 30, DateTimeOffset.UtcNow));
         Assert.Throws<ArgumentException>(() => service.Generate("AAAAAAAAAAAAAAAAA", TotpAlgorithm.Sha1, 6, 30, DateTimeOffset.UtcNow));
+        Assert.Throws<ArgumentException>(() => service.Generate("JBSWY3DPEHPK3PXP=", TotpAlgorithm.Sha1, 6, 30, DateTimeOffset.UtcNow));
+        Assert.Throws<ArgumentException>(() => service.Generate("JBSWY3DP=EHPK3PXP", TotpAlgorithm.Sha1, 6, 30, DateTimeOffset.UtcNow));
     }
 
     [Fact]
