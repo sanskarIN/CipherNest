@@ -39,6 +39,16 @@ public sealed class BackupFormatPolicyTests
     }
 
     [Fact]
+    public void MissingKdfMetadata_IsRejectedAsInvalidData()
+    {
+        Assert.Throws<InvalidDataException>(() => BackupFormatPolicy.ValidateHeader(
+            BackupFormatPolicy.CurrentVersion,
+            saltLength: 16,
+            null!,
+            chunkSize: 1024 * 1024));
+    }
+
+    [Fact]
     public void ChunkIndexBounds_AreEnforced()
     {
         BackupFormatPolicy.ValidateChunkIndex(0);
