@@ -59,6 +59,26 @@ The onboarding flow also requires its generator/strength policy before a new vau
 
 The character ceiling exists to bound input/resource work. It is not a recommendation to use extremely long inputs.
 
+## TOTP defaults and input bounds
+
+From `TotpPolicy`, `VaultItem`, and `TotpService`:
+
+| TOTP setting/resource | Current value |
+|---|---|
+| Default algorithm | SHA-1 |
+| Supported algorithms | SHA-1 / SHA-256 / SHA-512 |
+| Default digits | 6 |
+| Supported digits | 6 or 8 |
+| Default period | 30 seconds |
+| Supported period | 15–120 seconds |
+| Formatted seed input | maximum 4,096 characters |
+| Normalized Base32 seed | 16–1,024 characters |
+| Base32 alphabet | A-Z / 2-7, case-insensitive input |
+| Grouping accepted | whitespace and `-` removed during normalization |
+| Padding | optional terminal `=`; impossible lengths/non-zero residual bits rejected |
+
+The TOTP limits bound local parser/HMAC work. A generated code is transient presentation state and is not persisted in the encrypted item record.
+
 ## Vault storage limits
 
 From `CipherNest.Shared.VaultStorageLimits`:
@@ -76,7 +96,7 @@ SQLite and service-level paths enforce overlapping limits so a custom store cann
 
 ## Vault item validation limits
 
-From `VaultItemValidator` and `SafeNoteLimits`:
+From `VaultItemValidator`, `TotpPolicy`, and `SafeNoteLimits`:
 
 | Item resource | Maximum / rule |
 |---|---|
@@ -84,7 +104,7 @@ From `VaultItemValidator` and `SafeNoteLimits`:
 | Item type | defined `VaultItemType` |
 | Title | required, 256 chars |
 | Username/identifier | 2,048 chars |
-| Secret | 100,000 chars |
+| Secret | 100,000 chars general field ceiling; TOTP has stricter bounds above |
 | URL | 4,096 chars |
 | Notes | 200,000 chars |
 | Note lines | 5,000 |
@@ -197,7 +217,7 @@ Favorite
 ReviewAfterUtc
 ```
 
-Attachments are not included in plaintext CSV export.
+Attachments are not included in plaintext CSV export. The current CSV surface is generic and does not claim dedicated TOTP/`otpauth://` interoperability.
 
 ## Application preference defaults and normalization
 
@@ -206,7 +226,7 @@ From `AppPreferences` and `AppPreferencesPolicy`:
 | Preference | Default | Normalized range/values |
 |---|---:|---|
 | Theme | System | System / Light / Dark |
-| Language | System | System / English |
+| Language | System | System / English / Hindi |
 | Lock timeout | 60 s | 5–3,600 s |
 | Lock on background | true | boolean |
 | Clipboard clear | 30 s | 5–300 s |
@@ -227,6 +247,8 @@ From `AppPreferences` and `AppPreferencesPolicy`:
 | Digits | true | boolean |
 | Symbols | true | boolean |
 | Exclude ambiguous | true | boolean |
+
+Hindi currently covers the reviewed resource-backed catalog; unmigrated UI literals may still appear in English.
 
 If password mode has uppercase/lowercase/digits/symbols all disabled after deserialization, normalization restores lowercase so password generation still has a valid character source. That repair is not required in passphrase mode because character groups are unused there.
 
