@@ -5,6 +5,8 @@ public sealed class DocumentationCoverageSourceTests
     private static readonly string[][] RequiredDocumentation =
     [
         ["docs", "README.md"],
+        ["docs", "COMPLETE_PROJECT_DOCUMENTATION.md"],
+        ["docs", "FAQ.md"],
         ["docs", "USER_GUIDE.md"],
         ["docs", "DEVELOPER_GUIDE.md"],
         ["docs", "MAINTAINER_GUIDE.md"],
@@ -79,6 +81,8 @@ public sealed class DocumentationCoverageSourceTests
         var readme = File.ReadAllText(PathAt("README.md"));
 
         Assert.Contains("docs/README.md", readme, StringComparison.Ordinal);
+        Assert.Contains("docs/COMPLETE_PROJECT_DOCUMENTATION.md", readme, StringComparison.Ordinal);
+        Assert.Contains("docs/FAQ.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/USER_GUIDE.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/DEVELOPER_GUIDE.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/security/THREAT_MODEL.md", readme, StringComparison.Ordinal);
@@ -94,6 +98,8 @@ public sealed class DocumentationCoverageSourceTests
 
         foreach (var expected in new[]
                  {
+                     "COMPLETE_PROJECT_DOCUMENTATION.md",
+                     "FAQ.md",
                      "USER_GUIDE.md",
                      "DEVELOPER_GUIDE.md",
                      "MAINTAINER_GUIDE.md",
@@ -132,6 +138,19 @@ public sealed class DocumentationCoverageSourceTests
         Assert.Contains("has not yet undergone an independent professional security audit", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("has **not** completed an independent professional security audit", security, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not** completed an independent professional", cryptoDesign, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ConsolidatedDocumentation_KeepsSecurityAndReleaseDisclaimers()
+    {
+        var complete = File.ReadAllText(PathAt("docs", "COMPLETE_PROJECT_DOCUMENTATION.md"));
+        var faq = File.ReadAllText(PathAt("docs", "FAQ.md"));
+
+        Assert.Contains("not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("managed strings", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("historical evidence", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not** completed an independent professional security audit", faq, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cannot deterministically erase", faq, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string PathAt(params string[] segments)
