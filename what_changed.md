@@ -2416,3 +2416,10 @@ A finite source audit and automated test matrix cannot prove the mathematical ab
 - Added a real encrypted SQLite/VaultService round-trip test for a synthetic TOTP item and verified the encrypted envelope does not contain the synthetic Base32 seed as plaintext UTF-8 bytes.
 - Added `docs/security/TOTP.md` and reconciled the consolidated/user/developer/architecture/security/format/API/limits/roadmap/status/testing/release/maintainer/store documentation so TOTP core is implemented while QR/`otpauth://` enrollment, autofill/provider integration, and complete UI translation remain explicitly separate future work.
 - Added release/source guards for TOTP documentation, explicit-refresh UI shape, Hindi catalog parity, security claims, enum compatibility, and the required current-head CI/CodeQL rerun.
+
+### TOTP/Hindi follow-up consistency fixes
+
+- Fixed the bounded TOTP normalization buffer so the complete 4,096-character formatted-input budget can be processed before the 1,024-character normalized-secret ceiling/padding rules are applied, and added a maximum normalized-seed regression test.
+- Changed the integration test's temporary synthetic seed byte cleanup to `CryptographicOperations.ZeroMemory` after encrypted-envelope inspection.
+- Added `docs/verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md` and made documentation coverage require the TOTP security document, the new verification contract, root TOTP link, audit disclaimer, factor-separation limitation, and partial-translation honesty.
+- Removed remaining stale statements that still described core TOTP generation or the reviewed Hindi catalog as wholly deferred; future wording now distinguishes QR/`otpauth://`/autofill/provider integration and complete remaining-UI translation from the implemented core.
