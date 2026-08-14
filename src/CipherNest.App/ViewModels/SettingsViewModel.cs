@@ -385,6 +385,8 @@ public partial class SettingsViewModel : ObservableObject
         var backupPassphrase = BackupPassphrase;
         BackupPassphrase = string.Empty;
         string? tempPath = null;
+        var restoreCompleted = false;
+        var biometricSecretCleanupFailed = false;
         try
         {
             var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CipherNest encrypted backup" });
@@ -400,12 +402,23 @@ public partial class SettingsViewModel : ObservableObject
                 await using var source = await file.OpenReadAsync();
                 await CipherNest.Infrastructure.Services.BackupStagingPolicy.CopyToNewFileAsync(source, tempPath);
                 await _backup.RestoreEncryptedAsync(tempPath, backupPassphrase);
-                await _biometrics.ClearSecondarySecretAsync();
+                restoreCompleted = true;
                 _sessionSecurity.Clear();
+                BiometricUnlockEnabled = false;
+                try
+                {
+                    await _biometrics.ClearSecondarySecretAsync();
+                }
+                catch (Exception cleanupException)
+                {
+                    biometricSecretCleanupFailed = true;
+                    _exceptions.Report("Settings.BackupRestore.BiometricCleanup", cleanupException);
+                }
                 _loadedPreferences = (await _settings.LoadAsync()) with { BiometricUnlockEnabled = false };
                 await _settings.SaveAsync(_loadedPreferences);
-                BiometricUnlockEnabled = false;
-                StatusMessage = "Backup restored. Unlock the restored vault with its master passphrase or recovery key. Biometric unlock was disabled locally because restored vault metadata may not match this device's secure-storage entry.";
+                StatusMessage = biometricSecretCleanupFailed
+                    ? "Backup restored and the vault remains locked. Biometric unlock was disabled in CipherNest settings, but OS secure-storage cleanup could not be confirmed; unlock with the restored master passphrase or recovery key and review biometric settings before continuing."
+                    : "Backup restored. Unlock the restored vault with its master passphrase or recovery key. Biometric unlock was disabled locally because restored vault metadata may not match this device's secure-storage entry.";
                 await Shell.Current.GoToAsync("//unlock");
             }
             finally { IsBusy = false; }
@@ -413,7 +426,9 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _exceptions.Report("Settings.BackupRestore", ex);
-            StatusMessage = "Backup selection, confirmation, restore, or staging failed safely. The active vault was not intentionally replaced by this failed restore attempt.";
+            StatusMessage = restoreCompleted
+                ? "The backup was restored and the vault remains locked, but post-restore biometric or settings cleanup did not finish completely. Unlock with the restored master passphrase or recovery key and review biometric settings before continuing."
+                : "Backup selection, confirmation, restore, or staging failed safely. The active vault was not intentionally replaced by this failed restore attempt.";
         }
         finally
         {
