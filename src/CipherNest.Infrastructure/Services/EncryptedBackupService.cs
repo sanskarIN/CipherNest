@@ -84,6 +84,10 @@ public sealed class EncryptedBackupService : IBackupService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupPassphrase);
+        cancellationToken.ThrowIfCancellationRequested();
+        var sourceLength = new FileInfo(sourcePath).Length;
+        if (sourceLength > BackupFormatPolicy.MaximumEncryptedContainerBytes)
+            throw new InvalidDataException("Backup container exceeds the supported size limit.");
         var working = Path.Combine(Path.GetTempPath(), $"ciphernest-restore-{Guid.NewGuid():N}");
         Directory.CreateDirectory(working);
         var archive = Path.Combine(working, "payload.zip");
