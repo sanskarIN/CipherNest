@@ -48,7 +48,7 @@ public sealed class TotpVaultIntegrationTests : IAsyncLifetime
             TotpPeriodSeconds = 60
         });
 
-        var stored = Assert.Single((await store.ReadAllItemsAsync()).Where(record => record.Id == id));
+        var stored = Assert.Single(await store.ReadAllItemsAsync(), record => record.Id == id);
         var seedBytes = Encoding.UTF8.GetBytes(seed);
         try
         {
