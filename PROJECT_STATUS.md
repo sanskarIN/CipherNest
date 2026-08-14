@@ -66,7 +66,7 @@
 - Sensitive passphrase/recovery/decrypted ViewModel state is cleared when Unlock, Settings, Transfer, Trash, Item Editor, and Onboarding pages disappear. Bound credential fields are also cleared earlier before longer authentication/file/share operations where practical, within documented managed-memory limitations.
 - Crypto-bound master/recovery/backup/secondary passphrases are limited to 12–4,096 characters. Invalid-length unwrap guesses map to normal vault authentication failure; onboarding and Settings reject oversized setup/change inputs before expensive strength/KDF work.
 - Screenshot protection on supported implementation paths with honest fallback messaging.
-- Settings for theme, language readiness, lock/privacy, reminder intervals, biometrics, generator defaults, storage/cache, backup/restore, import/export, security audit, privacy/threat information, About/legal/acknowledgements, master-passphrase change, and destructive deletion.
+- Settings for theme, System/English/Hindi language preference, lock/privacy, reminder intervals, biometrics, generator defaults, storage/cache, backup/restore, import/export, security audit, privacy/threat information, About/legal/acknowledgements, master-passphrase change, and destructive deletion.
 - Settings persistence normalizes supported enum/numeric bounds on load/save, restores a valid password character group when password mode has none, falls back to defaults on malformed/unreadable non-secret settings files, rejects files above 64 KiB before JSON parsing, checks serialized output against the same 64 KiB ceiling, uses unique sibling `CreateNew` staging, and best-effort cleans staging without swallowing cancellation.
 - Settings load/save, cache cleanup, biometric configuration, backup export/share, restore picker/confirmation/staging, passphrase rotation, and destructive delete platform/storage failures now use fixed UI messages with privacy-safe reporting.
 - Transfer picker/import confirmation/plaintext re-authentication/export confirmation/share paths are contained; plaintext CSV staging is removed in `finally` after sharing/failure where permitted, with a redacted cleanup warning if deletion cannot be confirmed.
@@ -130,11 +130,11 @@ The ordered release/development plan is maintained in `docs/NEXT_STEPS.md`; veri
 ### Deliberately deferred pending dedicated security/platform review
 - Cloud synchronization, accounts, collaboration, server storage, and multi-device conflict resolution.
 - Autofill/type integration with other apps and browsers.
-- TOTP seed storage/generation.
+- TOTP QR scanning/rendering, bounded `otpauth://` import/export, and provider/autofill integration.
 - Local document scanning and rich binary/PDF document preview beyond the bounded safe text-preview formats.
 - Pronounceable-password mode unless a carefully reviewed design is selected.
 - Destructive automatic data wipe after failed unlock attempts.
 - Windows Hello biometric unlock until a native implementation can be tested and reviewed.
-- Additional translated resource catalogs such as Hindi; the preference/resource architecture exists, but the current release ships English content first.
+- Complete migration/review of the remaining UI literals into Hindi/additional catalogs; the reviewed Hindi resource-backed catalog is implemented, but complete UI translation is not claimed.
 
 Deferred features are not represented in the UI as complete.
