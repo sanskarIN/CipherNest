@@ -152,7 +152,6 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Verify reduced-motion preference on every feature that adds animation in future versions.
 - Test narrow phone width, portrait/landscape, tablet-sized surfaces, and resizable desktop windows.
 - Verify 44-DIP minimum touch targets and contrast in light/dark/system modes.
-- Continue migrating remaining user-facing literal strings into resource catalogs.
 - Continue migrating remaining user-facing literal strings into the neutral/Hindi resource catalogs; do not call the complete UI translated until every security warning and remaining literal is reviewed without weakening meaning.
 - Execute and record the complete target/accessibility matrix in `docs/ACCESSIBILITY.md` rather than treating source semantic metadata as certification.
 
