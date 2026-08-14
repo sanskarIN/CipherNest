@@ -6,12 +6,15 @@ public static class TotpPolicy
 {
     public const int MinimumSecretCharacters = 16;
     public const int MaximumSecretCharacters = 1024;
+    public const int MaximumFormattedInputCharacters = 4096;
     public const int MinimumPeriodSeconds = 15;
     public const int MaximumPeriodSeconds = 120;
 
     public static string NormalizeSecret(string secret)
     {
         ArgumentNullException.ThrowIfNull(secret);
+        if (secret.Length > MaximumFormattedInputCharacters)
+            throw new ArgumentException($"Formatted TOTP secret exceeds the {MaximumFormattedInputCharacters:N0}-character input safety limit.", nameof(secret));
 
         var normalized = new char[Math.Min(secret.Length, MaximumSecretCharacters + 1)];
         var length = 0;
