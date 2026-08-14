@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="ProductName" xml:space="preserve"><value>CipherNest</value></data>
+  <data name="VaultTitle" xml:space="preserve"><value>आपका वॉल्ट</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>सेटिंग्स</value></data>
+  <data name="GeneratorTitle" xml:space="preserve"><value>जेनरेटर</value></data>
+  <data name="SecurityAuditTitle" xml:space="preserve"><value>सुरक्षा ऑडिट</value></data>
+  <data name="BackButton" xml:space="preserve"><value>वापस</value></data>
+  <data name="LockButton" xml:space="preserve"><value>लॉक</value></data>
+  <data name="SaveButton" xml:space="preserve"><value>सहेजें</value></data>
+  <data name="CancelButton" xml:space="preserve"><value>रद्द करें</value></data>
+  <data name="LocalOnlySummary" xml:space="preserve"><value>आपका एन्क्रिप्टेड वॉल्ट इसी डिवाइस पर रहता है।</value></data>
+  <data name="AuditStatus" xml:space="preserve"><value>इस रिलीज़ ने अभी तक स्वतंत्र पेशेवर सुरक्षा ऑडिट पूरा नहीं किया है।</value></data>
+  <data name="RecoveryLimitation" xml:space="preserve"><value>भूला हुआ मास्टर पासफ्रेज़ पुनर्प्राप्त नहीं किया जा सकता, जब तक आपने कॉन्फ़िगर की गई रिकवरी सामग्री सुरक्षित नहीं रखी हो।</value></data>
+  <data name="EnglishPreferenceSaved" xml:space="preserve"><value>अंग्रेज़ी भाषा की प्राथमिकता सहेज दी गई है।</value></data>
+  <data name="HindiPreferenceSaved" xml:space="preserve"><value>समीक्षित रिसोर्स-आधारित इंटरफ़ेस के लिए हिन्दी भाषा की प्राथमिकता सहेज दी गई है। अभी तक माइग्रेट न किया गया इंटरफ़ेस टेक्स्ट अंग्रेज़ी में दिखाई दे सकता है।</value></data>
+  <data name="SystemPreferenceSaved" xml:space="preserve"><value>सिस्टम भाषा की प्राथमिकता सहेज दी गई है। CipherNest उपलब्ध समीक्षित भाषा कैटलॉग का उपयोग करता है और अनुवाद उपलब्ध न होने पर अंग्रेज़ी पर वापस आता है।</value></data>
+</root>
