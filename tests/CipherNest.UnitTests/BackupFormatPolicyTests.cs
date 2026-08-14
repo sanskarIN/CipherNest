@@ -16,6 +16,17 @@ public sealed class BackupFormatPolicyTests
             chunkSize: 1024 * 1024);
     }
 
+    [Fact]
+    public void EncryptedContainerCeiling_CoversMaximumArchiveAndFraming()
+    {
+        var minimumExpected = BackupArchivePolicy.MaximumArchiveBytes +
+                              ((long)BackupFormatPolicy.MaximumChunkCount * BackupFormatPolicy.EncryptedChunkOverheadBytes) +
+                              BackupFormatPolicy.MaximumHeaderBytes;
+
+        Assert.True(BackupFormatPolicy.MaximumEncryptedContainerBytes > minimumExpected);
+        Assert.Equal(1_075_855_376L, BackupFormatPolicy.MaximumEncryptedContainerBytes);
+    }
+
     [Theory]
     [InlineData(1, 16, 65536, 3, 1, 1048576)]
     [InlineData(3, 16, 65536, 3, 1, 1048576)]
