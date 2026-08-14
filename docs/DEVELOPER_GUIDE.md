@@ -11,7 +11,7 @@ This guide describes how the current source is organized and how to extend it wi
 - `src/CipherNest.Shared` — product/version/storage constants and small primitives shared across layers.
 - `src/CipherNest.Domain` — framework-independent vault/domain records and enums.
 - `src/CipherNest.Application` — public use-case abstractions, policy/services that do not require MAUI/SQLite, validation, and application exceptions.
-- `src/CipherNest.Infrastructure` — cryptography, SQLite, migrations, encrypted attachment storage, encrypted backups, CSV parsing/transfer, password/passphrase generation, and local audit implementations.
+- `src/CipherNest.Infrastructure` — cryptography, SQLite, migrations, encrypted attachment storage, encrypted backups, CSV parsing/transfer, password/passphrase generation, local RFC-compatible TOTP generation, and local audit implementations.
 - `src/CipherNest.App` — .NET MAUI composition, Views/ViewModels, navigation, lifecycle, platform biometric/clipboard/screenshot/secure-storage/file-picker/share surfaces, localization, accessibility state, storage maintenance, About/legal UI, and privacy-safe diagnostics.
 
 ### Tests
@@ -81,6 +81,7 @@ Current singleton service registrations include:
 - `IVaultStore -> SqliteVaultStore`
 - `IVaultService -> VaultService`
 - `IPasswordGenerator -> PasswordGenerator`
+- `ITotpService -> TotpService`
 - `ISecurityAuditService -> SecurityAuditService`
 - `ISafeNoteMarkupService -> SafeNoteMarkupService`
 - `ISettingsStore -> JsonSettingsStore`
@@ -208,6 +209,7 @@ Current important limits include:
 - title required/max 256;
 - username max 2,048;
 - secret max 100,000;
+- TOTP item seeds additionally use bounded Base32 validation (4,096 formatted / 1,024 normalized characters, minimum 16) with SHA-1/SHA-256/SHA-512, 6/8 digits, and 15–120-second periods;
 - URL max 4,096;
 - secure-note max 200,000 chars/5,000 lines;
 - collection max 128;
@@ -218,6 +220,15 @@ Current important limits include:
 - per-item attachment-ID/storage-name uniqueness.
 
 When adding a new field, update aggregate resource accounting and tests. Do not add a field to `VaultItem` that escapes encrypted-at-rest storage without a documented privacy/security reason.
+
+
+### TOTP extension rules
+
+TOTP generation is an Application abstraction (`ITotpService`) with a platform-independent Infrastructure implementation (`TotpService`). Keep provider/network/UI concerns out of that implementation. RFC 6238 known-answer vectors are release-blocking compatibility tests.
+
+The current encrypted JSON writes enums numerically. `VaultItemType.Custom = 8` is existing persisted compatibility and `OneTimePassword = 9` was intentionally appended rather than inserted. `VaultItemTypeCompatibilityTests` must stay green whenever item-type enums change. TOTP algorithm numeric values are also pinned.
+
+Do not add QR parsing, `otpauth://` URI parsing, automatic refresh timers, autofill, or provider enrollment as incidental changes: each needs bounded parsing, lifecycle/accessibility review, source/device tests, threat-model updates, and honest interoperability documentation.
 
 ## 11. Attachments
 
@@ -278,7 +289,8 @@ Do not log:
 - raw CSV rows containing secrets;
 - full exception messages/stacks in the privacy-safe reporter;
 - filesystem paths that may identify user content;
-- clipboard plaintext.
+- clipboard plaintext;
+- TOTP seeds or generated one-time codes.
 
 See `privacy/DIAGNOSTICS.md`.
 
@@ -321,7 +333,7 @@ When adding a preference:
 
 ## 18. Localization
 
-The current release is English-first with System/English preference. Do not claim a complete additional language until every user/security/error string in the supported surface has a reviewed resource translation.
+Neutral English remains the fallback, with System/English/Hindi preferences for the reviewed resource-backed surface. Do not claim a fully translated interface until every remaining user/security/error literal in that surface has been migrated to resources and reviewed.
 
 Security warnings must preserve meaning across translations. See `architecture/LOCALIZATION.md`.
 
