@@ -75,6 +75,7 @@ The current domain supports these item types:
 - Server/SSH Reference
 - Document
 - Custom
+- Time-Based One-Time Password (TOTP)
 
 Every item has a required title and can also contain a username/identifier, secret, URL, notes, collection, tags, favorite state, custom fields, attachment references, timestamps, optional review date, trash state, and optional per-item re-authentication requirement.
 
@@ -90,6 +91,21 @@ Every item has a required title and can also contain a username/identifier, secr
 8. Save.
 
 The application normalizes title/username/URL/collection and tags before storage. Tags are trimmed, empty tags are removed, duplicate tags are collapsed case-insensitively, and tags are sorted.
+
+
+### TOTP items
+
+Choose **Time-Based One-Time Password (TOTP)** when you are authorized to store an authentication seed in CipherNest. In this item type, the normal Secret field is the Base32 TOTP seed. Select the provider's algorithm (SHA-1/SHA-256/SHA-512), digit count (6 or 8), and period (15–120 seconds; commonly 30).
+
+- CipherNest stores the seed and TOTP settings inside the authenticated encrypted vault item.
+- Choose **Refresh code** to calculate the current code locally. There is no background refresh timer in this release.
+- Generated codes are not saved into the vault record.
+- **Copy code** refreshes immediately and then uses the same timed best-effort clipboard cleanup policy as other secrets.
+- A copied seed has longer-lived risk than a copied one-time code because the seed can generate future codes.
+- QR scanning/rendering and `otpauth://` import/export are not implemented by the current source. Enter only seed/settings you are authorized to use.
+- If password and TOTP seed for the same service are kept in one vault, compromise of the unlocked vault can expose both factors.
+
+See `security/TOTP.md` for the precise security model and RFC compatibility details.
 
 ### Important item limits
 
@@ -210,6 +226,8 @@ The local Security Audit can identify findings such as:
 - missing titles;
 - overdue review dates.
 
+TOTP seeds are deliberately excluded from password weakness/reuse findings because they are authentication seeds rather than user-chosen passwords; exact duplicate detection still applies.
+
 Audit results are local application findings, not an independent security audit of the CipherNest codebase.
 
 ## 10. Password and passphrase generator
@@ -230,7 +248,7 @@ See `security/PASSPHRASE_GENERATOR.md`.
 
 ## 11. Clipboard behavior
 
-Username, primary-secret, and secret-custom-field copy actions are explicit.
+Username, primary-secret, secret-custom-field, and TOTP-code copy actions are explicit.
 
 After a successful secret copy, CipherNest keeps a fixed-size SHA-256 fingerprint for delayed comparison rather than retaining the copied plaintext in the timer state. It clears only when the current clipboard still matches the value CipherNest previously copied, helping avoid erasing unrelated clipboard content copied afterward.
 
@@ -324,7 +342,7 @@ Attachments are not included in plaintext CSV export. CipherNest creates a tempo
 Current settings include:
 
 - System/Light/Dark theme;
-- System/English language readiness;
+- System/English/Hindi language preference for the reviewed resource-backed interface;
 - inactivity lock timeout;
 - lock on background;
 - clipboard-clear delay;
@@ -382,7 +400,7 @@ Reparse-point directories are not recursively followed by the maintenance implem
 
 CipherNest includes semantic metadata, larger-interface preference support, reduced-motion state, responsive layouts, minimum touch-target guidance, and English-first resource-backed localization architecture.
 
-Current complete user-facing content is English-first. System/English preference exists; a complete Hindi/additional-language catalog is not claimed in the current release.
+Neutral English remains the fallback. System/English/Hindi preferences exist, and the reviewed Hindi (`hi-IN`) catalog covers the currently resource-backed interface. A completely translated application is not claimed because remaining literal UI strings may still appear in English.
 
 See `ACCESSIBILITY.md` and `architecture/LOCALIZATION.md`.
 
@@ -407,11 +425,11 @@ The current release does not claim completed support for:
 - cloud synchronization/accounts/collaboration;
 - server-side vault storage;
 - browser/app autofill;
-- TOTP seed storage/generation;
 - Windows Hello convenience unlock;
 - rich binary/PDF preview and document scanning beyond bounded safe text preview;
 - pronounceable-password mode;
 - destructive automatic wipe after failed unlock attempts;
-- complete Hindi/additional translation catalogs.
+- complete migration/review of the remaining UI into Hindi/additional translation catalogs;
+- TOTP QR scanning/rendering, `otpauth://` import/export, and autofill/provider enrollment integration.
 
 See `NEXT_STEPS.md` for the reviewed future-work sequence.
