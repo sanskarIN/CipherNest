@@ -229,6 +229,11 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         {
             ErrorMessage = "The item contains invalid or unsupported data. Review field lengths, secure-note limits, dates, and custom fields.";
         }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.Save", ex);
+            ErrorMessage = "The item could not be saved safely. The existing encrypted record remains unchanged unless the save completed successfully.";
+        }
         finally
         {
             IsBusy = false;
