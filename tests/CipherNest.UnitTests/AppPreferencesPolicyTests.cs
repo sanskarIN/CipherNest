@@ -35,6 +35,17 @@ public sealed class AppPreferencesPolicyTests
     }
 
     [Theory]
+    [InlineData(AppLanguagePreference.System)]
+    [InlineData(AppLanguagePreference.English)]
+    [InlineData(AppLanguagePreference.Hindi)]
+    public void Normalize_PreservesSupportedLanguagePreference(AppLanguagePreference language)
+    {
+        var normalized = AppPreferencesPolicy.Normalize(new AppPreferences { Language = language });
+
+        Assert.Equal(language, normalized.Language);
+    }
+
+    [Theory]
     [InlineData(-1000)]
     [InlineData(-1)]
     [InlineData(0)]
