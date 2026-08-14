@@ -29,6 +29,8 @@
 - Android biometric source uses the API-28 `BiometricPrompt` baseline without relying on the newer `BiometricManager` as a preflight; Apple authentication cancellation invalidates the native `LAContext`.
 - Fresh-process and periodic master-passphrase requirements before biometric convenience unlock can continue.
 - Item CRUD for all modeled vault types, encrypted custom fields, collections, tags, favorites, local search, review dates, per-item master re-authentication, trash retention, and encrypted last-accessed timestamps.
+- Local TOTP vault items store Base32 seeds and SHA-1/SHA-256/SHA-512 + 6/8-digit + bounded period settings inside the authenticated encrypted record; generated codes are RFC 6238-verified, manual-refresh presentation state and are not persisted. TOTP seed/settings validation is bounded before HMAC/storage use, temporary decoded/hash/counter buffers are zeroed where practical, and code copy uses the existing timed conditional clipboard service.
+- Persisted `VaultItemType` numeric values are explicit (`Custom = 8`, `OneTimePassword = 9`) with legacy JSON compatibility tests so adding TOTP cannot reinterpret older Custom records.
 - Vault local search rejects trimmed queries longer than 4,096 characters before matching decrypted fields.
 - Vault item validation is null-safe at runtime and rejects empty IDs, unknown types, oversized fields, excessive aggregate item text, invalid collections/custom fields, invalid attachment metadata, attachment metadata control characters, duplicate attachment IDs, duplicate encrypted storage names, and opaque attachment storage names that do not match their attachment identifiers.
 - Decrypted vault records must match their authenticated SQLite row ID, remain inside serialized/decrypted byte budgets, and pass item metadata validation before they leave the infrastructure boundary; plaintext record buffers are zeroed on all exits.
@@ -71,7 +73,7 @@
 - Item-editor re-authentication, copy-secret, attachment picker/export/share/removal, and move-to-trash platform failures use fixed privacy-safe reporting; temporary decrypted attachment cleanup remains best-effort and reported.
 - Local storage measurement/cache cleanup materializes directory enumeration inside guarded blocks and skips reparse-point directories so lazy enumeration failures/link recursion do not escape the intended fail-soft boundary.
 - Dynamic larger-interface typography resources, reduced-motion preference state, light/dark/system theme behavior, semantic labels/live regions, and responsive layouts including wrapping vault actions for narrow windows.
-- English-first `.resx` resource catalog, persisted System/English preference, and localization service architecture ready for Hindi/additional catalogs without coupling language to vault formats.
+- Neutral-English `.resx` fallback plus a reviewed `hi-IN` satellite catalog, persisted System/English/Hindi preference, parity/source tests, and explicit documentation that not-yet-migrated UI literals can still appear in English without coupling language to vault formats.
 - Central privacy-safe unhandled-exception reporting records sanitized operation/type/HResult metadata while intentionally excluding exception messages/stacks and vault content; capability probes, external links, file operations, lifecycle fallback, and security cleanup use this path where applicable.
 - Redacted developer diagnostics with best-effort temporary-file deletion after sharing and Settings cache-cleanup fallback.
 - In-app security/privacy/audit-status surface, runtime version/build About information, GPL/privacy/terms references, third-party dependency notices, acknowledgements, repository/support contacts, and hidden developer diagnostics.
@@ -84,6 +86,14 @@
 - CodeQL is configured to build/analyze the MAUI Android application path in addition to core/integration code; dependency review retains a high-severity failure threshold with bounded/cancelable execution.
 - Committed local verification scripts cover core PowerShell/POSIX, Windows, Android, and Apple-host compile gates; `docs/verification/CI_GATES.md` documents release evidence requirements.
 - Repository templates, contribution/security/support/privacy/terms files, architecture records, implemented cryptographic design, release/setup/packaging/reproducibility/troubleshooting/test documentation, third-party notices, release checklist, and executable `docs/NEXT_STEPS.md` roadmap are present.
+
+
+### Current TOTP/localization release validation
+- RFC 6238 known-answer tests cover SHA-1, SHA-256, and SHA-512 at the published test timestamps.
+- TOTP unit tests cover formatted Base32 input, malformed alphabet/length/padding, code digit counts, period/algorithm bounds, and pre-epoch rejection.
+- Integration coverage round-trips a synthetic TOTP item through real SQLite + VaultService encryption and checks that the encrypted envelope does not contain the synthetic Base32 seed as plaintext UTF-8 bytes.
+- Source tests guard explicit TOTP refresh/copy UI, no background timer, documentation security claims, Hindi neutral/satellite key parity, and runtime language wiring.
+- Physical-device clipboard/history, clock correctness, accessibility, language layout, and lifecycle behavior remain release gates.
 
 ### Hosted verification evidence
 - Exact hosted candidate `2327abba1646082a4d94a689d452b1116701cc0b` completed `CipherNest CI` run `31697433940` successfully.
