@@ -17,7 +17,7 @@ public sealed class SecurityAuditService(IPasswordGenerator passwordGenerator) :
             {
                 findings.Add(new(item.Id, SecurityFindingKind.MissingTitle, "Item is missing a title.", 1));
             }
-            if (!string.IsNullOrEmpty(item.Secret) && passwordGenerator.Evaluate(item.Secret).Score <= 1)
+            if (item.Type != VaultItemType.OneTimePassword && !string.IsNullOrEmpty(item.Secret) && passwordGenerator.Evaluate(item.Secret).Score <= 1)
             {
                 findings.Add(new(item.Id, SecurityFindingKind.WeakSecret, "Secret appears weak; replace it with a long unique value where possible.", 3));
             }
@@ -27,7 +27,7 @@ public sealed class SecurityAuditService(IPasswordGenerator passwordGenerator) :
             }
         }
 
-        foreach (var group in active.Where(static x => !string.IsNullOrEmpty(x.Secret)).GroupBy(static x => x.Secret, StringComparer.Ordinal).Where(static g => g.Count() > 1))
+        foreach (var group in active.Where(static x => x.Type != VaultItemType.OneTimePassword && !string.IsNullOrEmpty(x.Secret)).GroupBy(static x => x.Secret, StringComparer.Ordinal).Where(static g => g.Count() > 1))
         {
             foreach (var item in group)
             {
@@ -54,5 +54,8 @@ public sealed class SecurityAuditService(IPasswordGenerator passwordGenerator) :
         item.Secret,
         item.Url.Trim(),
         item.Notes,
-        item.Collection.Trim());
+        item.Collection.Trim(),
+        item.TotpAlgorithm.ToString(),
+        item.TotpDigits.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        item.TotpPeriodSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
 }
