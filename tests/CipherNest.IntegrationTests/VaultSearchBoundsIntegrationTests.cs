@@ -29,6 +29,19 @@ public sealed class VaultSearchBoundsIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_OversizedInputIsRejectedBeforeLockedVaultAccess()
+    {
+        const string master = "Search Ordering Test Master Passphrase 2026!";
+        var store = new SqliteVaultStore(DatabasePath);
+        using var vault = new VaultService(store, new CryptoService(), new SystemClock());
+        await vault.CreateAsync(master, createRecoveryKey: false);
+        await vault.LockAsync();
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            vault.SearchAsync(new string('x', VaultService.MaximumSearchQueryCharacters + 1)));
+    }
+
+    [Fact]
     public async Task Search_WhitespaceOnlyInputRetainsNormalAllItemsBehavior()
     {
         const string master = "Search Whitespace Test Master Passphrase 2026!";

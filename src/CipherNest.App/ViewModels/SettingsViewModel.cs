@@ -387,8 +387,8 @@ public partial class SettingsViewModel : ObservableObject
             try
             {
                 await _vault.LockAsync();
-                await using (var source = await file.OpenReadAsync())
-                await using (var destination = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true)) await source.CopyToAsync(destination);
+                await using var source = await file.OpenReadAsync();
+                await CipherNest.Infrastructure.Services.BackupStagingPolicy.CopyToNewFileAsync(source, tempPath);
                 await _backup.RestoreEncryptedAsync(tempPath, backupPassphrase);
                 await _biometrics.ClearSecondarySecretAsync();
                 _sessionSecurity.Clear();

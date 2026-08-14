@@ -91,6 +91,15 @@ public sealed class RepositoryUiStructureTests
     }
 
     [Fact]
+    public void BackupRestore_BoundsExternalFileBeforeCacheStaging()
+    {
+        var settings = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "SettingsViewModel.cs"));
+
+        Assert.Contains("BackupStagingPolicy.CopyToNewFileAsync", settings, StringComparison.Ordinal);
+        Assert.DoesNotContain("source.CopyToAsync(destination)", settings, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrashManualDeletion_RequiresMasterReauthentication()
     {
         var trash = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "TrashViewModel.cs"));
@@ -198,7 +207,11 @@ public sealed class RepositoryUiStructureTests
         Assert.Contains("cancel-in-progress: true", codeql, StringComparison.Ordinal);
         Assert.Contains("timeout-minutes:", codeql, StringComparison.Ordinal);
 
-        Assert.Contains("fail-on-severity: high", dependencyReview, StringComparison.Ordinal);
+        Assert.Contains("NuGetAudit=true", dependencyReview, StringComparison.Ordinal);
+        Assert.Contains("NuGetAuditMode=all", dependencyReview, StringComparison.Ordinal);
+        Assert.Contains("CipherNest.UnitTests", dependencyReview, StringComparison.Ordinal);
+        Assert.Contains("CipherNest.IntegrationTests", dependencyReview, StringComparison.Ordinal);
+        Assert.Contains("CipherNest.UiTests", dependencyReview, StringComparison.Ordinal);
         Assert.Contains("cancel-in-progress: true", dependencyReview, StringComparison.Ordinal);
         Assert.Contains("timeout-minutes:", dependencyReview, StringComparison.Ordinal);
 

@@ -24,6 +24,8 @@ public sealed class PasswordGenerator : IPasswordGenerator
     public string Generate(GeneratorOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        if (!Enum.IsDefined(options.Mode))
+            throw new ArgumentOutOfRangeException(nameof(options), "Generator mode is not supported.");
         return options.Mode == GeneratorMode.Passphrase ? GeneratePassphrase(options) : GeneratePassword(options);
     }
 
@@ -72,7 +74,7 @@ public sealed class PasswordGenerator : IPasswordGenerator
     private static string GeneratePassphrase(GeneratorOptions options)
     {
         if (options.WordCount is < 6 or > 16) throw new ArgumentOutOfRangeException(nameof(options), "Passphrase word count must be between 6 and 16. Eight or more words are recommended for high-value vault secrets.");
-        if (options.Separator.Length > 4 || options.Separator.Any(char.IsControl)) throw new ArgumentException("Passphrase separator is invalid.", nameof(options));
+        if (options.Separator is null || options.Separator.Length > 4 || options.Separator.Any(char.IsControl)) throw new ArgumentException("Passphrase separator is invalid.", nameof(options));
         var words = new string[options.WordCount];
         try
         {

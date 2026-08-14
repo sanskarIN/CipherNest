@@ -10,7 +10,11 @@ public sealed class SqliteVaultStore : IVaultStore
     private readonly SemaphoreSlim _gate = new(1, 1);
     public string DatabasePath { get; }
 
-    public SqliteVaultStore(string databasePath) => DatabasePath = databasePath ?? throw new ArgumentNullException(nameof(databasePath));
+    public SqliteVaultStore(string databasePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+        DatabasePath = Path.GetFullPath(databasePath);
+    }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
