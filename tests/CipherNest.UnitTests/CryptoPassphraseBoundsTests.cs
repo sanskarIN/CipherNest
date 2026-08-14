@@ -21,4 +21,13 @@ public sealed class CryptoPassphraseBoundsTests
 
         Assert.Throws<ArgumentException>(() => crypto.CreateWrappedKey(passphrase.AsSpan()));
     }
+
+    [Fact]
+    public void WrappedKey_RejectsWhitespaceOnlyPassphraseBeforeKdfWork()
+    {
+        var crypto = new CryptoService();
+        var passphrase = new string(' ', CryptoService.MinimumPassphraseCharacters);
+
+        Assert.Throws<ArgumentException>(() => crypto.CreateWrappedKey(passphrase.AsSpan()));
+    }
 }
