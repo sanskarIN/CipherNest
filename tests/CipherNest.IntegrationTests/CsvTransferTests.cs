@@ -41,6 +41,14 @@ public sealed class CsvTransferTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Import_RejectsMissingRequiredTitleMapping()
+    {
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("Title\nExample\n"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _transfer.ImportCsvAsync(stream, new CsvImportMapping("   ")));
+    }
+
+    [Fact]
     public async Task Headers_RejectDuplicateNames()
     {
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("Title,title\nA,B"));
