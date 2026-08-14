@@ -5,6 +5,7 @@ All notable changes are documented here following Semantic Versioning principles
 ## [Unreleased]
 
 ### Added
+- Consolidated the complete project documentation into `docs/COMPLETE_PROJECT_DOCUMENTATION.md`, added `docs/FAQ.md`, linked both from the root/documentation hubs, and extended source tests so these documentation entry points remain required.
 - Optional biometric unlock on supported Android, iOS, and Mac Catalyst devices using an independently generated secondary vault-key wrapper; the master passphrase is never stored for biometric unlock.
 - Periodic master-passphrase requirement for biometric sessions, with a fresh app process requiring the master passphrase first.
 - Guarded plaintext attachment export through an explicit warning and temporary app-cache cleanup path.
