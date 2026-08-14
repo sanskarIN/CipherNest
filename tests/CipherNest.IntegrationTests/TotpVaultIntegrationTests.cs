@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using CipherNest.Domain.Models;
 using CipherNest.Infrastructure.Crypto;
@@ -55,7 +56,7 @@ public sealed class TotpVaultIntegrationTests : IAsyncLifetime
         }
         finally
         {
-            Array.Clear(seedBytes);
+            CryptographicOperations.ZeroMemory(seedBytes);
         }
 
         await vault.LockAsync();
