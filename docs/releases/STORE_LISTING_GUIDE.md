@@ -68,3 +68,9 @@ Before publishing:
 - verify the independent-audit status remains accurate;
 - verify no deferred feature (cloud sync, autofill, TOTP, Windows Hello, rich PDF scanning, complete additional-language catalog, etc.) is implied to be complete;
 - complete the relevant `../RELEASE_CHECKLIST.md` and `RELEASE_PROCESS.md` evidence.
+
+## TOTP and language listing claims
+
+Accurate current wording may state that CipherNest can store a TOTP seed inside the encrypted local vault and generate standard time-based one-time codes locally while unlocked. Do not imply that CipherNest currently scans/renders TOTP QR codes, imports/exports `otpauth://` enrollment URIs, autofills provider codes, isolates a TOTP seed from compromise of the same unlocked vault, or has independently audited TOTP security.
+
+Language/store metadata may state that reviewed Hindi resources are available for the resource-backed interface. Do not market the whole UI as fully translated while not-yet-migrated literals can still fall back/remain in English.
