@@ -41,6 +41,18 @@ public sealed class CsvTransferTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Import_LeavesCallerOwnedSourceStreamOpen()
+    {
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("Title\nExample\n"));
+
+        var result = await _transfer.ImportCsvAsync(stream, new CsvImportMapping("Title"));
+
+        Assert.Equal(1, result.Imported);
+        Assert.True(stream.CanRead);
+        Assert.True(stream.CanSeek);
+    }
+
+    [Fact]
     public async Task Import_RejectsMissingRequiredTitleMapping()
     {
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("Title\nExample\n"));
