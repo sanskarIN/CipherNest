@@ -112,3 +112,11 @@ The repository configures core tests/formatting, Windows/Android/iOS/Mac Catalys
 
 ### Future synchronization
 Cloud synchronization, accounts, conflict resolution, device enrollment, collaboration, sharing protocols, and server compromise are **out of scope** for this release. A future design requires a separate protocol threat model before code.
+
+## TOTP seed/code security boundary
+
+A TOTP seed is a long-lived authentication secret and a generated code is short-lived sensitive data. CipherNest keeps the seed in the authenticated encrypted item payload and does not persist generated codes, but storing an account password and its TOTP seed in the same vault means compromise of an unlocked vault can expose both factors. TOTP support therefore does not create cryptographic factor separation from the vault itself.
+
+The implementation partially mitigates accidental exposure with bounded seed parsing, local-only HMAC generation, temporary byte-buffer clearing where practical, protected-item re-authentication, explicit refresh/copy actions, privacy-safe diagnostics, and the existing conditional timed clipboard policy. It does not defend against a compromised OS, process-memory inspection while unlocked, screen capture outside supported controls, clipboard/history capture, a materially wrong device clock, provider recovery bypass, or a user deliberately exporting/copying a seed.
+
+QR/`otpauth://` parsing and provider/autofill enrollment remain out of scope until separately threat-modeled.
