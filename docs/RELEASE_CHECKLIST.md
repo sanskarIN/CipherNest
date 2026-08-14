@@ -94,3 +94,13 @@
 - [ ] Independent professional security-audit status is stated exactly as it exists at release time.
 
 A checklist item may be marked not applicable only with a written reason in the release notes. CipherNest must not be called bug-free or independently audited unless that statement is actually supported.
+
+## TOTP and staged Hindi release gate
+
+- [ ] RFC 6238 SHA-1/SHA-256/SHA-512 known-answer tests pass on the exact candidate.
+- [ ] TOTP parser/settings bounds, malformed padding/alphabet/length tests, encrypted round-trip, audit semantics, and enum compatibility tests pass.
+- [ ] No real TOTP seed/code appears in tests, docs, screenshots, logs, diagnostics, issues, or release artifacts.
+- [ ] TOTP UI is verified on target platforms for manual refresh, protected-item re-authentication, 6/8-digit display, period controls, clipboard cleanup/history limitations, accessibility, and clock correctness.
+- [ ] Store/release wording states local TOTP generation accurately and does not claim QR/`otpauth://` import, autofill/provider enrollment, factor isolation from the unlocked vault, or independent security audit.
+- [ ] Neutral/Hindi resource key parity tests pass and security-critical translations retain equivalent meaning.
+- [ ] System/English/Hindi selection and fallback are tested on target platforms; release copy does not claim the entire UI is translated while unmigrated literals remain.
