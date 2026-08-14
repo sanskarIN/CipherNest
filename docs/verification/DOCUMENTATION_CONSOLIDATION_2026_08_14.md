@@ -52,3 +52,7 @@ Those remain release gates documented in `docs/NEXT_STEPS.md`, `docs/RELEASE_CHE
 Repository commits in this continuation use the requested commit identity:
 
 `Sanskar <sanskarin@outlook.in>`
+
+## Final current-head trigger
+
+This file is intentionally the last direct repository edit in the documentation continuation. Its commit exists to trigger the configured `main` branch CI and CodeQL workflows against the complete tree after documentation, tests, changelog/status records, and append-only implementation ledgers have all been finalized.
