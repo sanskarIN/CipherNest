@@ -91,9 +91,17 @@ public sealed class SafeNoteMarkupService : ISafeNoteMarkupService
         var lines = SplitLines(markdown);
         if (lines.Length > SafeNoteLimits.MaximumLines) throw new ArgumentException($"Secure note exceeds the {SafeNoteLimits.MaximumLines:N0}-line safety limit.", nameof(markdown));
         var found = 0;
+        var inCodeFence = false;
         for (var index = 0; index < lines.Length; index++)
         {
             var trimmed = lines[index].TrimStart();
+            if (trimmed.StartsWith("```", StringComparison.Ordinal))
+            {
+                inCodeFence = !inCodeFence;
+                continue;
+            }
+            if (inCodeFence) continue;
+
             var indentation = lines[index][..(lines[index].Length - trimmed.Length)];
             var isOpen = trimmed.StartsWith("- [ ] ", StringComparison.OrdinalIgnoreCase);
             var isDone = trimmed.StartsWith("- [x] ", StringComparison.OrdinalIgnoreCase);
