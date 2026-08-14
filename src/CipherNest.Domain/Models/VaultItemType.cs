@@ -10,5 +10,6 @@ public enum VaultItemType
     SoftwareLicense,
     ServerSshReference,
     Document,
+    OneTimePassword,
     Custom
 }
