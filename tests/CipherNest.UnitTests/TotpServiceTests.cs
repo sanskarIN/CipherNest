@@ -45,6 +45,17 @@ public sealed class TotpServiceTests
         Assert.Equal("94287082", result.Code);
     }
 
+    [Fact]
+    public void Generate_AcceptsMaximumNormalizedSeedWithBoundedGrouping()
+    {
+        var normalized = new string('A', 1024);
+        var grouped = string.Join('-', Enumerable.Range(0, 128).Select(index => normalized.Substring(index * 8, 8)));
+
+        var result = new TotpService().Generate(grouped, TotpAlgorithm.Sha512, 8, 30, DateTimeOffset.FromUnixTimeSeconds(59));
+
+        Assert.Equal(8, result.Code.Length);
+    }
+
     [Theory]
     [InlineData(6)]
     [InlineData(8)]
