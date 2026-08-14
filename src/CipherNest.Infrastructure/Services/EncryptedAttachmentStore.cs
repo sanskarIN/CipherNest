@@ -37,6 +37,12 @@ public sealed class EncryptedAttachmentStore
         ArgumentNullException.ThrowIfNull(source);
         if (!source.CanRead) throw new ArgumentException("Attachment source stream must be readable.", nameof(source));
         if (dataKey.Length != 32) throw new ArgumentException("Vault data key must contain exactly 32 bytes.", nameof(dataKey));
+        if (source.CanSeek)
+        {
+            var remaining = source.Length - source.Position;
+            if (remaining is < 0 or > MaximumPlaintextBytes)
+                throw new InvalidDataException("Attachment exceeds the 100 MB safety limit.");
+        }
 
         Directory.CreateDirectory(_directory);
         var normalizedName = AttachmentStorageNamePolicy.ValidateForAttachment(attachmentId, opaqueFileName);
@@ -66,6 +72,7 @@ public sealed class EncryptedAttachmentStore
             }
             await WriteInt32Async(output, -1, cancellationToken).ConfigureAwait(false);
             await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(tempPath, finalPath, overwrite: false);
             return total;
         }
@@ -87,6 +94,9 @@ public sealed class EncryptedAttachmentStore
 
         var normalizedName = AttachmentStorageNamePolicy.ValidateForAttachment(attachmentId, opaqueFileName);
         var encryptedPath = Path.Combine(_directory, normalizedName);
+        var containerLength = new FileInfo(encryptedPath).Length;
+        if (containerLength is < MinimumContainerBytes or > MaximumContainerBytes)
+            throw new InvalidDataException("Attachment container size is outside the supported range.");
         await using var input = new FileStream(encryptedPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, useAsync: true);
         var magic = new byte[Magic.Length];
         await ReadExactlyAsync(input, magic, cancellationToken).ConfigureAwait(false);
