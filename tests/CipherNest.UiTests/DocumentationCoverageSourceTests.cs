@@ -41,6 +41,7 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "HOSTED_CI_EVIDENCE_2026_08_13.md"],
         ["docs", "verification", "CURRENT_HEAD_2026_08_13.md"],
         ["docs", "verification", "POST_BASELINE_CHECKLIST_2026_08_13.md"],
+        ["docs", "verification", "DOCUMENTATION_CONSOLIDATION_2026_08_14.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -119,6 +120,7 @@ public sealed class DocumentationCoverageSourceTests
                      "verification/HOSTED_CI_EVIDENCE_2026_08_13.md",
                      "verification/CURRENT_HEAD_2026_08_13.md",
                      "verification/POST_BASELINE_CHECKLIST_2026_08_13.md",
+                     "verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
@@ -145,12 +147,15 @@ public sealed class DocumentationCoverageSourceTests
     {
         var complete = File.ReadAllText(PathAt("docs", "COMPLETE_PROJECT_DOCUMENTATION.md"));
         var faq = File.ReadAllText(PathAt("docs", "FAQ.md"));
+        var verification = File.ReadAllText(PathAt("docs", "verification", "DOCUMENTATION_CONSOLIDATION_2026_08_14.md"));
 
         Assert.Contains("not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("managed strings", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("historical evidence", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not** completed an independent professional security audit", faq, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cannot deterministically erase", faq, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("final direct-commit head", verification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("independent professional security audit", verification, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string PathAt(params string[] segments)
