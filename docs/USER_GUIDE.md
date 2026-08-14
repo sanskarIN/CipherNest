@@ -398,7 +398,7 @@ Reparse-point directories are not recursively followed by the maintenance implem
 
 ## 19. Accessibility and language
 
-CipherNest includes semantic metadata, larger-interface preference support, reduced-motion state, responsive layouts, minimum touch-target guidance, and English-first resource-backed localization architecture.
+CipherNest includes semantic metadata, larger-interface preference support, reduced-motion state, responsive layouts, minimum touch-target guidance, and neutral-English-fallback/reviewed-Hindi resource-backed localization architecture.
 
 Neutral English remains the fallback. System/English/Hindi preferences exist, and the reviewed Hindi (`hi-IN`) catalog covers the currently resource-backed interface. A completely translated application is not claimed because remaining literal UI strings may still appear in English.
 
