@@ -36,6 +36,17 @@ public sealed class SafeNoteMarkupServiceTests
     }
 
     [Fact]
+    public void ToggleChecklist_IgnoresChecklistSyntaxInsideCodeFence()
+    {
+        const string markdown = "```text\n- [ ] literal example\n```\n- [ ] real task";
+
+        var toggled = _service.ToggleChecklistItem(markdown, 0);
+
+        Assert.Contains("- [ ] literal example", toggled, StringComparison.Ordinal);
+        Assert.Contains("- [x] real task", toggled, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AppendChecklistItem_EnforcesCharacterBoundary()
     {
         var maximum = new string('x', SafeNoteLimits.MaximumChecklistItemCharacters);
