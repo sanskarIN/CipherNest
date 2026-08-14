@@ -20,7 +20,8 @@ public static class BackupFormatPolicy
             throw new InvalidDataException("Backup salt length is outside supported bounds.");
         if (chunkSize is < MinimumChunkSize or > MaximumChunkSize)
             throw new InvalidDataException("Backup chunk size is outside supported bounds.");
-        if (kdf.MemoryKiB is < CryptoService.MinimumKdfMemoryKiB or > CryptoService.MaximumKdfMemoryKiB ||
+        if (kdf is null ||
+            kdf.MemoryKiB is < CryptoService.MinimumKdfMemoryKiB or > CryptoService.MaximumKdfMemoryKiB ||
             kdf.Iterations is < 1 or > CryptoService.MaximumKdfIterations ||
             kdf.Parallelism is < 1 or > CryptoService.MaximumKdfParallelism)
         {
