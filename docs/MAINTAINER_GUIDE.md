@@ -28,7 +28,8 @@ Do not request or commit:
 - private documents/attachments;
 - payment credentials;
 - signing private keys/passwords;
-- store/API tokens.
+- store/API tokens;
+- real TOTP seeds or generated one-time codes.
 
 ## 3. Small reviewable commits
 
@@ -257,7 +258,7 @@ See `branding/ASSETS.md`.
 
 ## 21. Localization maintenance
 
-Current release is English-first.
+Neutral English remains the fallback and a reviewed Hindi resource-backed catalog is implemented; remaining literal UI text can still appear in English.
 
 When adding a language:
 
@@ -288,12 +289,12 @@ Do not quietly implement one piece of these and advertise the whole feature:
 
 - cloud sync/accounts/collaboration;
 - autofill;
-- TOTP;
+- TOTP QR scanning/rendering, `otpauth://` enrollment interoperability, and provider/autofill integration;
 - Windows Hello;
 - rich binary/PDF preview/scanning;
 - pronounceable passwords;
 - automatic destructive wipe;
-- complete additional-language catalogs.
+- complete migration/review of remaining UI literals into additional-language catalogs.
 
 Each requires its own design/test/privacy/migration/release plan.
 
