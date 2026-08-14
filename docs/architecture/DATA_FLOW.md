@@ -520,3 +520,11 @@ Exception messages/stacks and decrypted vault context are intentionally omitted 
 ## 21. Future data-flow warning
 
 Cloud sync/accounts/collaboration/autofill/TOTP/server storage are not part of this graph. Any future feature that moves vault data across process/device/network boundaries requires a new protocol/data-flow diagram, threat model, privacy assessment, compatibility/version design, and release gate before implementation.
+
+## TOTP seed and code flow
+
+A `OneTimePassword` item's Base32 seed and algorithm/digit/period settings follow the normal authenticated encrypted `VaultItem` path. After the item is decrypted while unlocked, explicit **Refresh code** passes the seed/settings plus current UTC time to `ITotpService`. The Infrastructure implementation performs bounded Base32 validation/decoding, HMAC generation, and dynamic truncation locally; the returned decimal code exists only in ViewModel presentation state and is not written to SQLite or backup as a generated-code field.
+
+Changing the seed/settings/item type clears displayed code state. A re-authentication-protected item cannot generate/display its code until current-master re-authentication succeeds. Explicit **Copy code** recalculates before copying through `IClipboardSecurityService`, so the same conditional timed-cleanup and OS clipboard-history limitations apply as for other secrets.
+
+The encrypted backup path naturally carries the encrypted seed/settings because it carries the encrypted vault database. QR/`otpauth://` import/export and autofill/provider enrollment are outside this current flow.
