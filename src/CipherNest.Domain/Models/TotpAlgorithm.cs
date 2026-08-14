@@ -2,7 +2,7 @@ namespace CipherNest.Domain.Models;
 
 public enum TotpAlgorithm
 {
-    Sha1,
-    Sha256,
-    Sha512
+    Sha1 = 0,
+    Sha256 = 1,
+    Sha512 = 2
 }
