@@ -14,18 +14,34 @@ public partial class ItemEditorViewModel
     private async Task CopyUsernameAsync()
     {
         if (IsReauthenticationRequired || string.IsNullOrEmpty(Username)) return;
-        var preferences = await _settings.LoadAsync();
-        await _clipboard.CopySecretAsync(Username, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
-        ErrorMessage = "Username copied. CipherNest will attempt to clear it after the configured clipboard interval where the platform allows reliable clearing.";
+        try
+        {
+            var preferences = await _settings.LoadAsync();
+            await _clipboard.CopySecretAsync(Username, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
+            ErrorMessage = "Username copied. CipherNest will attempt to clear it after the configured clipboard interval where the platform allows reliable clearing.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.CopyUsername", ex);
+            ErrorMessage = "The username could not be copied safely. The vault item remains unchanged.";
+        }
     }
 
     [RelayCommand]
     private async Task CopyCustomSecretAsync(CustomField field)
     {
         if (IsReauthenticationRequired || field is null || !field.IsSecret || string.IsNullOrEmpty(field.Value)) return;
-        var preferences = await _settings.LoadAsync();
-        await _clipboard.CopySecretAsync(field.Value, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
-        ErrorMessage = $"Secret custom field '{field.Name}' copied. CipherNest will attempt timed clipboard clearing where supported.";
+        try
+        {
+            var preferences = await _settings.LoadAsync();
+            await _clipboard.CopySecretAsync(field.Value, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
+            ErrorMessage = $"Secret custom field '{field.Name}' copied. CipherNest will attempt timed clipboard clearing where supported.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.CopyCustomSecret", ex);
+            ErrorMessage = "The secret custom field could not be copied safely. The vault item remains unchanged.";
+        }
     }
 
     public void ClearSensitiveState()
