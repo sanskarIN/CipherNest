@@ -5,6 +5,8 @@ All notable changes are documented here following Semantic Versioning principles
 ## [Unreleased]
 
 ### Added
+- Local RFC 6238-compatible TOTP vault items with encrypted Base32 seed/settings, SHA-1/SHA-256/SHA-512, 6/8-digit output, bounded periods/input parsing, explicit refresh/copy UI, RFC known-answer tests, real encrypted SQLite round-trip coverage, audit semantics, and persisted-enum compatibility protection.
+- Reviewed Hindi (`hi-IN`) resource catalog for the current resource-backed interface, System/English/Hindi preference wiring, catalog-parity/security-translation tests, and explicit English fallback for not-yet-migrated UI literals.
 - Consolidated the complete project documentation into `docs/COMPLETE_PROJECT_DOCUMENTATION.md`, added `docs/FAQ.md`, linked both from the root/documentation hubs, and extended source tests so these documentation entry points remain required.
 - Optional biometric unlock on supported Android, iOS, and Mac Catalyst devices using an independently generated secondary vault-key wrapper; the master passphrase is never stored for biometric unlock.
 - Periodic master-passphrase requirement for biometric sessions, with a fresh app process requiring the master passphrase first.
