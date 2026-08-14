@@ -17,6 +17,7 @@ public sealed class LocalizationService : ILocalizationService
         var culture = preference switch
         {
             AppLanguagePreference.English => CultureInfo.GetCultureInfo("en-US"),
+            AppLanguagePreference.Hindi => CultureInfo.GetCultureInfo("hi-IN"),
             _ => SystemUiCulture
         };
         CultureInfo.CurrentUICulture = culture;
