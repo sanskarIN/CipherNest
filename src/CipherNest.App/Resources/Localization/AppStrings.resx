@@ -16,4 +16,7 @@
   <data name="LocalOnlySummary" xml:space="preserve"><value>Your encrypted vault remains on this device.</value></data>
   <data name="AuditStatus" xml:space="preserve"><value>This release has not completed an independent professional security audit.</value></data>
   <data name="RecoveryLimitation" xml:space="preserve"><value>Forgotten master passphrases cannot be recovered unless you retained configured recovery material.</value></data>
+  <data name="EnglishPreferenceSaved" xml:space="preserve"><value>English language preference saved.</value></data>
+  <data name="HindiPreferenceSaved" xml:space="preserve"><value>Hindi language preference saved for the reviewed resource-backed interface. Unmigrated interface text may still appear in English.</value></data>
+  <data name="SystemPreferenceSaved" xml:space="preserve"><value>System language preference saved. CipherNest uses an available reviewed catalog and falls back to English when a translation is unavailable.</value></data>
 </root>
