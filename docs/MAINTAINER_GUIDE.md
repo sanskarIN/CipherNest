@@ -330,3 +330,11 @@ A new maintainer should first read:
 10. `releases/RELEASE_PROCESS.md`.
 
 Then run the core verification scripts on a clean checkout before making security-sensitive changes.
+
+## TOTP maintenance rules
+
+Treat TOTP seed/settings as security-sensitive encrypted record semantics. Preserve the explicit persisted `VaultItemType` numeric values, RFC 6238 known-answer vectors, Base32/resource bounds, no-generated-code-persistence rule, audit exclusions, and explicit clipboard behavior. Any QR/`otpauth://` parser, background refresh, autofill/provider integration, or broader interoperability change requires dedicated threat, parser, lifecycle, accessibility, format, and release review rather than being folded into an unrelated UI patch.
+
+Never request a user's real TOTP seed or current code in support/security triage. Synthetic seeds only belong in tests/documentation.
+
+For localization, maintain neutral-English/satellite key parity and do not describe the complete UI as Hindi-translated until remaining literals are migrated and reviewed.
