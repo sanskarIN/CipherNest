@@ -222,12 +222,13 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
                 RequiresReauthentication = RequiresReauthentication,
                 LastAccessedUtc = _existing?.LastAccessedUtc
             };
+            item = ApplyTotpSettings(item);
             await _vault.SaveItemAsync(item);
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
         {
-            ErrorMessage = "The item contains invalid or unsupported data. Review field lengths, secure-note limits, dates, and custom fields.";
+            ErrorMessage = "The item contains invalid or unsupported data. Review field lengths, secure-note limits, dates, custom fields, and any one-time-password settings.";
         }
         catch (Exception ex)
         {
@@ -411,6 +412,7 @@ public partial class ItemEditorViewModel : ObservableObject, IQueryAttributable
         ReviewDate = item.ReviewAfterUtc?.ToLocalTime().Date ?? DateTime.Today.AddMonths(6);
         Attachments.Clear();
         foreach (var attachment in item.Attachments) Attachments.Add(attachment);
+        PopulateTotp(item);
     }
 
     private void RefreshNotePreview(string value)
