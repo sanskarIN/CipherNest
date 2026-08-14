@@ -1,0 +1,39 @@
+name: Audit Maintenance
+
+on:
+  push:
+    branches: [fix/full-audit-20260814]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-restore-staging:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Patch restore staging call site
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/CipherNest.App/ViewModels/SettingsViewModel.cs")
+          text = path.read_text(encoding="utf-8")
+          old = '''                await using (var source = await file.OpenReadAsync())
+                await using (var destination = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true)) await source.CopyToAsync(destination);
+'''
+          new = '''                await using var source = await file.OpenReadAsync();
+                await CipherNest.Infrastructure.Services.BackupStagingPolicy.CopyToNewFileAsync(source, tempPath);
+'''
+          if text.count(old) != 1:
+              raise SystemExit("Expected restore staging call site was not found exactly once.")
+          path.write_text(text.replace(old, new), encoding="utf-8", newline="")
+      - name: Commit call-site patch
+        run: |
+          git config user.name "Sanskar"
+          git config user.email "sanskarin@outlook.in"
+          git add src/CipherNest.App/ViewModels/SettingsViewModel.cs
+          git commit -m "fix(backup): enforce staging ceiling in restore flow"
+          git push origin HEAD:${GITHUB_REF_NAME}
