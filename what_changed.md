@@ -2386,3 +2386,14 @@ The exact test evidence came from the completed `test-core` job for pull request
 This continuation does not claim completion of physical-device biometric enrollment/cancellation/lockout/secure-storage-loss testing, real OS clipboard-history behavior, screenshot/app-switcher validation on physical devices, complete TalkBack/VoiceOver/Narrator/keyboard accessibility testing, signed packaging/notarization/provisioning/store submission, exact store-policy approval, or independent professional cryptographic/security review. Those remain release gates in `docs/NEXT_STEPS.md`.
 
 A finite source audit and automated test matrix cannot prove the mathematical absence of all undiscovered bugs. The acceptance criterion used here is zero observed failures in the configured analyzer/test/format/platform/dependency/CodeQL gates for the exact candidate, plus explicit deferral of environment-dependent validation that cannot be truthfully completed by repository changes alone.
+
+## 2026-08-14 — Complete documentation consolidation
+
+- Added `docs/COMPLETE_PROJECT_DOCUMENTATION.md` as a consolidated end-to-end reference for project identity, supported targets, repository architecture, security/key/session design, records, SQLite, resource limits, attachments, backup/restore, CSV, clipboard, secure notes, generators, deletion, settings/privacy, accessibility/localization, build, CI, release, support, and external validation gates.
+- Added `docs/FAQ.md` covering common user, security, biometric, storage, backup, transfer, platform, build, CI, release, deletion, accessibility, and support questions without weakening the project's independent-audit or managed-memory limitations.
+- Updated `docs/README.md` so the consolidated reference and FAQ are first-class canonical navigation entries.
+- Updated root `README.md` so repository visitors can reach the complete documentation and FAQ directly.
+- Extended `tests/CipherNest.UiTests/DocumentationCoverageSourceTests.cs` to require both new files, require root/hub links, and preserve consolidated security/release disclaimers.
+- Updated `CHANGELOG.md` and `PROJECT_STATUS.md` to record the documentation consolidation.
+- All repository mutations in this continuation were committed directly to `main`; Git commit identity uses `Sanskar <sanskarin@outlook.in>`.
+
