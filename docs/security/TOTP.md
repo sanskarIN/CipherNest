@@ -2,7 +2,7 @@
 
 CipherNest supports local generation of RFC 6238-style time-based one-time passwords for vault items whose type is `OneTimePassword`.
 
-This feature is intentionally local-first. CipherNest does not contact an authentication provider to generate a code, does not upload the seed, and does not persist generated one-time codes. The Base32 seed is stored as the item's encrypted `Secret` field inside the existing authenticated vault-record envelope.
+This feature is intentionally local-first. CipherNest does not contact an authentication provider to generate a code and does not upload the seed. **Generated one-time codes are not persisted.** The Base32 seed is stored as the item's encrypted `Secret` field inside the existing authenticated vault-record envelope.
 
 ## Security status
 
