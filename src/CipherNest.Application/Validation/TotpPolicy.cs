@@ -18,6 +18,7 @@ public static class TotpPolicy
 
         var normalized = new char[Math.Min(secret.Length, MaximumSecretCharacters + 1)];
         var length = 0;
+        var paddingCount = 0;
         var paddingStarted = false;
 
         foreach (var raw in secret)
@@ -30,6 +31,7 @@ public static class TotpPolicy
             if (value == '=')
             {
                 paddingStarted = true;
+                paddingCount++;
                 normalized[length++] = value;
                 continue;
             }
@@ -51,6 +53,18 @@ public static class TotpPolicy
         var remainder = length % 8;
         if (remainder is 1 or 3 or 6)
             throw new ArgumentException("TOTP secret has an invalid Base32 length.", nameof(secret));
+
+        var expectedPadding = remainder switch
+        {
+            0 => 0,
+            2 => 6,
+            4 => 4,
+            5 => 3,
+            7 => 1,
+            _ => throw new ArgumentException("TOTP secret has an invalid Base32 length.", nameof(secret))
+        };
+        if (paddingCount > 0 && paddingCount != expectedPadding)
+            throw new ArgumentException("TOTP Base32 padding length is invalid.", nameof(secret));
 
         return new string(normalized, 0, length);
     }
