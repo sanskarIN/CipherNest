@@ -11,6 +11,7 @@ public partial class GeneratorViewModel : ObservableObject
     private readonly IPasswordGenerator _generator;
     private readonly IClipboardSecurityService _clipboard;
     private readonly ISettingsStore _settings;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
 
     [ObservableProperty]
     public partial bool PassphraseMode { get; set; }
@@ -45,27 +46,36 @@ public partial class GeneratorViewModel : ObservableObject
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
 
-    public GeneratorViewModel(IPasswordGenerator generator, IClipboardSecurityService clipboard, ISettingsStore settings)
+    public GeneratorViewModel(IPasswordGenerator generator, IClipboardSecurityService clipboard, ISettingsStore settings, IPrivacySafeExceptionReporter exceptions)
     {
         _generator = generator;
         _clipboard = clipboard;
         _settings = settings;
+        _exceptions = exceptions;
     }
 
     [RelayCommand]
     public async Task LoadDefaultsAsync()
     {
-        var preferences = await _settings.LoadAsync();
-        PassphraseMode = preferences.GeneratorPassphraseMode;
-        Length = Math.Clamp(preferences.GeneratorPasswordLength, 8, 256);
-        WordCount = Math.Clamp(preferences.GeneratorPassphraseWordCount, 6, 16);
-        Uppercase = preferences.GeneratorUppercase;
-        Lowercase = preferences.GeneratorLowercase;
-        Digits = preferences.GeneratorDigits;
-        Symbols = preferences.GeneratorSymbols;
-        ExcludeAmbiguous = preferences.GeneratorExcludeAmbiguous;
-        if (!PassphraseMode && !Uppercase && !Lowercase && !Digits && !Symbols) Lowercase = true;
-        Generate();
+        try
+        {
+            var preferences = await _settings.LoadAsync();
+            PassphraseMode = preferences.GeneratorPassphraseMode;
+            Length = Math.Clamp(preferences.GeneratorPasswordLength, 8, 256);
+            WordCount = Math.Clamp(preferences.GeneratorPassphraseWordCount, 6, 16);
+            Uppercase = preferences.GeneratorUppercase;
+            Lowercase = preferences.GeneratorLowercase;
+            Digits = preferences.GeneratorDigits;
+            Symbols = preferences.GeneratorSymbols;
+            ExcludeAmbiguous = preferences.GeneratorExcludeAmbiguous;
+            if (!PassphraseMode && !Uppercase && !Lowercase && !Digits && !Symbols) Lowercase = true;
+            Generate();
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Generator.LoadDefaults", ex);
+            ErrorMessage = "Generator defaults could not be loaded safely. Review settings access and try again.";
+        }
     }
 
     [RelayCommand]
@@ -100,8 +110,16 @@ public partial class GeneratorViewModel : ObservableObject
     private async Task CopyAsync()
     {
         if (GeneratedValue.Length == 0) return;
-        var preferences = await _settings.LoadAsync();
-        await _clipboard.CopySecretAsync(GeneratedValue, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
+        try
+        {
+            var preferences = await _settings.LoadAsync();
+            await _clipboard.CopySecretAsync(GeneratedValue, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Generator.Copy", ex);
+            ErrorMessage = "The generated value could not be copied safely. Generate a new value or retry after checking clipboard access.";
+        }
     }
 
     [RelayCommand] private async Task BackAsync() => await Shell.Current.GoToAsync("//vault");
