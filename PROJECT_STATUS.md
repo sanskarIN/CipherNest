@@ -3,6 +3,7 @@
 ## Current release: 0.1.0 + unreleased hardening
 
 ### Completed in source
+- A consolidated `docs/COMPLETE_PROJECT_DOCUMENTATION.md` reference and `docs/FAQ.md` now provide complete orientation/support entry points over the canonical specialist documentation; `DocumentationCoverageSourceTests` requires both files and their root/hub links.
 - Repository and multi-project solution scaffolding with Domain/Application/Infrastructure/Shared/MAUI/test separation.
 - Versioned cryptographic envelope with Argon2id key derivation and AES-256-GCM authenticated encryption.
 - Random vault data-encryption key wrapped independently by master passphrase, optional recovery key, and optional biometric secondary secret.
