@@ -30,6 +30,7 @@ Project support is optional. It does not change feature access, security/privacy
 - Repeated interactive unlock failures use a bounded exponential delay. This is a client-side control and is not claimed to stop offline guessing against a copied database.
 - Supported vault-header versions are explicit; future/unknown header versions are rejected before key unwrap. Header metadata is capped at 64 KiB UTF-8 before deserialization.
 - Local search, favorites, collections, item-type filters, review reminders, recent-use sorting, and weak/reused/duplicate-secret audit operate only over decrypted data while unlocked. Large matching result sets render incrementally in 50-item pages.
+- Local TOTP items keep the Base32 seed and SHA-1/SHA-256/SHA-512 + 6/8-digit + period settings inside the authenticated encrypted record, generate RFC 6238-compatible codes only while unlocked, use explicit refresh/copy actions, and do not persist generated codes. QR/`otpauth://` enrollment and autofill integration are not claimed.
 - Decrypted records must match their authenticated SQLite row ID and pass null-safe metadata validation before reaching application/search/UI code.
 - Resource limits bound stored/decrypted item work: 16 MiB serialized/decrypted item JSON, 24 MiB per stored encrypted envelope, 100,000 rows, 256 MiB aggregate encrypted-envelope bytes, and 2,000,000 aggregate item-text characters. These are safety ceilings, not recommended target sizes.
 - Trash has configurable retention; routine vault maintenance removes expired encrypted trash records. Manual permanent deletion and empty-trash actions require current-master re-authentication plus explicit confirmation. Permanent item deletion removes its database record before best-effort encrypted attachment cleanup.
@@ -51,7 +52,7 @@ Project support is optional. It does not change feature access, security/privacy
 - Sensitive Settings, transfer, backup, restore, item-open, and attachment file failures use fixed user-facing text plus redacted diagnostic events instead of directly surfacing exception messages that can contain paths/context.
 - Settings include theme, larger-interface/reduced-motion preferences, local reminder controls, biometric configuration, generator defaults, storage/cache inspection, security information, backup/restore, import/export, and destructive local-vault deletion.
 - Settings persistence normalizes supported enum/numeric bounds on load/save, falls back safely on malformed/unreadable files, and uses unique sibling staging with best-effort cleanup. Cache/storage enumeration is guarded and does not recurse through reparse-point directories.
-- English resources ship first with a persisted System/English language preference and resource-backed architecture ready for additional culture catalogs.
+- Neutral English remains the fallback resource catalog; persisted System/English/Hindi preferences are supported for the reviewed resource-backed interface, while not-yet-migrated UI literals may still appear in English.
 - Central exception reporting intentionally omits exception messages/stacks and vault content. No third-party analytics or crash-reporting service is enabled.
 - Original vector branding includes launcher/adaptive sources, a splash wordmark with `Made by the Sanskar`, a monochrome source, a dark-surface logo variant, and an original BMC project-support badge.
 
@@ -69,7 +70,7 @@ Primary entry points:
 - [API Reference](docs/API_REFERENCE.md) — current Application contracts and Domain models.
 - [Limits and Defaults](docs/LIMITS_AND_DEFAULTS.md) — implemented resource ceilings, defaults, versions, and timing bounds.
 - [Architecture and Data Flow](docs/architecture/ARCHITECTURE.md) · [Data Flow](docs/architecture/DATA_FLOW.md) · [Session/Concurrency](docs/architecture/SESSION_AND_CONCURRENCY.md) · [Dependency Map](docs/architecture/DEPENDENCY_MAP.md).
-- [Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [Session Security](docs/security/SESSION_SECURITY.md) · [Sensitive Data Lifecycle](docs/security/DATA_LIFECYCLE.md).
+- [Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [TOTP Security](docs/security/TOTP.md) · [Session Security](docs/security/SESSION_SECURITY.md) · [Sensitive Data Lifecycle](docs/security/DATA_LIFECYCLE.md).
 - [Vault Records](docs/formats/VAULT_RECORDS.md) · [Encrypted Attachments](docs/formats/ATTACHMENTS.md) · [Encrypted Backup](docs/formats/ENCRYPTED_BACKUP.md) · [CSV Transfer](docs/formats/CSV_TRANSFER.md).
 - [Testing Guide](docs/TESTING_GUIDE.md) · [Accessibility](docs/ACCESSIBILITY.md) · [Release Process](docs/releases/RELEASE_PROCESS.md) · [Backup/Recovery Runbook](docs/operations/BACKUP_RECOVERY_RUNBOOK.md) · [Security Response Runbook](docs/operations/SECURITY_RESPONSE.md).
 - [Hosted CI Evidence — 2026-08-13](docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md) — exact candidate/run evidence and remaining external validation limits.
