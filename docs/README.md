@@ -19,7 +19,7 @@ This directory is the canonical navigation point for CipherNest project document
 
 - [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — project/layer boundaries and dependency direction.
 - [`architecture/DATABASE.md`](architecture/DATABASE.md) — SQLite schema, migration, replacement, snapshot, validation, and recovery boundaries.
-- [`architecture/LOCALIZATION.md`](architecture/LOCALIZATION.md) — English-first localization architecture and extension rules.
+- [`architecture/LOCALIZATION.md`](architecture/LOCALIZATION.md) — staged neutral-English/Hindi resource-backed localization architecture and extension rules.
 - [`architecture/DATA_FLOW.md`](architecture/DATA_FLOW.md) — lifecycle of vault records, keys, attachments, backups, CSV data, clipboard data, and platform shares.
 - [`architecture/SESSION_AND_CONCURRENCY.md`](architecture/SESSION_AND_CONCURRENCY.md) — session transition gate, key leases, cancellation, attachment mutation serialization, and destructive authorization.
 - [`architecture/DEPENDENCY_MAP.md`](architecture/DEPENDENCY_MAP.md) — solution/project dependency map and ownership of major services.
@@ -28,6 +28,7 @@ This directory is the canonical navigation point for CipherNest project document
 
 - [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md) — protected assets, attacker capabilities, partial mitigations, explicit non-goals, and platform limitations.
 - [`security/CRYPTOGRAPHIC_DESIGN.md`](security/CRYPTOGRAPHIC_DESIGN.md) — implemented key hierarchy, Argon2id/AES-GCM design, record/attachment/backup formats, storage bounds, and audit status.
+- [`security/TOTP.md`](security/TOTP.md) — local RFC-compatible time-based one-time-password seed storage, generation, bounds, clipboard behavior, tests, and threat considerations.
 - [`security/BIOMETRIC_UNLOCK.md`](security/BIOMETRIC_UNLOCK.md) — secondary convenience-unlock design and platform behavior.
 - [`security/SECURE_NOTES.md`](security/SECURE_NOTES.md) — safe note rendering subset and bounds.
 - [`security/PASSPHRASE_GENERATOR.md`](security/PASSPHRASE_GENERATOR.md) — generator design and entropy guidance.
@@ -39,7 +40,7 @@ This directory is the canonical navigation point for CipherNest project document
 
 ## Formats and interoperability
 
-- [`formats/VAULT_RECORDS.md`](formats/VAULT_RECORDS.md) — logical vault item model, encrypted record identity binding, validation, and storage limits.
+- [`formats/VAULT_RECORDS.md`](formats/VAULT_RECORDS.md) — logical vault item model, encrypted record identity binding, validation, TOTP record parameters, and storage limits.
 - [`formats/ATTACHMENTS.md`](formats/ATTACHMENTS.md) — encrypted attachment naming/framing, chunk processing, metadata policy, preview, and export boundary.
 - [`formats/ENCRYPTED_BACKUP.md`](formats/ENCRYPTED_BACKUP.md) — `.cnbak` container framing, KDF/header validation, encrypted chunks, bounded archive contents, restore validation, and rollback.
 - [`formats/CSV_TRANSFER.md`](formats/CSV_TRANSFER.md) — explicit CSV mapping/import behavior and guarded plaintext export.
@@ -93,8 +94,8 @@ These format documents are implementation documentation, not promises of permane
 1. Documentation must track the current source rather than desired future features.
 2. Never describe configured CI as passing until the exact commit has executed successfully; preserve the commit/run identifier with any hosted evidence.
 3. Never describe CipherNest as independently audited, unhackable, military-grade, 100% secure, physically erasable, or able to recover a lost master passphrase from a server.
-4. Mark cloud sync, accounts, collaboration, autofill, TOTP, Windows Hello, rich binary/PDF preview/scanning, pronounceable passwords, destructive wipe-on-failure, and complete additional language catalogs as deferred until implemented and reviewed.
-5. Update `THREAT_MODEL.md`, `CRYPTOGRAPHIC_DESIGN.md`, format docs, tests, release gates, changelog, project status, and this index whenever a security-sensitive persistence/format/session behavior changes.
+4. Mark cloud sync, accounts, collaboration, autofill, Windows Hello, rich binary/PDF preview/scanning, pronounceable passwords, destructive wipe-on-failure, and complete-unmigrated language surfaces as deferred until implemented and reviewed. TOTP code generation and the reviewed Hindi resource-backed catalog are implemented, but QR enrollment/import, autofill integration, full UI translation, and related expanded platform surfaces are not.
+5. Update `THREAT_MODEL.md`, `CRYPTOGRAPHIC_DESIGN.md`, TOTP/format docs, tests, release gates, changelog, project status, and this index whenever a security-sensitive persistence/format/session behavior changes.
 6. Use synthetic/demo data only in documentation examples and screenshots.
-7. Keep credentials, passphrases, recovery keys, signing files, store tokens, private keys, crash-service tokens, and real vault contents out of documentation and Git history.
+7. Keep credentials, passphrases, recovery keys, TOTP seeds/codes, signing files, store tokens, private keys, crash-service tokens, and real vault contents out of documentation and Git history.
 8. Keep public contact/project metadata centralized with `CipherNest.Shared.AppConstants` where application code needs it.
