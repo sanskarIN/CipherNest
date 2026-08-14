@@ -86,11 +86,11 @@ public partial class TransferViewModel : ObservableObject
             TypeColumn = Guess(headers, "type");
             StatusMessage = "Review every mapping before importing. Unmapped columns are ignored.";
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
+        catch (Exception ex)
         {
             _exceptions.Report("Transfer.PickCsv", ex);
+            ResetCsvSelection();
             StatusMessage = "CSV could not be selected or opened safely. Check file access and format, then try again.";
-            _selectedCsv = null;
         }
         finally
         {
@@ -127,7 +127,7 @@ public partial class TransferViewModel : ObservableObject
             var result = await _transfer.ImportCsvAsync(stream, new CsvImportMapping(TitleColumn!, UsernameColumn, SecretColumn, UrlColumn, NotesColumn, TagsColumn, CollectionColumn, TypeColumn));
             StatusMessage = $"Imported {result.Imported} item(s); skipped {result.Skipped}. " + (result.Warnings.Count == 0 ? string.Empty : string.Join(" ", result.Warnings.Take(3)));
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
             _exceptions.Report("Transfer.ImportCsv", ex);
             StatusMessage = "Import stopped safely. No additional rows will be imported from this file until you retry.";
@@ -242,6 +242,21 @@ public partial class TransferViewModel : ObservableObject
     }
 
     [RelayCommand] private async Task BackAsync() => await Shell.Current.GoToAsync("//settings");
+
+    private void ResetCsvSelection()
+    {
+        _selectedCsv = null;
+        Headers.Clear();
+        SelectedFileName = "No CSV selected.";
+        TitleColumn = null;
+        UsernameColumn = null;
+        SecretColumn = null;
+        UrlColumn = null;
+        NotesColumn = null;
+        TagsColumn = null;
+        CollectionColumn = null;
+        TypeColumn = null;
+    }
 
     private static string? Guess(IReadOnlyList<string> headers, params string[] names) => headers.FirstOrDefault(h => names.Any(n => h.Equals(n, StringComparison.OrdinalIgnoreCase)));
 }
