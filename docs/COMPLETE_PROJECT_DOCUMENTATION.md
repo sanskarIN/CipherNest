@@ -34,7 +34,7 @@ The current source emphasizes:
 - documented platform limitations instead of unsupported security claims;
 - automated regression coverage for security-sensitive source invariants.
 
-Cloud synchronization, collaboration, browser/application autofill, TOTP generation, Windows Hello convenience unlock, rich PDF/binary preview/scanning, and complete additional-language catalogs are deferred future-version work unless and until they are implemented, reviewed, tested, and documented.
+Local RFC-compatible TOTP generation and a reviewed Hindi resource-backed catalog are now implemented. Cloud synchronization, collaboration, browser/application autofill, TOTP QR/`otpauth://` enrollment interoperability, Windows Hello convenience unlock, rich PDF/binary preview/scanning, and complete migration of the remaining user-facing UI into additional-language catalogs remain future-version work unless and until they are implemented, reviewed, tested, and documented.
 
 ## 3. Supported application targets
 
@@ -104,6 +104,13 @@ Unlock, recovery unlock, secondary unlock, public lock, and full-vault deletion 
 
 CipherNest clears owned byte arrays and sensitive ViewModel properties where practical, but .NET strings and operating-system/application copies cannot be deterministically erased. Documentation and UI must not claim otherwise.
 
+
+### 5.8 Local TOTP generation
+
+`OneTimePassword` vault items store a Base32 TOTP seed plus algorithm/digit/period settings inside the same authenticated encrypted item payload used by other vault fields. `TotpService` generates RFC 6238-compatible codes locally using HMAC-SHA-1, HMAC-SHA-256, or HMAC-SHA-512, with 6/8-digit output and bounded 15–120-second periods. Generated codes are transient presentation state and are not persisted.
+
+Seed parsing is bounded before HMAC work, decoded seed/hash/counter buffers are zeroed where practical, and RFC 6238 known-answer vectors guard compatibility. The editor uses explicit manual refresh and explicit clipboard copy rather than a background timer. TOTP seeds are excluded from password-strength/reuse heuristics, while exact duplicate detection still includes the TOTP parameters. See `docs/security/TOTP.md`.
+
 ## 6. Vault records and item behavior
 
 CipherNest supports the modeled vault item types and common metadata including collections, tags, favorites, review dates, encrypted custom fields, attachments, recent-access metadata, and trash state.
@@ -156,6 +163,8 @@ CipherNest intentionally rejects extreme or malformed inputs before they can con
 | Backup ZIP entries | 10,001 maximum (`vault.db` plus attachment slots) |
 | Settings JSON | 64 KiB |
 | Passphrase input | 12–4,096 characters for crypto-bound passphrases |
+| TOTP formatted seed | 4,096 characters maximum before normalization |
+| TOTP normalized Base32 seed | 16–1,024 characters; SHA-1/SHA-256/SHA-512; 6/8 digits; 15–120 s period |
 
 These are defensive ceilings, not recommended operating targets. The authoritative complete table is `docs/LIMITS_AND_DEFAULTS.md`.
 
@@ -226,7 +235,7 @@ Settings cover theme, language readiness, lock/privacy controls, reminders, biom
 
 Settings persistence validates size, normalizes enum/numeric values, restores safe generator defaults, falls back to defaults on malformed/unreadable non-secret settings files, and uses unique sibling staging.
 
-Central diagnostic reporting records sanitized operation/type/HResult-style metadata and intentionally excludes exception messages, stacks, vault contents, passphrases, recovery keys, plaintext secrets, and full user file paths. No third-party analytics/crash service is enabled by the current source.
+Central diagnostic reporting records sanitized operation/type/HResult-style metadata and intentionally excludes exception messages, stacks, vault contents, passphrases, recovery keys, plaintext secrets, TOTP seeds/codes, and full user file paths. No third-party analytics/crash service is enabled by the current source.
 
 See `docs/privacy/DIAGNOSTICS.md` and `PRIVACY.md`.
 
@@ -234,7 +243,7 @@ See `docs/privacy/DIAGNOSTICS.md` and `PRIVACY.md`.
 
 The application includes semantic labels/live regions, responsive layouts, dynamic larger-interface typography, reduced-motion preference state, and light/dark/system theme behavior.
 
-English is the shipping resource catalog. A persisted System/English preference and resource-backed architecture are present so additional catalogs can be added without coupling language to encrypted formats. A complete Hindi catalog remains future work until all security warnings can be translated and reviewed without weakening meaning.
+Neutral English remains the fallback resource catalog. Persisted System/English/Hindi preferences are supported, and the reviewed `hi-IN` satellite catalog covers the currently resource-backed interface including security-critical local-only, audit-status, recovery-limitation, and language-status messages. CipherNest does not claim that every remaining literal UI string is translated; unmigrated strings may still appear in English.
 
 Source semantics are not an accessibility certification. TalkBack, VoiceOver, Narrator, keyboard-only navigation, large text, focus, touch-target, and responsive-layout behavior require target-device testing.
 
