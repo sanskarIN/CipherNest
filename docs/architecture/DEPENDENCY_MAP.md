@@ -211,3 +211,21 @@ Before adding/upgrading a dependency:
 7. Add/update tests.
 8. Update `THIRD_PARTY_NOTICES.md` when required.
 9. Update this map and release provenance for release-impacting changes.
+
+## TOTP dependency path
+
+```text
+ItemEditorViewModel
+      |
+      v
+ITotpService (Application)
+      |
+      v
+TotpService (Infrastructure)
+      |
+      +--> TotpPolicy (Application validation)
+      +--> TotpAlgorithm / VaultItem (Domain)
+      +--> System.Security.Cryptography HMAC implementations
+```
+
+The MAUI composition root registers `ITotpService -> TotpService`. TOTP remains platform-independent; clipboard behavior stays behind the existing App clipboard-security service. No provider network SDK or additional TOTP package is required by the current implementation.
