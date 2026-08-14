@@ -16,7 +16,7 @@ public static class TotpPolicy
         if (secret.Length > MaximumFormattedInputCharacters)
             throw new ArgumentException($"Formatted TOTP secret exceeds the {MaximumFormattedInputCharacters:N0}-character input safety limit.", nameof(secret));
 
-        var normalized = new char[Math.Min(secret.Length, MaximumSecretCharacters + 1)];
+        var normalized = new char[secret.Length];
         var length = 0;
         var paddingCount = 0;
         var paddingStarted = false;
@@ -24,8 +24,6 @@ public static class TotpPolicy
         foreach (var raw in secret)
         {
             if (char.IsWhiteSpace(raw) || raw == '-') continue;
-            if (length >= normalized.Length)
-                throw new ArgumentException($"TOTP secret exceeds the {MaximumSecretCharacters:N0}-character safety limit.", nameof(secret));
 
             var value = char.ToUpperInvariant(raw);
             if (value == '=')
@@ -42,6 +40,8 @@ public static class TotpPolicy
                 throw new ArgumentException("TOTP secret must use Base32 characters A-Z and 2-7.", nameof(secret));
 
             normalized[length++] = value;
+            if (length > MaximumSecretCharacters)
+                throw new ArgumentException($"TOTP secret exceeds the {MaximumSecretCharacters:N0}-character safety limit.", nameof(secret));
         }
 
         while (length > 0 && normalized[length - 1] == '=') length--;
