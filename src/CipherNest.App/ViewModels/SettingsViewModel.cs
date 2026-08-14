@@ -261,23 +261,33 @@ public partial class SettingsViewModel : ObservableObject
             finally { CryptographicOperations.ZeroMemory(bytes); }
 
             IsBusy = true;
+            var secondaryConfigured = false;
             try
             {
                 await _biometrics.StoreSecondarySecretAsync(secret);
                 try
                 {
                     await _vault.EnableSecondaryUnlockAsync(masterPassphrase, secret);
+                    secondaryConfigured = true;
+                    var enabledPreferences = _loadedPreferences with { BiometricUnlockEnabled = true };
+                    await _settings.SaveAsync(enabledPreferences);
+                    _loadedPreferences = enabledPreferences;
                 }
                 catch
                 {
+                    if (secondaryConfigured)
+                    {
+                        try { await _vault.DisableSecondaryUnlockAsync(masterPassphrase); }
+                        catch (Exception rollbackException) { _exceptions.Report("Settings.BiometricEnable.VaultRollback", rollbackException); }
+                    }
                     try { await _biometrics.ClearSecondarySecretAsync(); }
-                    catch (Exception rollbackException) { _exceptions.Report("Settings.BiometricEnable.Rollback", rollbackException); }
+                    catch (Exception rollbackException) { _exceptions.Report("Settings.BiometricEnable.SecretRollback", rollbackException); }
+                    _loadedPreferences = _loadedPreferences with { BiometricUnlockEnabled = false };
                     throw;
                 }
+
                 BiometricUnlockEnabled = true;
                 _sessionSecurity.RecordMasterAuthentication(DateTimeOffset.UtcNow);
-                _loadedPreferences = _loadedPreferences with { BiometricUnlockEnabled = true };
-                await _settings.SaveAsync(_loadedPreferences);
                 BiometricSupportMessage = "Biometric unlock is configured. CipherNest stores an independent random secondary secret in OS secure storage; it does not store the master passphrase.";
                 StatusMessage = "Biometric unlock enabled.";
             }
