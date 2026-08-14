@@ -53,7 +53,7 @@ Use the original CipherNest nest/shield geometry from the repository. The icon m
 
 ## Privacy screenshots
 
-Use synthetic sample records only. Avoid real email addresses, URLs, server names, card references, Wi-Fi credentials, recovery keys, imported documents, private attachments, or diagnostic paths.
+Use synthetic sample records only. Avoid real email addresses, URLs, server names, card references, Wi-Fi credentials, recovery keys, TOTP seeds/codes, imported documents, private attachments, or diagnostic paths.
 
 If a screenshot shows a plaintext-export or destructive warning, keep the warning meaningful rather than cropping it to make the listing more visually attractive.
 
@@ -66,7 +66,7 @@ Before publishing:
 - verify every feature shown in screenshots exists in the packaged candidate;
 - verify every privacy/security claim matches current docs/source and actual device behavior;
 - verify the independent-audit status remains accurate;
-- verify no deferred feature (cloud sync, autofill, TOTP, Windows Hello, rich PDF scanning, complete additional-language catalog, etc.) is implied to be complete;
+- verify no deferred feature (cloud sync, autofill/provider integration, TOTP QR/`otpauth://` enrollment interoperability, Windows Hello, rich PDF scanning, complete migration of all UI literals into additional-language catalogs, etc.) is implied to be complete;
 - complete the relevant `../RELEASE_CHECKLIST.md` and `RELEASE_PROCESS.md` evidence.
 
 ## TOTP and language listing claims
