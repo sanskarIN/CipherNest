@@ -2109,3 +2109,156 @@ The following remain separate future reviewed projects and are not represented a
 - complete Hindi/additional translation catalogs beyond the current English-first architecture.
 
 This `what_changed.md` commit is the final repository write in the August 13 continuation. All earlier chronological ledger content above was preserved while this section was appended.
+## 2026-08-14 — Full error-fix audit continuation, malformed-input hardening, bounded restore staging, and CI modernization
+
+This continuation audited the current `main` branch from commit `d57c8c873563547e27437c926916135f3718f8bc` on the dedicated branch `fix/full-audit-20260814` and opened pull request #8 so every source change could be evaluated by the repository's configured test, analyzer, platform-build, dependency-audit, formatting, and CodeQL gates before merge. The objective of this pass was zero observed build/test/analyzer failures across the configured gates while continuing to search for runtime and malformed-input defects that compile-time checks alone cannot prove absent. A literal mathematical guarantee that no undiscovered bug exists is not claimed.
+
+### Settings path construction and persistence hardening
+
+- `JsonSettingsStore` now rejects null, empty, and whitespace-only paths at construction.
+- Settings paths are canonicalized with `Path.GetFullPath(...)` before later directory/file operations.
+- This fixes the bare-relative-filename case where a path such as `settings.json` previously had no directory component when persistence attempted to create its parent directory.
+- Regression coverage now saves and loads through a bare relative settings filename and verifies the canonical file is created successfully.
+- Constructor rejection of whitespace settings paths is covered explicitly.
+- Existing malformed-JSON fallback, normalization, temporary-file cleanup, and size-limit behavior is preserved.
+
+### Password/passphrase generator malformed-option hardening
+
+- `PasswordGenerator.Generate(...)` now rejects undefined `GeneratorMode` enum values instead of silently treating every unknown value as password mode.
+- Passphrase generation now rejects a null separator, separators longer than the supported bound, and control characters in separators.
+- Regression tests cover unknown generator modes and null separators.
+- Existing password group guarantees, passphrase word-count bounds, local-word-list validation, cryptographic RNG use, and password-strength behavior remain intact.
+
+### Secure-note fenced-code checklist correctness
+
+- `SafeNoteMarkupService.ToggleChecklistItem(...)` now tracks fenced-code state with the same ` ``` ` fence semantics used by preview parsing.
+- Checklist-looking source text inside a fenced code block is no longer counted as an interactive checklist item.
+- This fixes an indexing mismatch where preview showed fenced content as code while toggle indexing could previously count it as a real checklist.
+- A regression test proves a fenced `- [ ]` example stays unchanged while the first actual checklist item outside the fence is toggled.
+
+### CSV import/parser validation and lifetime fixes
+
+- `CsvTransferService.ImportCsvAsync(...)` now rejects a missing or whitespace-only required title mapping before parsing/import work begins.
+- The mapped title column is still required to exist in the parsed header, and all optional mapped columns continue to be validated.
+- `CsvParser` now participates in deterministic disposal so its `StreamReader` buffer is released when header reading/import finishes.
+- The first implementation used `StreamReader.DisposeAsync()`, and the Android analyzer build correctly exposed that this target surface did not provide that member. The parser was corrected to implement `IAsyncDisposable` while disposing the `StreamReader` synchronously.
+- The `StreamReader` continues to be constructed with `leaveOpen: true`, so disposing parser buffers does not close the caller-owned CSV stream.
+- Regression coverage proves the source stream remains readable/seekable after import.
+- Existing UTF-8 strictness, row/column/field bounds, quoted-field parsing, quote-closure validation, duplicate-header rejection, warning limits, and vault-item validation remain active.
+
+### Backup format fail-closed validation
+
+- `BackupFormatPolicy.ValidateHeader(...)` now rejects missing/null KDF metadata as invalid backup data rather than allowing a null dereference path.
+- Regression coverage explicitly verifies missing KDF metadata fails closed as `InvalidDataException`.
+- Backup format policy now publishes the authenticated encrypted-container framing bounds used by staging:
+  - maximum header bytes: `16,384`
+  - per encrypted chunk framing overhead: `sizeof(int) + 12-byte nonce + 16-byte tag`
+  - maximum encrypted container bytes: `1,075,855,376`
+- The maximum container value is derived from the existing maximum archive bytes plus worst-case authenticated chunk framing/header overhead and is locked by a unit regression test.
+
+### Bounded external backup staging before restore
+
+- Added `BackupStagingPolicy.CopyToNewFileAsync(...)`.
+- Restore staging now validates that the source stream is readable and that the destination path is valid.
+- Seekable sources are rejected before destination creation when their remaining length exceeds `BackupFormatPolicy.MaximumEncryptedContainerBytes`.
+- Non-seekable and seekable sources are both bounded while streaming; the copy aborts before writing bytes beyond the supported encrypted-container ceiling.
+- Staging uses `FileMode.CreateNew` so a pre-existing destination cannot be silently overwritten.
+- Partial staging files are deleted on copy failure where the OS permits.
+- The caller-owned source stream remains open.
+- Unit tests cover normal copy, source lifetime, and rejection of an oversized seekable source before destination creation.
+- `SettingsViewModel.RestoreBackupAsync()` now stages selected external backups through `BackupStagingPolicy.CopyToNewFileAsync(...)` instead of an unbounded `CopyToAsync(...)`.
+- This closes the resource-boundary gap where a user-selected external file could previously consume arbitrary app-cache space before the authenticated backup parser got a chance to enforce internal archive/resource limits.
+- A source-regression test requires the bounded staging policy to remain wired into the restore flow and rejects the former unbounded call-site pattern.
+
+### Vault search cost ordering and input bounds
+
+- `VaultService.SearchAsync(...)` now rejects non-whitespace queries longer than `MaximumSearchQueryCharacters` before calling `GetItemsAsync(...)`.
+- This moves the 4,096-character search limit ahead of vault materialization/decryption instead of paying the vault-decryption cost before rejecting oversized input.
+- Integration coverage verifies:
+  - a query exactly at the maximum supported length is accepted,
+  - a query above the maximum is rejected,
+  - an oversized query is rejected even while the vault is locked, proving vault access does not happen first,
+  - whitespace-only input preserves the existing all-items behavior.
+
+### SQLite vault database path hardening
+
+- `SqliteVaultStore` now rejects null, empty, and whitespace-only database paths at construction.
+- The database path is canonicalized with `Path.GetFullPath(...)`.
+- This fixes the same bare-relative-filename directory-component failure class found in settings persistence.
+- Integration coverage initializes a real SQLite vault using a bare relative database filename and verifies the canonical database file is created.
+- Whitespace database-path rejection is covered explicitly.
+
+### GitHub Actions runtime modernization
+
+- Repository workflows were upgraded from `actions/checkout@v4` to `actions/checkout@v6`.
+- Workflows using .NET setup were upgraded from `actions/setup-dotnet@v4` to `actions/setup-dotnet@v5`.
+- CodeQL remains on `github/codeql-action/*@v4` and continues to build both the analyzable core and the MAUI Android application before analysis.
+- The changes remove the repository's old Node 20 action-runtime warnings from the upgraded checkout/setup actions while preserving the same platform/build intent.
+
+### Dependency-audit gate repaired without weakening failure behavior
+
+- The original pull-request dependency-review job could not execute because GitHub reported that the repository Dependency graph was disabled; the action failed before reviewing project dependencies.
+- The gate was not changed to `continue-on-error` and the failure was not ignored.
+- The workflow was replaced with direct .NET/NuGet restore audits for UnitTests, IntegrationTests, and UiTests using:
+  - `NuGetAudit=true`
+  - `NuGetAuditMode=all`
+- This audits direct and transitive NuGet dependencies without depending on the repository Dependency graph feature.
+- The repository's warnings-as-errors policy remains active, so vulnerability audit warnings remain capable of failing the gate.
+- `RepositoryUiStructureTests` now requires this direct/transitive NuGet audit configuration so the security gate cannot silently regress back to an unusable configuration.
+
+### Hosted failures found during this continuation and fixed
+
+The branch was not declared clean merely because the initial source inspection looked reasonable. Hosted verification exposed concrete failures that were corrected before the candidate was accepted:
+
+1. The initial GitHub dependency-review action failed because the repository Dependency graph prerequisite was disabled. The unusable gate was replaced with a direct/transitive NuGet audit rather than suppressed.
+2. The Android analyzer build exposed `CS1061` because the first CSV parser disposal implementation called `StreamReader.DisposeAsync()` on a target where that member was unavailable. The parser lifetime implementation was corrected and covered by caller-stream-lifetime regression tests.
+3. The UI/source-regression suite then exposed one stale assertion that still required the removed `fail-on-severity: high` dependency-review-action syntax. That regression was updated to require the new NuGet audit behavior.
+4. A temporary one-shot maintenance workflow explored for a surgical view-model patch was rejected by GitHub before runner execution. It never changed application code, was not used as evidence, and was removed from the final branch tree. The restore call-site fix was then applied directly and verified normally.
+
+### Exact pre-ledger verification evidence for source candidate `759f9969a9baa3675c4a0d7c4280e886f1f85b24`
+
+The complete source candidate immediately before this append-only ledger update passed the configured hosted gates:
+
+- Unit tests: **129 passed, 0 failed, 0 skipped**
+- Integration tests: **69 passed, 0 failed, 0 skipped**
+- UI/source-regression tests: **76 passed, 0 failed, 0 skipped**
+- Total automated tests: **274 passed, 0 failed, 0 skipped**
+- Unit test project analyzer build: **0 warnings, 0 errors**
+- Integration test project analyzer build: **0 warnings, 0 errors**
+- UI test project analyzer build: **0 warnings, 0 errors**
+- Configured `dotnet format --verify-no-changes` checks: **passed**
+- Direct/transitive NuGet vulnerability-audit workflow: **passed**
+- Windows MAUI analyzer build: **passed**
+- Windows MAUI funding-disabled analyzer build: **passed**
+- Android MAUI analyzer build: **passed**
+- iOS simulator MAUI analyzer build: **passed**
+- Mac Catalyst MAUI analyzer build: **passed**
+- CodeQL analyzable core build: **passed**
+- CodeQL analyzable MAUI Android build: **passed**
+- CodeQL analysis: **passed**
+
+The hosted CI matrix, dependency audit, and CodeQL result were all green for the same pre-ledger source SHA. The changelog append itself is documentation-only; nevertheless, the repository gates are run again on the exact post-ledger/final pull-request head before merge so the recorded result is not substituted for final-tree verification.
+
+### Commit discipline
+
+This continuation intentionally split source fixes, regression coverage, CI modernization, and follow-up corrections into separate logical commits wherever practical instead of combining unrelated fixes into one large commit. Before this ledger append, the audit branch was 30 commits ahead of the starting `main` head. This preserves bisectability and makes it clear which regression test protects which production-code correction.
+
+### Security and reliability invariants preserved
+
+- No plaintext vault record storage was introduced.
+- No raw master passphrase storage was introduced.
+- Existing Argon2id/AES-GCM cryptographic paths remain in place.
+- Existing encrypted attachment authentication/storage behavior remains in place.
+- Existing authenticated backup format and restore validation remain in place and are now preceded by bounded external staging.
+- Existing vault lock/session cancellation behavior remains in place.
+- Existing atomic settings-write behavior remains in place.
+- Existing SQLite replacement validation/recovery behavior remains in place.
+- Existing backup archive path/entry/resource validation remains in place.
+- Existing privacy-safe exception-reporting intent remains in place.
+- No `continue-on-error` bypass was added to make a red security/build gate appear green.
+
+### External release gates remain external
+
+This engineering pass verifies the source-controlled and hosted CI behavior available to the repository. Store signing identities, paid developer accounts, notarization/store submission, publisher identity verification, and hardware/device-specific release acceptance remain external operational gates and are not fabricated as completed by source changes.
+
+The next repository write after this entry is limited to final pull-request verification/merge handling; no additional application behavior should be changed unless a final gate reports a concrete failure.
