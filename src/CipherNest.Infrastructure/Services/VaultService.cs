@@ -293,11 +293,16 @@ public sealed class VaultService : IVaultService, IDisposable
 
     public async Task<IReadOnlyList<VaultItem>> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var trimmedQuery = query.Trim();
+            if (trimmedQuery.Length > MaximumSearchQueryCharacters)
+                throw new ArgumentException($"Search query cannot exceed {MaximumSearchQueryCharacters:N0} characters.", nameof(query));
+        }
+
         var items = await GetItemsAsync(false, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(query)) return items;
         var q = query.Trim();
-        if (q.Length > MaximumSearchQueryCharacters)
-            throw new ArgumentException($"Search query cannot exceed {MaximumSearchQueryCharacters:N0} characters.", nameof(query));
         return items.Where(item => item.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Username.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Url.Contains(q, StringComparison.OrdinalIgnoreCase) || item.Notes.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Collection.Contains(q, StringComparison.CurrentCultureIgnoreCase) || item.Tags.Any(tag => tag.Contains(q, StringComparison.CurrentCultureIgnoreCase)) || item.CustomFields.Any(field => field.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase) || field.Value.Contains(q, StringComparison.CurrentCultureIgnoreCase))).ToArray();
     }
 
