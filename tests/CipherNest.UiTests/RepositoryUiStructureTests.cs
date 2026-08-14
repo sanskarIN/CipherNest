@@ -91,6 +91,15 @@ public sealed class RepositoryUiStructureTests
     }
 
     [Fact]
+    public void BackupRestore_BoundsExternalFileBeforeCacheStaging()
+    {
+        var settings = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "SettingsViewModel.cs"));
+
+        Assert.Contains("BackupStagingPolicy.CopyToNewFileAsync", settings, StringComparison.Ordinal);
+        Assert.DoesNotContain("source.CopyToAsync(destination)", settings, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrashManualDeletion_RequiresMasterReauthentication()
     {
         var trash = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "TrashViewModel.cs"));
