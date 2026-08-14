@@ -2404,3 +2404,15 @@ A finite source audit and automated test matrix cannot prove the mathematical ab
 - Extended `DocumentationCoverageSourceTests` so the August 14 verification record is required, linked from the documentation hub, and retains its current-head and independent-audit limitations.
 - Prepared the repository for a final direct `main` commit so the full configured CI and CodeQL workflows execute on the complete post-ledger tree rather than relying on superseded historical runs.
 
+## 2026-08-14 — Reviewed Hindi localization and local TOTP implementation
+
+- Expanded the neutral English localization catalog and added a reviewed `hi-IN` satellite catalog with exact key-parity/security-message source tests.
+- Added persisted `AppLanguagePreference.Hindi`, explicit `hi-IN` culture application, Settings status messages, and normalization tests while retaining neutral English fallback and documenting that not-yet-migrated UI literals may still appear in English.
+- Added `VaultItemType.OneTimePassword`, `TotpAlgorithm`, encrypted TOTP settings on `VaultItem`, `ITotpService`, `TotpCodeResult`, bounded `TotpPolicy`, and the local `TotpService` HMAC implementation without a new third-party package.
+- Added SHA-1/SHA-256/SHA-512 RFC 6238 Appendix B known-answer vectors, 6/8-digit tests, period/input/alphabet/length/padding/pre-epoch rejection, and temporary decoded-key/hash/counter buffer zeroing where practical.
+- Added Item Editor TOTP controls with explicit manual refresh/copy, no background timer, protected-item re-authentication gating, transient generated-code state, and the existing conditional timed clipboard cleanup service.
+- Added TOTP-specific vault validation and changed local password audit semantics so TOTP seeds are not incorrectly scored as weak/reused passwords while exact-duplicate signatures include TOTP settings.
+- Found and fixed a persisted-enum compatibility hazard before finalization: existing `VaultItemType.Custom` remains numeric value `8` and the new `OneTimePassword` is appended as `9`; regression tests deserialize a legacy numeric Custom JSON payload and require backward-compatible TOTP defaults.
+- Added a real encrypted SQLite/VaultService round-trip test for a synthetic TOTP item and verified the encrypted envelope does not contain the synthetic Base32 seed as plaintext UTF-8 bytes.
+- Added `docs/security/TOTP.md` and reconciled the consolidated/user/developer/architecture/security/format/API/limits/roadmap/status/testing/release/maintainer/store documentation so TOTP core is implemented while QR/`otpauth://` enrollment, autofill/provider integration, and complete UI translation remain explicitly separate future work.
+- Added release/source guards for TOTP documentation, explicit-refresh UI shape, Hindi catalog parity, security claims, enum compatibility, and the required current-head CI/CodeQL rerun.
