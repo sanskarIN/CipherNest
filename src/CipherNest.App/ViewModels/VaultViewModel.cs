@@ -162,6 +162,12 @@ public partial class VaultViewModel : ObservableObject
             await MainThread.InvokeOnMainThreadAsync(() => ReplaceItems(results));
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Vault.Search", ex);
+            if (!cancellationToken.IsCancellationRequested)
+                await MainThread.InvokeOnMainThreadAsync(() => ErrorMessage = "Search could not be completed safely. Lock and unlock again if the problem continues.");
+        }
     }
 
     private void ReplaceItems(IReadOnlyList<VaultItem> items)

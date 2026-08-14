@@ -1,4 +1,5 @@
 using CipherNest.Application.Abstractions;
+using CipherNest.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -7,6 +8,7 @@ namespace CipherNest.App.ViewModels;
 public partial class GeneratorDefaultsViewModel : ObservableObject
 {
     private readonly ISettingsStore _settings;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
 
     [ObservableProperty]
     public partial bool PassphraseMode { get; set; }
@@ -35,21 +37,33 @@ public partial class GeneratorDefaultsViewModel : ObservableObject
     [ObservableProperty]
     public partial string StatusMessage { get; set; } = string.Empty;
 
-    public GeneratorDefaultsViewModel(ISettingsStore settings) => _settings = settings;
+    public GeneratorDefaultsViewModel(ISettingsStore settings, IPrivacySafeExceptionReporter exceptions)
+    {
+        _settings = settings;
+        _exceptions = exceptions;
+    }
 
     [RelayCommand]
     public async Task LoadAsync()
     {
-        var preferences = await _settings.LoadAsync();
-        PassphraseMode = preferences.GeneratorPassphraseMode;
-        PasswordLength = preferences.GeneratorPasswordLength;
-        PassphraseWordCount = preferences.GeneratorPassphraseWordCount;
-        Uppercase = preferences.GeneratorUppercase;
-        Lowercase = preferences.GeneratorLowercase;
-        Digits = preferences.GeneratorDigits;
-        Symbols = preferences.GeneratorSymbols;
-        ExcludeAmbiguous = preferences.GeneratorExcludeAmbiguous;
-        StatusMessage = string.Empty;
+        try
+        {
+            var preferences = await _settings.LoadAsync();
+            PassphraseMode = preferences.GeneratorPassphraseMode;
+            PasswordLength = preferences.GeneratorPasswordLength;
+            PassphraseWordCount = preferences.GeneratorPassphraseWordCount;
+            Uppercase = preferences.GeneratorUppercase;
+            Lowercase = preferences.GeneratorLowercase;
+            Digits = preferences.GeneratorDigits;
+            Symbols = preferences.GeneratorSymbols;
+            ExcludeAmbiguous = preferences.GeneratorExcludeAmbiguous;
+            StatusMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("GeneratorDefaults.Load", ex);
+            StatusMessage = "Generator defaults could not be loaded safely. Existing local defaults were kept.";
+        }
     }
 
     [RelayCommand]
@@ -63,19 +77,27 @@ public partial class GeneratorDefaultsViewModel : ObservableObject
             return;
         }
 
-        var preferences = await _settings.LoadAsync();
-        await _settings.SaveAsync(preferences with
+        try
         {
-            GeneratorPassphraseMode = PassphraseMode,
-            GeneratorPasswordLength = PasswordLength,
-            GeneratorPassphraseWordCount = PassphraseWordCount,
-            GeneratorUppercase = Uppercase,
-            GeneratorLowercase = Lowercase,
-            GeneratorDigits = Digits,
-            GeneratorSymbols = Symbols,
-            GeneratorExcludeAmbiguous = ExcludeAmbiguous
-        });
-        StatusMessage = "Generator defaults saved locally.";
+            var preferences = await _settings.LoadAsync();
+            await _settings.SaveAsync(preferences with
+            {
+                GeneratorPassphraseMode = PassphraseMode,
+                GeneratorPasswordLength = PasswordLength,
+                GeneratorPassphraseWordCount = PassphraseWordCount,
+                GeneratorUppercase = Uppercase,
+                GeneratorLowercase = Lowercase,
+                GeneratorDigits = Digits,
+                GeneratorSymbols = Symbols,
+                GeneratorExcludeAmbiguous = ExcludeAmbiguous
+            });
+            StatusMessage = "Generator defaults saved locally.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("GeneratorDefaults.Save", ex);
+            StatusMessage = "Generator defaults could not be saved safely. Review storage access and try again.";
+        }
     }
 
     [RelayCommand] private async Task BackAsync() => await Shell.Current.GoToAsync("//settings");

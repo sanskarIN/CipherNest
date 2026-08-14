@@ -162,8 +162,17 @@ public sealed class CryptoService : ICryptoService
 
     private static void ValidatePassphrase(ReadOnlySpan<char> passphrase)
     {
-        if (passphrase.Length is < MinimumPassphraseCharacters or > MaximumPassphraseCharacters)
-            throw new ArgumentException($"A passphrase or recovery key must contain between {MinimumPassphraseCharacters:N0} and {MaximumPassphraseCharacters:N0} characters.", nameof(passphrase));
+        if (passphrase.Length is < MinimumPassphraseCharacters or > MaximumPassphraseCharacters || IsWhiteSpaceOnly(passphrase))
+            throw new ArgumentException($"A passphrase or recovery key must contain between {MinimumPassphraseCharacters:N0} and {MaximumPassphraseCharacters:N0} characters and cannot be blank.", nameof(passphrase));
+    }
+
+    private static bool IsWhiteSpaceOnly(ReadOnlySpan<char> value)
+    {
+        foreach (var character in value)
+        {
+            if (!char.IsWhiteSpace(character)) return false;
+        }
+        return true;
     }
 
     private static void ValidateKdfParameters(ReadOnlySpan<byte> salt, KdfParameters parameters)

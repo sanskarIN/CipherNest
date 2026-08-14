@@ -19,9 +19,10 @@ public partial class UnlockPage : ContentPage
     {
         base.OnAppearing();
         try { await ViewModel.LoadAsync(); }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        catch (Exception ex)
         {
             _exceptions.Report("Unlock.BiometricCapabilityProbe", ex);
+            ViewModel.BiometricUnlockAvailable = false;
             // The normal master-passphrase path remains available if capability probing fails.
         }
     }

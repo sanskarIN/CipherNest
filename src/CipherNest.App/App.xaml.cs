@@ -14,6 +14,7 @@ public partial class App : Microsoft.Maui.Controls.Application
     private readonly ILocalizationService _localization;
     private readonly SessionLockPolicy _lockPolicy;
     private readonly IClipboardSecurityService _clipboard;
+    private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private DateTimeOffset? _inactiveUtc;
 
     public App(
@@ -66,50 +67,66 @@ public partial class App : Microsoft.Maui.Controls.Application
 
     private async Task HandleInactiveAsync()
     {
-        _inactiveUtc ??= DateTimeOffset.UtcNow;
+        await _lifecycleGate.WaitAsync();
         try
         {
-            var preferences = await _settings.LoadAsync();
-            if (_lockPolicy.ShouldLockWhenBackgrounded(preferences, _vault.IsUnlocked))
+            _inactiveUtc ??= DateTimeOffset.UtcNow;
+            try
             {
-                await _vault.LockAsync();
-                await _clipboard.ClearAsync();
+                var preferences = await _settings.LoadAsync();
+                if (_lockPolicy.ShouldLockWhenBackgrounded(preferences, _vault.IsUnlocked))
+                {
+                    await _vault.LockAsync();
+                    await _clipboard.ClearAsync();
+                }
+            }
+            catch (Exception exception)
+            {
+                _exceptions.Report("Lifecycle.Inactive", exception);
+                await FailClosedLockAndClearClipboardAsync("Lifecycle.Inactive");
             }
         }
-        catch (Exception exception)
+        finally
         {
-            _exceptions.Report("Lifecycle.Inactive", exception);
-            await FailClosedLockAndClearClipboardAsync("Lifecycle.Inactive");
+            _lifecycleGate.Release();
         }
     }
 
     private async Task HandleActiveAsync()
     {
+        await _lifecycleGate.WaitAsync();
         try
         {
-            var preferences = await _settings.LoadAsync();
-            ApplyTheme(preferences.Theme);
-            _localization.Apply(preferences.Language);
-            AccessibilityPreferenceApplicator.Apply(preferences.LargerInterface, preferences.ReducedMotion);
-            await _screenshots.ApplyAsync(preferences.ScreenshotProtection);
-            if (_lockPolicy.ShouldLockAfterInactivity(preferences, _vault.IsUnlocked, _inactiveUtc, DateTimeOffset.UtcNow))
+            try
             {
-                await _vault.LockAsync();
-                await _clipboard.ClearAsync();
+                var preferences = await _settings.LoadAsync();
+                ApplyTheme(preferences.Theme);
+                _localization.Apply(preferences.Language);
+                AccessibilityPreferenceApplicator.Apply(preferences.LargerInterface, preferences.ReducedMotion);
+                await _screenshots.ApplyAsync(preferences.ScreenshotProtection);
+                if (_lockPolicy.ShouldLockAfterInactivity(preferences, _vault.IsUnlocked, _inactiveUtc, DateTimeOffset.UtcNow))
+                {
+                    await _vault.LockAsync();
+                    await _clipboard.ClearAsync();
+                }
+                if (!_vault.IsUnlocked && Shell.Current is not null && await _vault.HasVaultAsync())
+                {
+                    await Shell.Current.GoToAsync("//unlock");
+                }
             }
-            if (!_vault.IsUnlocked && Shell.Current is not null && await _vault.HasVaultAsync())
+            catch (Exception exception)
             {
-                await Shell.Current.GoToAsync("//unlock");
+                _exceptions.Report("Lifecycle.Active", exception);
+                await FailClosedLockAndClearClipboardAsync("Lifecycle.Active");
             }
-        }
-        catch (Exception exception)
-        {
-            _exceptions.Report("Lifecycle.Active", exception);
-            await FailClosedLockAndClearClipboardAsync("Lifecycle.Active");
+            finally
+            {
+                _inactiveUtc = null;
+            }
         }
         finally
         {
-            _inactiveUtc = null;
+            _lifecycleGate.Release();
         }
     }
 
