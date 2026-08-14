@@ -2262,3 +2262,127 @@ This continuation intentionally split source fixes, regression coverage, CI mode
 This engineering pass verifies the source-controlled and hosted CI behavior available to the repository. Store signing identities, paid developer accounts, notarization/store submission, publisher identity verification, and hardware/device-specific release acceptance remain external operational gates and are not fabricated as completed by source changes.
 
 The next repository write after this entry is limited to final pull-request verification/merge handling; no additional application behavior should be changed unless a final gate reports a concrete failure.
+
+## 2026-08-14 — Roadmap hardening continuation: lifecycle serialization, resource preflights, failure containment, and recovery-state accuracy
+
+This continuation started from the verified `main` merge commit `9bdcc4ffcec9adbbc0dd0ff1ec529699cf9c8e23` on branch `fix/roadmap-hardening-20260814` and pull request #9. The pass continued the repository-testable work in `docs/NEXT_STEPS.md`, prioritizing lifecycle ordering, backup/attachment resource bounds, authentication consistency, cancellation publication points, recovery-state accuracy, and UI command failure containment. Physical-device-only, signing/store, and independent-audit gates remain external validation and are not represented as completed by source changes.
+
+### Lifecycle transition serialization
+
+- `App` now serializes inactive and active lifecycle security transitions through a single `SemaphoreSlim`.
+- Deactivated/stopped and activated/resumed handlers can no longer overlap their asynchronous lock, clipboard, settings, screenshot, localization, and route transitions.
+- This prevents a fast foreground transition from completing before an older inactive handler finishes locking the vault.
+- Regression coverage requires both inactive and active paths to acquire/release the lifecycle gate.
+
+### Attachment resource and publication bounds
+
+- `EncryptedAttachmentStore.EncryptAsync(...)` now rejects oversized seekable plaintext sources before directory creation, source reads, or encryption work.
+- The existing 100 MiB plaintext attachment ceiling is therefore enforced cheaply for seekable sources.
+- Encrypted attachment containers now publish explicit minimum/maximum container bounds derived from the format.
+- `DecryptToAsync(...)` validates encrypted container file length before opening/decrypting payload chunks.
+- Attachment encryption now performs a final cancellation check after flush and before atomic publication.
+- Unit coverage verifies oversized seekable input is rejected before the source is read or the attachment directory is created, and undersized containers are rejected before destination plaintext is produced.
+
+### Direct backup restore and export publication bounds
+
+- `EncryptedBackupService.RestoreEncryptedAsync(...)` now checks cancellation and the source file's encrypted-container length before creating restore working state.
+- Direct service callers therefore receive the same encrypted-container ceiling already enforced by MAUI restore staging.
+- Integration coverage verifies an oversized sparse backup is rejected before the active database is created or parsed.
+- Encrypted backup export now checks cancellation after the final staged flush and before the atomic destination move.
+- Source regression coverage requires the final cancellation boundary to remain between staged output completion and publication.
+
+### Passphrase consistency
+
+- `CryptoService` now rejects all-whitespace passphrases in addition to enforcing existing minimum/maximum character bounds.
+- This closes the inconsistent path where a whitespace-only replacement could pass a service-layer length check and become wrapping material.
+- Unit coverage verifies whitespace-only passphrases fail before KDF work.
+- Integration coverage verifies a rejected whitespace-only master-passphrase rotation leaves the current master passphrase valid and the vault unlockable.
+
+### Settings publication cancellation
+
+- `JsonSettingsStore.SaveAsync(...)` now honors cancellation after the staged file is flushed and before the atomic `File.Move(...)` publication.
+- Temporary settings staging cleanup remains in `finally`.
+- Source regression coverage requires the final cancellation check to precede atomic settings publication.
+
+### Vault search background-task containment
+
+- `VaultViewModel.SearchDelayedAsync(...)` remains cancellation-aware, but now catches and privacy-safely reports non-cancellation failures from background search.
+- Fire-and-forget search failures no longer escape as unobserved task faults.
+- A controlled UI message is posted only when the search token was not cancelled.
+- Regression coverage requires the background search path to retain both cancellation handling and general failure containment.
+
+### Biometric enablement rollback
+
+- Biometric enablement now treats secure-secret storage, secondary vault-wrapper creation, and preference persistence as one consistency-sensitive transition.
+- If enablement fails after secure material has been written, CipherNest attempts to remove the secondary vault wrapper and clear the OS secure-storage secret.
+- Rollback failures are separately privacy-safely reported.
+- `BiometricUnlockEnabled` is not published to UI state until settings persistence succeeds.
+- The current security session's master-authentication timestamp is recorded only after the enablement state is durably persisted.
+- Regression coverage requires both vault-wrapper and secure-secret rollback paths.
+
+### Restore completion-state accuracy
+
+- Backup restore now records the irreversible point at which the authenticated backup has successfully replaced the vault.
+- Post-restore biometric secure-storage cleanup is best-effort and separately reported without pretending the restore itself failed.
+- If settings/biometric cleanup fails after replacement, the UI truthfully reports that the restored vault is active and locked and instructs the user to use its master passphrase or recovery key.
+- Failures before replacement retain the existing message that the active vault was not intentionally replaced.
+- Regression coverage locks this distinction.
+
+### UI command failure containment
+
+- Item Editor username and secret-custom-field clipboard commands now catch/report settings or clipboard failures instead of allowing async command faults to escape.
+- Item Editor save preserves specific validation messaging and now privacy-safely contains unexpected storage/crypto/session/database failures.
+- Local Security Audit now clears stale findings and reports a controlled failure if vault retrieval or analysis fails.
+- Unlock-page capability probing now catches all probe failures, disables the biometric convenience path, and keeps the normal master-passphrase route available.
+- Generator default load/save and generated-value clipboard copy now contain/report settings and clipboard failures.
+- Onboarding vault creation now contains unexpected initialization/storage failures without claiming setup succeeded.
+
+### CSV transfer stale-state and fault containment
+
+- A failed replacement CSV selection now clears the selected file, headers, filename label, and every mapping property together.
+- Old mappings can no longer remain visually active after the underlying selected CSV has been discarded.
+- CSV picker and import commands now contain all exceptions from strict UTF-8 decoding, mapping validation, file-provider behavior, and storage/service failures while reporting only fixed privacy-safe UI messages.
+- Regression coverage requires the complete stale-selection reset and broad import containment.
+
+### Hosted verification failure found and corrected during this continuation
+
+- An intermediate hosted `dotnet format --verify-no-changes` run found missing final newlines in `CryptoService.cs` and `EncryptedBackupService.cs`.
+- Both formatting defects were corrected before the source candidate was frozen. The backup-file correction was combined with the final export-publication cancellation fix, and the crypto newline received its own style commit.
+- The failed intermediate candidate is not used as release evidence.
+
+### Exact pre-ledger source verification
+
+The frozen source head `e20ba6d13e5ff4781797dc09560b819f87186935` was evaluated by the configured pull-request gates before any ledger/helper commits were introduced:
+
+- Unit tests: **132 passed, 0 failed, 0 skipped**
+- Integration tests: **71 passed, 0 failed, 0 skipped**
+- UI/source-regression tests: **89 passed, 0 failed, 0 skipped**
+- Total automated tests: **292 passed, 0 failed, 0 skipped**
+- Unit test project analyzer build: **0 warnings, 0 errors**
+- Integration test project analyzer build: **0 warnings, 0 errors**
+- UI/source-regression test project analyzer build: **0 warnings, 0 errors**
+- Configured `dotnet format --verify-no-changes` checks: **passed**
+- Direct/transitive NuGet vulnerability audit: **passed**
+- Windows MAUI analyzer build: **passed**
+- Windows MAUI funding-disabled analyzer build: **passed**
+- Android MAUI analyzer build: **passed**
+- iOS simulator MAUI analyzer build: **passed**
+- Mac Catalyst MAUI analyzer build: **passed**
+- CodeQL analyzable core build: **passed**
+- CodeQL analyzable MAUI Android build: **passed**
+- CodeQL analysis: **passed**
+
+The exact test evidence came from the completed `test-core` job for pull request #9's merge candidate; no test was skipped. The ledger/helper cleanup commits are documentation/maintenance-only, but the full configured gates are run again on the exact final pull-request tree before merge so this pre-ledger evidence is not substituted for final-tree verification.
+
+### Commit discipline and repository scope
+
+- Before the append-only ledger update, pull request #9 was 35 focused commits ahead of the verified starting `main` commit.
+- Production fixes and focused regression coverage were kept in separate commits wherever practical.
+- The pre-ledger compare showed 15 existing source files modified plus focused test additions/updates, with no unrelated mass rewrite or file deletion.
+- Commit authorship uses `Sanskar <sanskarin@outlook.in>` on the branch commits.
+
+### External validation that source/hosted CI does not replace
+
+This continuation does not claim completion of physical-device biometric enrollment/cancellation/lockout/secure-storage-loss testing, real OS clipboard-history behavior, screenshot/app-switcher validation on physical devices, complete TalkBack/VoiceOver/Narrator/keyboard accessibility testing, signed packaging/notarization/provisioning/store submission, exact store-policy approval, or independent professional cryptographic/security review. Those remain release gates in `docs/NEXT_STEPS.md`.
+
+A finite source audit and automated test matrix cannot prove the mathematical absence of all undiscovered bugs. The acceptance criterion used here is zero observed failures in the configured analyzer/test/format/platform/dependency/CodeQL gates for the exact candidate, plus explicit deferral of environment-dependent validation that cannot be truthfully completed by repository changes alone.
