@@ -45,6 +45,19 @@ public static class VaultItemValidator
             errors.Add("An attachment contains invalid metadata.");
         }
 
+        if (item.Type == VaultItemType.OneTimePassword)
+        {
+            try
+            {
+                TotpPolicy.ValidateSettings(item.TotpAlgorithm, item.TotpDigits, item.TotpPeriodSeconds);
+                _ = TotpPolicy.NormalizeSecret(item.Secret ?? string.Empty);
+            }
+            catch (ArgumentException)
+            {
+                errors.Add("TOTP seed or settings are invalid.");
+            }
+        }
+
         if (CalculateAggregateTextCharacters(item, tags, customFields, attachments) > MaximumAggregateTextCharacters)
             errors.Add($"Combined vault item text exceeds the {MaximumAggregateTextCharacters:N0}-character safety limit.");
 
