@@ -2397,3 +2397,10 @@ A finite source audit and automated test matrix cannot prove the mathematical ab
 - Updated `CHANGELOG.md` and `PROJECT_STATUS.md` to record the documentation consolidation.
 - All repository mutations in this continuation were committed directly to `main`; Git commit identity uses `Sanskar <sanskarin@outlook.in>`.
 
+## 2026-08-14 — Documentation current-head verification layer
+
+- Added `docs/verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md` to define the repository-side gate for the complete-documentation continuation and to distinguish current-head verification from historical CI evidence.
+- Linked the August 14 verification record from `docs/README.md`.
+- Extended `DocumentationCoverageSourceTests` so the August 14 verification record is required, linked from the documentation hub, and retains its current-head and independent-audit limitations.
+- Prepared the repository for a final direct `main` commit so the full configured CI and CodeQL workflows execute on the complete post-ledger tree rather than relying on superseded historical runs.
+
