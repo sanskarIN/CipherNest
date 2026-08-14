@@ -24,6 +24,7 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "architecture", "SESSION_AND_CONCURRENCY.md"],
         ["docs", "security", "THREAT_MODEL.md"],
         ["docs", "security", "CRYPTOGRAPHIC_DESIGN.md"],
+        ["docs", "security", "TOTP.md"],
         ["docs", "security", "BIOMETRIC_UNLOCK.md"],
         ["docs", "security", "SECURE_NOTES.md"],
         ["docs", "security", "PASSPHRASE_GENERATOR.md"],
@@ -42,6 +43,7 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "CURRENT_HEAD_2026_08_13.md"],
         ["docs", "verification", "POST_BASELINE_CHECKLIST_2026_08_13.md"],
         ["docs", "verification", "DOCUMENTATION_CONSOLIDATION_2026_08_14.md"],
+        ["docs", "verification", "TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -88,6 +90,7 @@ public sealed class DocumentationCoverageSourceTests
         Assert.Contains("docs/DEVELOPER_GUIDE.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/security/THREAT_MODEL.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/security/CRYPTOGRAPHIC_DESIGN.md", readme, StringComparison.Ordinal);
+        Assert.Contains("docs/security/TOTP.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/formats/ENCRYPTED_BACKUP.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/releases/RELEASE_PROCESS.md", readme, StringComparison.Ordinal);
     }
@@ -107,6 +110,7 @@ public sealed class DocumentationCoverageSourceTests
                      "DOCUMENTATION_MAINTENANCE.md",
                      "architecture/DATA_FLOW.md",
                      "architecture/SESSION_AND_CONCURRENCY.md",
+                     "security/TOTP.md",
                      "security/SESSION_SECURITY.md",
                      "security/DATA_LIFECYCLE.md",
                      "formats/VAULT_RECORDS.md",
@@ -121,6 +125,7 @@ public sealed class DocumentationCoverageSourceTests
                      "verification/CURRENT_HEAD_2026_08_13.md",
                      "verification/POST_BASELINE_CHECKLIST_2026_08_13.md",
                      "verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md",
+                     "verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
@@ -136,10 +141,12 @@ public sealed class DocumentationCoverageSourceTests
         var readme = File.ReadAllText(PathAt("README.md"));
         var security = File.ReadAllText(PathAt("SECURITY.md"));
         var cryptoDesign = File.ReadAllText(PathAt("docs", "security", "CRYPTOGRAPHIC_DESIGN.md"));
+        var totp = File.ReadAllText(PathAt("docs", "security", "TOTP.md"));
 
         Assert.Contains("has not yet undergone an independent professional security audit", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("has **not** completed an independent professional security audit", security, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not** completed an independent professional", cryptoDesign, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not** completed an independent professional", totp, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -148,6 +155,7 @@ public sealed class DocumentationCoverageSourceTests
         var complete = File.ReadAllText(PathAt("docs", "COMPLETE_PROJECT_DOCUMENTATION.md"));
         var faq = File.ReadAllText(PathAt("docs", "FAQ.md"));
         var verification = File.ReadAllText(PathAt("docs", "verification", "DOCUMENTATION_CONSOLIDATION_2026_08_14.md"));
+        var totpVerification = File.ReadAllText(PathAt("docs", "verification", "TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md"));
 
         Assert.Contains("not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cannot be deterministically erased", complete, StringComparison.OrdinalIgnoreCase);
@@ -156,6 +164,9 @@ public sealed class DocumentationCoverageSourceTests
         Assert.Contains("cannot deterministically erase", faq, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final direct-commit head", verification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("independent professional security audit", verification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("exact current-head candidate", totpVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("does not provide cryptographic factor separation", totpVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("does not claim every remaining UI literal is translated", totpVerification, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string PathAt(params string[] segments)
