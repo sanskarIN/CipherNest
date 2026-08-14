@@ -24,7 +24,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
     {
         ArgumentNullException.ThrowIfNull(source);
         if (!source.CanRead) throw new ArgumentException("CSV source stream must be readable.", nameof(source));
-        var parser = new CsvParser(source, 1);
+        await using var parser = new CsvParser(source, 1);
         var row = await parser.ReadRowAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
         ValidateHeader(row);
         return row;
@@ -35,8 +35,9 @@ public sealed class CsvTransferService : IPlaintextTransferService
         ArgumentNullException.ThrowIfNull(source);
         if (!source.CanRead) throw new ArgumentException("CSV source stream must be readable.", nameof(source));
         ArgumentNullException.ThrowIfNull(mapping);
+        ArgumentException.ThrowIfNullOrWhiteSpace(mapping.Title);
         if (!_vault.IsUnlocked) throw new InvalidOperationException("Unlock the vault before importing.");
-        var parser = new CsvParser(source, checked(MaxRows + 1));
+        await using var parser = new CsvParser(source, checked(MaxRows + 1));
         var headers = await parser.ReadRowAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
         ValidateHeader(headers);
         var indexes = headers.Select((name, index) => (name, index)).ToDictionary(static x => x.name, static x => x.index, StringComparer.OrdinalIgnoreCase);
@@ -134,7 +135,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
     private static VaultItemType ParseType(string value) => Enum.TryParse<VaultItemType>(value, true, out var parsed) ? parsed : VaultItemType.Login;
     private static string Escape(string value) => value.IndexOfAny([',', '"', '\r', '\n']) >= 0 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
 
-    private sealed class CsvParser
+    private sealed class CsvParser : IAsyncDisposable
     {
         private static readonly Encoding StrictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
         private readonly StreamReader _reader;
@@ -246,6 +247,8 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 if (field.Length > MaxFieldChars) throw new InvalidDataException("CSV field exceeds the safety limit.");
             }
         }
+
+        public ValueTask DisposeAsync() => _reader.DisposeAsync();
 
         private async Task ConsumeOptionalLineFeedAsync(char current, CancellationToken cancellationToken)
         {
