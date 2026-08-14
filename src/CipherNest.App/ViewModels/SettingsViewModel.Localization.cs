@@ -24,9 +24,14 @@ public partial class SettingsViewModel
     {
         var preferences = await _settings.LoadAsync();
         await _settings.SaveAsync(preferences with { Language = SelectedLanguage });
-        ServiceProviderHelper.GetRequiredService<ILocalizationService>().Apply(SelectedLanguage);
-        StatusMessage = SelectedLanguage == AppLanguagePreference.English
-            ? "English language preference saved."
-            : "System language preference saved. CipherNest currently ships English resources and falls back to English when a translation is unavailable.";
+
+        var localization = ServiceProviderHelper.GetRequiredService<ILocalizationService>();
+        localization.Apply(SelectedLanguage);
+        StatusMessage = SelectedLanguage switch
+        {
+            AppLanguagePreference.English => localization.Get("EnglishPreferenceSaved"),
+            AppLanguagePreference.Hindi => localization.Get("HindiPreferenceSaved"),
+            _ => localization.Get("SystemPreferenceSaved")
+        };
     }
 }
