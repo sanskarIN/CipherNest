@@ -161,7 +161,7 @@ CipherNest intentionally rejects extreme or malformed inputs before they can con
 | Attachment media type | 256 characters |
 | Backup archive | 1 GiB aggregate plaintext archive content |
 | Backup ZIP entries | 10,001 maximum (`vault.db` plus attachment slots) |
-| Settings JSON | 64 KiB |
+| Settings JSON | 64 KiB; actual reads use a 64 KiB + 1 sentinel boundary; maximum nesting depth 16 |
 | Passphrase input | 12–4,096 characters for crypto-bound passphrases |
 | TOTP formatted seed | 4,096 characters maximum before normalization |
 | TOTP normalized Base32 seed | 16–1,024 characters; SHA-1/SHA-256/SHA-512; 6/8 digits; 15–120 s period |
@@ -233,7 +233,7 @@ Full local-vault deletion attempts the database, sidecars/recovery artifacts, an
 
 Settings cover theme, language readiness, lock/privacy controls, reminders, biometrics, generator defaults, storage/cache inspection, backup/restore, import/export, audit, security/privacy information, About/legal/acknowledgements, passphrase rotation, and destructive local deletion.
 
-Settings persistence validates size, normalizes enum/numeric values, restores safe generator defaults, falls back to defaults on malformed/unreadable non-secret settings files, and uses unique sibling staging.
+Settings persistence rejects files already above 64 KiB and independently bounds the actual read to a fixed 64 KiB + 1 sentinel byte before bounded-memory JSON deserialization. JSON nesting is capped at 16; invalid UTF-8, over-depth, malformed, or unreadable non-secret settings fall back to defaults, while cancellation continues to propagate. Valid parses are normalized for enum/numeric bounds and safe generator defaults, UTF-8 BOM compatibility is preserved, serialized output is checked against the 64 KiB ceiling, and saves use unique sibling staging.
 
 Central diagnostic reporting records sanitized operation/type/HResult-style metadata and intentionally excludes exception messages, stacks, vault contents, passphrases, recovery keys, plaintext secrets, TOTP seeds/codes, and full user file paths. No third-party analytics/crash service is enabled by the current source.
 
