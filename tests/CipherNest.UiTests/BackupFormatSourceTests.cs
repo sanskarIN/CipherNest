@@ -6,12 +6,14 @@ public sealed class BackupFormatSourceTests
     public void Restore_ValidatesHeaderSchemaAndResourcesBeforeKeyDerivation()
     {
         var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "EncryptedBackupService.cs"));
-        var schema = source.IndexOf("BackupHeaderJsonPolicy.Validate(headerJson)", StringComparison.Ordinal);
+        var restore = source.IndexOf("public async Task RestoreEncryptedAsync", StringComparison.Ordinal);
+        var schema = source.IndexOf("BackupHeaderJsonPolicy.Validate(headerJson)", restore, StringComparison.Ordinal);
         var deserialize = source.IndexOf("JsonSerializer.Deserialize<BackupHeader>", schema, StringComparison.Ordinal);
         var validate = source.IndexOf("BackupFormatPolicy.ValidateHeader", deserialize, StringComparison.Ordinal);
         var derive = source.IndexOf("key = _crypto.DeriveKey", validate, StringComparison.Ordinal);
 
-        Assert.True(schema >= 0);
+        Assert.True(restore >= 0);
+        Assert.True(schema > restore);
         Assert.True(deserialize > schema);
         Assert.True(validate > deserialize);
         Assert.True(derive > validate);
