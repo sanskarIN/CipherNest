@@ -8,7 +8,12 @@ namespace CipherNest.Infrastructure.Services;
 public sealed class JsonSettingsStore : ISettingsStore
 {
     public const long MaximumSettingsFileBytes = 64 * 1024;
-    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    public const int MaximumSettingsJsonDepth = 16;
+    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true,
+        MaxDepth = MaximumSettingsJsonDepth
+    };
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string _path;
 
@@ -29,8 +34,8 @@ public sealed class JsonSettingsStore : ISettingsStore
             await using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read, 16 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
             if (stream.Length is < 0 or > MaximumSettingsFileBytes)
                 return new AppPreferences();
-            var loaded = await JsonSerializer.DeserializeAsync<AppPreferences>(stream, Options, cancellationToken).ConfigureAwait(false);
-            return AppPreferencesPolicy.Normalize(loaded ?? new AppPreferences());
+
+            return await DeserializeBoundedAsync(stream, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -82,5 +87,27 @@ public sealed class JsonSettingsStore : ISettingsStore
         {
             _gate.Release();
         }
+    }
+
+    private static async Task<AppPreferences> DeserializeBoundedAsync(Stream source, CancellationToken cancellationToken)
+    {
+        var buffer = GC.AllocateUninitializedArray<byte>(checked((int)MaximumSettingsFileBytes + 1));
+        var totalRead = 0;
+
+        while (totalRead < buffer.Length)
+        {
+            var read = await source.ReadAsync(buffer.AsMemory(totalRead), cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+                break;
+
+            totalRead += read;
+        }
+
+        if (totalRead > MaximumSettingsFileBytes)
+            return new AppPreferences();
+
+        await using var bounded = new MemoryStream(buffer, 0, totalRead, writable: false, publiclyVisible: false);
+        var loaded = await JsonSerializer.DeserializeAsync<AppPreferences>(bounded, Options, cancellationToken).ConfigureAwait(false);
+        return AppPreferencesPolicy.Normalize(loaded ?? new AppPreferences());
     }
 }
