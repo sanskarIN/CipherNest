@@ -95,6 +95,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Test a wrong backup passphrase.
 - Test corrupted/truncated containers.
 - Test unsupported backup version, too-short/too-long salt, hostile KDF parameters, and invalid chunk-size metadata; rejection must happen before Argon2 key derivation.
+- Reconfirm strict version-2 backup-header parsing with duplicate/unknown/missing/wrong-type properties, excessive nesting, exact 16,384-byte boundary input, and the deterministic hostile-header corpus; every invalid case must fail before key derivation.
 - Verify backup export refuses a destination equal to the active `vault.db`, its WAL/SHM/recovery names, or any path inside the encrypted attachment store.
 - Verify backup encrypted staging is collision-resistant and opened with create-new semantics.
 - Test duplicate normalized ZIP entry names, unexpected/nested paths, excessive entry count/aggregate size, and encrypted attachment entries smaller/larger than the implemented `.cna` container envelope.
@@ -193,7 +194,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Review backup destination canonicalization, duplicate ZIP handling, attachment-container size derivation, rollback cancellation semantics, and DB/WAL/SHM partial recovery.
 - Review memory-lifetime assumptions around managed strings and decrypted ViewModels; source clears bound credential properties earlier and zeroes several owned arrays, but managed string copies cannot be deterministically erased.
 - Review the SHA-256 clipboard-fingerprint approach, OS clipboard/history behavior, and plaintext export/share-sheet data remnants.
-- Extend parser fuzzing beyond the current deterministic CSV-header and settings-JSON adversarial corpora to CSV row/import semantics, backup archives/header metadata, attachment metadata/storage names, TOTP Base32 input, vault records, and vault-header deserialization.
+- Extend parser fuzzing beyond the current deterministic CSV-header, settings-JSON, and backup-header adversarial corpora to CSV row/import semantics, backup ZIP/archive semantics beyond header metadata, attachment metadata/storage names, TOTP Base32 input, vault records, and vault-header deserialization.
 - Independently review the local TOTP implementation against RFC 6238/HOTP truncation rules, Base32 normalization, seed memory lifetime, same-vault second-factor tradeoffs, clock assumptions, and clipboard exposure.
 - Review rollback/downgrade behavior for future crypto/database/vault-header format versions.
 - Review dependency/supply-chain pinning and release provenance.
