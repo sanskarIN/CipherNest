@@ -124,18 +124,23 @@ From `VaultItemValidator`, `TotpPolicy`, and `SafeNoteLimits`:
 
 Combined text accounting includes core strings, tags, custom-field names/values, and attachment display/media/storage metadata.
 
-## Attachment import metadata
+## Attachment import and persisted metadata
 
-From `AttachmentImportPolicy`:
+From `AttachmentImportPolicy` and `AttachmentStorageNamePolicy`:
 
-| Resource | Limit/default |
+| Resource | Limit/default/rule |
 |---|---|
-| Display name | maximum 240 characters; normalized to leaf filename |
-| Media type | maximum 256 characters |
+| Display name | maximum 240 UTF-16 code units; import normalized to trimmed leaf filename |
+| Stored display name | trimmed leaf; not `.`/`..`; no `/` or `\\`; valid UTF-16; Unicode Control/Format runes rejected |
+| Media type | maximum 256 UTF-16 code units |
+| Stored media type | already trimmed; valid UTF-16; Unicode Control/Format runes rejected |
 | Missing media type | `application/octet-stream` |
-| Control characters | rejected in display name/media type |
+| Opaque encrypted filename | exactly 36 characters: 32-char non-empty GUID-N stem + `.cna` |
+| Opaque filename separators | `/` and `\\` rejected before filesystem access |
 
-Encrypted storage identity is canonicalized to `<attachment-guid-N>.cna` and path separators are rejected before filesystem access.
+Metadata classification is rune/code-point aware through `Rune.DecodeFromUtf16` and `Rune.GetUnicodeCategory`. Supplementary-plane `Format` characters and malformed isolated UTF-16 surrogates are rejected rather than slipping through code-unit-only `char.IsControl` checks. `VaultItemValidator` reuses the same display/media predicates for decrypted/programmatically supplied item metadata.
+
+The opaque filename length check runs before stem parsing. This prevents an oversized hostile name from creating a large stem substring before the canonical 36-character requirement is discovered. Accepted case variants are normalized to lower-case `<attachment-guid-N>.cna`, and `ValidateForAttachment` additionally requires the filename GUID to match the attachment ID.
 
 ## Encrypted attachment framing
 
