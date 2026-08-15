@@ -49,6 +49,7 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "SETTINGS_JSON_HARDENING_2026_08_15.md"],
         ["docs", "verification", "BACKUP_HEADER_HARDENING_2026_08_15.md"],
         ["docs", "verification", "VAULT_HEADER_HARDENING_2026_08_15.md"],
+        ["docs", "verification", "ATTACHMENT_METADATA_HARDENING_2026_08_15.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -136,6 +137,7 @@ public sealed class DocumentationCoverageSourceTests
                      "verification/SETTINGS_JSON_HARDENING_2026_08_15.md",
                      "verification/BACKUP_HEADER_HARDENING_2026_08_15.md",
                      "verification/VAULT_HEADER_HARDENING_2026_08_15.md",
+                     "verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
@@ -170,6 +172,7 @@ public sealed class DocumentationCoverageSourceTests
         var settingsVerification = File.ReadAllText(PathAt("docs", "verification", "SETTINGS_JSON_HARDENING_2026_08_15.md"));
         var backupHeaderVerification = File.ReadAllText(PathAt("docs", "verification", "BACKUP_HEADER_HARDENING_2026_08_15.md"));
         var vaultHeaderVerification = File.ReadAllText(PathAt("docs", "verification", "VAULT_HEADER_HARDENING_2026_08_15.md"));
+        var attachmentVerification = File.ReadAllText(PathAt("docs", "verification", "ATTACHMENT_METADATA_HARDENING_2026_08_15.md"));
 
         Assert.Contains("not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cannot be deterministically erased", complete, StringComparison.OrdinalIgnoreCase);
@@ -193,6 +196,9 @@ public sealed class DocumentationCoverageSourceTests
         Assert.Contains("exactly 120 fixed hostile cases", vaultHeaderVerification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Version 1 remains accepted", vaultHeaderVerification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not an independent security audit", vaultHeaderVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("exactly 128 deterministic hostile inputs", attachmentVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("supplementary-plane", attachmentVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not an independent security audit", attachmentVerification, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string PathAt(params string[] segments)
