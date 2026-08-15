@@ -1,3 +1,4 @@
+using System.Text;
 using CipherNest.Domain.Models;
 using CipherNest.Infrastructure.Services;
 
@@ -21,6 +22,49 @@ public sealed class JsonSettingsStoreBoundsTests : IDisposable
         var store = new JsonSettingsStore(_path);
 
         var loaded = await store.LoadAsync();
+
+        Assert.Equal(new AppPreferences(), loaded);
+    }
+
+    [Fact]
+    public async Task SettingsFileAtExactByteLimit_RemainsReadable()
+    {
+        const string json = "{\"theme\":2}";
+        var jsonBytes = Encoding.UTF8.GetBytes(json);
+        var bytes = new byte[JsonSettingsStore.MaximumSettingsFileBytes];
+        jsonBytes.CopyTo(bytes, 0);
+        Array.Fill(bytes, (byte)' ', jsonBytes.Length, bytes.Length - jsonBytes.Length);
+        await File.WriteAllBytesAsync(_path, bytes);
+
+        var loaded = await new JsonSettingsStore(_path).LoadAsync();
+
+        Assert.Equal(AppThemePreference.Dark, loaded.Theme);
+    }
+
+    [Fact]
+    public async Task InvalidUtf8_FallsBackToDefaults()
+    {
+        await File.WriteAllBytesAsync(_path, [(byte)'{', (byte)'\"', (byte)'x', (byte)'\"', (byte)':', 0xC3, (byte)'}']);
+
+        var loaded = await new JsonSettingsStore(_path).LoadAsync();
+
+        Assert.Equal(new AppPreferences(), loaded);
+    }
+
+    [Fact]
+    public async Task ExcessiveJsonDepth_FallsBackToDefaults()
+    {
+        var nested = new StringBuilder();
+        nested.Append('{');
+        for (var index = 0; index < JsonSettingsStore.MaximumSettingsJsonDepth + 1; index++)
+            nested.Append("\"x\":{");
+        nested.Append("\"value\":1");
+        for (var index = 0; index < JsonSettingsStore.MaximumSettingsJsonDepth + 1; index++)
+            nested.Append('}');
+        nested.Append('}');
+        await File.WriteAllTextAsync(_path, nested.ToString());
+
+        var loaded = await new JsonSettingsStore(_path).LoadAsync();
 
         Assert.Equal(new AppPreferences(), loaded);
     }
