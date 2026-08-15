@@ -186,6 +186,22 @@ From `BackupArchivePolicy` and vault attachment budget:
 
 Restore additionally restricts paths to the expected database/attachment layout, rejects normalized duplicate paths, and checks encrypted attachment entry sizes against the actual attachment-container envelope.
 
+## Settings JSON limits
+
+From `JsonSettingsStore` and `AppPreferencesPolicy`:
+
+| Resource | Maximum / behavior |
+|---|---:|
+| Settings file bytes | 64 KiB |
+| JSON nesting depth | 16 |
+| Read buffer | 64 KiB + 1 sentinel byte |
+| Malformed/invalid UTF-8 JSON | falls back to normalized defaults |
+| Oversized JSON | falls back to normalized defaults |
+
+The settings loader first rejects an already-oversized file by length, then independently reads through a fixed 64 KiB + 1 byte buffer before deserializing from bounded memory. This second boundary prevents a file that changes after the initial length snapshot from causing unbounded parser input. JSON nesting is capped at 16 because the persisted `AppPreferences` schema is flat; malformed, over-depth, or invalid UTF-8 content is treated as unreadable local settings and falls back safely. Cancellation is not converted into a fallback and continues to propagate to the caller.
+
+All successfully parsed settings still pass through `AppPreferencesPolicy.Normalize(...)`, which clamps numeric ranges, rejects undefined persisted enum values through safe defaults, and restores at least one password character group when password mode would otherwise have none.
+
 ## CSV parser/import limits
 
 From `CsvTransferService`:
