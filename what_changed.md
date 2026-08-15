@@ -2423,3 +2423,18 @@ A finite source audit and automated test matrix cannot prove the mathematical ab
 - Changed the integration test's temporary synthetic seed byte cleanup to `CryptographicOperations.ZeroMemory` after encrypted-envelope inspection.
 - Added `docs/verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md` and made documentation coverage require the TOTP security document, the new verification contract, root TOTP link, audit disclaimer, factor-separation limitation, and partial-translation honesty.
 - Removed remaining stale statements that still described core TOTP generation or the reviewed Hindi catalog as wholly deferred; future wording now distinguishes QR/`otpauth://`/autofill/provider integration and complete remaining-UI translation from the implemented core.
+
+## 2026-08-15 — CSV import trust-boundary hardening and deterministic adversarial coverage
+
+- Added a dedicated 256-character ceiling for each imported CSV header name before mapping dictionaries or mapping UI consume it.
+- CSV header validation now rejects Unicode control characters and Unicode `Format` category characters, covering NUL/tab/embedded-line-break forms plus invisible and bidirectional formatting controls that could create misleading mapping labels.
+- Preserved strict UTF-8 parsing, explicit single initial UTF-8 BOM handling, case-insensitive header uniqueness, 256-column limit, 100,000-row limit, 1,000,000-character field limit, and 2,000,000-character row budget.
+- Added boundary tests proving 256-character header names remain accepted and 257-character names are rejected.
+- Added fixed malformed-header coverage for NUL, tab, embedded newline, zero-width formatting, and bidirectional formatting characters.
+- Added a deterministic 256-case adversarial header corpus using a fixed pseudo-random seed; each generated case must either fail through the public invalid-data boundary or satisfy every published accepted-header invariant.
+- Added `CsvSafetySourceTests` assertions so the dedicated header ceiling and control/Unicode-format rejection cannot silently disappear from production source.
+- Corrected `docs/formats/CSV_TRANSFER.md` encoding wording to match the implementation: strict UTF-8 without alternate-encoding auto-detection, with one explicitly accepted initial UTF-8 BOM.
+- Updated `docs/formats/CSV_TRANSFER.md` and `docs/LIMITS_AND_DEFAULTS.md` with the header trust-boundary rules and dedicated limit.
+- Added `docs/verification/CSV_IMPORT_HARDENING_2026_08_15.md`, linked it from the documentation hub, and made documentation source coverage require the record and its audit/current-head caveats.
+- Reconciled `docs/TEST_PLAN.md`, `docs/NEXT_STEPS.md`, `PROJECT_STATUS.md`, and `CHANGELOG.md` so the implemented deterministic CSV-header corpus is distinguished from broader parser-fuzzing work that remains open.
+- This continuation does not treat deterministic adversarial tests as exhaustive fuzzing or as an independent security audit. Platform file-provider behavior, UI accessibility/layout, packaging/signing, and independent professional review remain separate release gates.

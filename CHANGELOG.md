@@ -5,6 +5,7 @@ All notable changes are documented here following Semantic Versioning principles
 ## [Unreleased]
 
 ### Added
+- Deterministic adversarial CSV-header corpus coverage plus source-regression guards for the imported-header trust boundary.
 - Local RFC 6238-compatible TOTP vault items with encrypted Base32 seed/settings, SHA-1/SHA-256/SHA-512, 6/8-digit output, bounded periods/input parsing, explicit refresh/copy UI, RFC known-answer tests, real encrypted SQLite round-trip coverage, audit semantics, and persisted-enum compatibility protection.
 - Reviewed Hindi (`hi-IN`) resource catalog for the current resource-backed interface, System/English/Hindi preference wiring, catalog-parity/security-translation tests, and explicit English fallback for not-yet-migrated UI literals.
 - Consolidated the complete project documentation into `docs/COMPLETE_PROJECT_DOCUMENTATION.md`, added `docs/FAQ.md`, linked both from the root/documentation hubs, and extended source tests so these documentation entry points remain required.
@@ -66,6 +67,7 @@ All notable changes are documented here following Semantic Versioning principles
 - `DocumentationCoverageSourceTests` and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` to guard required documentation files, canonical entry-point links, and explicit independent-audit disclaimers.
 
 ### Changed
+- CSV import now bounds each header name to 256 characters and rejects Unicode control/`Format` characters before headers reach mapping UI or mapped-column lookup.
 - Vault master/recovery unlock, secondary unlock, public lock, and full-vault deletion transitions are serialized through the service transition gate so a late-finishing unlock cannot publish a new session after an already-requested lock.
 - Full-vault deletion requires a live session key lease while waiting for the transition gate; an intervening lock/unlock invalidates that authorization rather than allowing deletion on stale re-authentication.
 - After full-vault deletion clears its session key, database deletion uses an uncancelled token and locked-state notification occurs only if the destructive session transition actually occurred.
