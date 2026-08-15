@@ -56,6 +56,92 @@ public sealed class BackupHeaderValidationIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task DuplicateHeaderMetadata_IsRejectedBeforeDeriveKey()
+    {
+        var source = Path.Combine(_directory, "duplicate-header-property.cnbak");
+        var json = "{\"Version\":2,\"Version\":2,\"Salt\":\"AAAAAAAAAAAAAAAAAAAAAA==\",\"Kdf\":{\"MemoryKiB\":65536,\"Iterations\":3,\"Parallelism\":1},\"ChunkSize\":1048576,\"CreatedUtc\":\"2026-08-15T00:00:00+00:00\"}";
+        await WriteRawHeaderAsync(source, Encoding.UTF8.GetBytes(json));
+
+        var crypto = new DerivationGuardCryptoService();
+        var service = new EncryptedBackupService(new SqliteVaultStore(DatabasePath), crypto);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.RestoreEncryptedAsync(source, "Synthetic backup passphrase 2026!"));
+        Assert.Contains("duplicate", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, crypto.DeriveKeyCalls);
+    }
+
+    [Fact]
+    public async Task UnexpectedHeaderMetadata_IsRejectedBeforeDeriveKey()
+    {
+        var source = Path.Combine(_directory, "unexpected-header-property.cnbak");
+        var json = "{\"Version\":2,\"Salt\":\"AAAAAAAAAAAAAAAAAAAAAA==\",\"Kdf\":{\"MemoryKiB\":65536,\"Iterations\":3,\"Parallelism\":1},\"ChunkSize\":1048576,\"CreatedUtc\":\"2026-08-15T00:00:00+00:00\",\"Unexpected\":true}";
+        await WriteRawHeaderAsync(source, Encoding.UTF8.GetBytes(json));
+
+        var crypto = new DerivationGuardCryptoService();
+        var service = new EncryptedBackupService(new SqliteVaultStore(DatabasePath), crypto);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.RestoreEncryptedAsync(source, "Synthetic backup passphrase 2026!"));
+        Assert.Contains("unexpected", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, crypto.DeriveKeyCalls);
+    }
+
+    [Fact]
+    public async Task OverDepthHeader_IsNormalizedAndRejectedBeforeDeriveKey()
+    {
+        var source = Path.Combine(_directory, "over-depth-header.cnbak");
+        var nested = string.Concat(Enumerable.Repeat("{\"x\":", BackupFormatPolicy.MaximumHeaderJsonDepth + 1)) +
+                     "0" +
+                     new string('}', BackupFormatPolicy.MaximumHeaderJsonDepth + 1);
+        var json = "{\"Version\":2,\"Salt\":\"AAAAAAAAAAAAAAAAAAAAAA==\",\"Kdf\":{\"MemoryKiB\":65536,\"Iterations\":3,\"Parallelism\":1},\"ChunkSize\":1048576,\"CreatedUtc\":\"2026-08-15T00:00:00+00:00\",\"Unexpected\":" + nested + "}";
+        await WriteRawHeaderAsync(source, Encoding.UTF8.GetBytes(json));
+
+        var crypto = new DerivationGuardCryptoService();
+        var service = new EncryptedBackupService(new SqliteVaultStore(DatabasePath), crypto);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.RestoreEncryptedAsync(source, "Synthetic backup passphrase 2026!"));
+        Assert.Contains("malformed", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, crypto.DeriveKeyCalls);
+    }
+
+    [Fact]
+    public async Task MaximumLengthValidHeader_ReachesDeriveKey()
+    {
+        var source = Path.Combine(_directory, "maximum-header.cnbak");
+        var header = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            Version = BackupFormatPolicy.CurrentVersion,
+            Salt = new byte[16],
+            Kdf = new KdfParameters(64 * 1024, 3, 1),
+            ChunkSize = 1024 * 1024,
+            CreatedUtc = DateTimeOffset.Parse("2026-08-15T00:00:00+00:00")
+        });
+        var padded = new byte[BackupFormatPolicy.MaximumHeaderBytes];
+        Array.Fill(padded, (byte)' ');
+        header.CopyTo(padded, 0);
+        await WriteRawHeaderAsync(source, padded);
+
+        var crypto = new DerivationGuardCryptoService();
+        var service = new EncryptedBackupService(new SqliteVaultStore(DatabasePath), crypto);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RestoreEncryptedAsync(source, "Synthetic backup passphrase 2026!"));
+        Assert.Equal(1, crypto.DeriveKeyCalls);
+    }
+
+    [Fact]
+    public async Task HeaderAboveMaximumLength_IsRejectedBeforeReadOrDeriveKey()
+    {
+        var source = Path.Combine(_directory, "oversized-header.cnbak");
+        await WriteRawHeaderAsync(source, new byte[BackupFormatPolicy.MaximumHeaderBytes + 1]);
+
+        var crypto = new DerivationGuardCryptoService();
+        var service = new EncryptedBackupService(new SqliteVaultStore(DatabasePath), crypto);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.RestoreEncryptedAsync(source, "Synthetic backup passphrase 2026!"));
+        Assert.Contains("header size", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, crypto.DeriveKeyCalls);
+    }
+
+    [Fact]
     public async Task TruncatedHeader_IsNormalizedToInvalidData()
     {
         var source = Path.Combine(_directory, "truncated-header.cnbak");
