@@ -89,4 +89,14 @@ public sealed class TotpServiceTests
         Assert.Throws<ArgumentOutOfRangeException>(() => service.Generate(Sha1Secret, (TotpAlgorithm)999, 6, 30, DateTimeOffset.UtcNow));
         Assert.Throws<ArgumentOutOfRangeException>(() => service.Generate(Sha1Secret, TotpAlgorithm.Sha1, 6, 30, DateTimeOffset.FromUnixTimeSeconds(-1)));
     }
+
+    [Fact]
+    public void Generate_ClampsValidityBoundaryAtMaximumRepresentableTimestamp()
+    {
+        var result = new TotpService().Generate(Sha1Secret, TotpAlgorithm.Sha1, 6, 30, DateTimeOffset.MaxValue);
+
+        Assert.Equal(6, result.Code.Length);
+        Assert.Equal(1, result.SecondsRemaining);
+        Assert.Equal(DateTimeOffset.MaxValue, result.ValidUntilUtc);
+    }
 }
