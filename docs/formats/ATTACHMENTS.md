@@ -38,11 +38,15 @@ Example using a synthetic GUID:
 Rules:
 
 - attachment ID must not be `Guid.Empty`;
+- the complete opaque filename must be exactly 36 characters;
+- the 36-character length check runs before GUID-stem parsing so an oversized hostile string is rejected before any large stem substring/allocation;
 - stem must parse as GUID format `N`;
 - `.cna` extension is required;
 - `/` and `\` path separators are rejected;
 - metadata validation binds the filename to the same attachment ID;
 - filesystem paths are built only after this validation.
+
+Accepted upper-case GUID/extension input is normalized to canonical lower-case `<guid-N>.cna`; persisted/generated names are already canonical lower-case.
 
 ## 3. Container magic/version
 
@@ -180,22 +184,40 @@ MaximumContainerBytes =
 
 Backup restore uses the same attachment-container size envelope to reject archive entries that cannot be valid CipherNest encrypted attachments before installing them.
 
-## 10. Attachment import metadata
+## 10. Attachment import and persisted metadata
 
 Before encryption, `AttachmentImportPolicy` normalizes:
 
-- display name to a leaf filename;
-- missing media type to `application/octet-stream`.
+- display name to a trimmed leaf filename;
+- missing media type to `application/octet-stream`;
+- non-empty media type by trimming outer whitespace.
 
-Limits:
+Persisted display-name rules:
 
 ```text
-Display name <= 240 characters
-Media type   <= 256 characters
-Control characters rejected
+Maximum length: 240 UTF-16 code units
+Must already be trimmed
+Must be a leaf name (no / or \\)
+`.` and `..` rejected
+Unicode Control and Format runes rejected
+Malformed UTF-16 rejected
 ```
 
-The current per-item attachment cap is 25; the global referenced-attachment storage/backup cap is 10,000.
+Persisted media-type rules:
+
+```text
+Maximum length: 256 UTF-16 code units
+Must already be trimmed
+Unicode Control and Format runes rejected
+Malformed UTF-16 rejected
+Missing import value -> application/octet-stream
+```
+
+Unicode classification is rune/code-point aware. The policy decodes with `Rune.DecodeFromUtf16(...)`, requires complete scalar decoding, and rejects both `UnicodeCategory.Control` and `UnicodeCategory.Format`, including supplementary-plane formatting code points. This prevents the previous code-unit-only gap where invisible/directional formatting metadata could survive attachment validation.
+
+`VaultItemValidator` reuses the same canonical display-name/media-type predicates rather than maintaining a weaker duplicate metadata check. The current per-item attachment cap is 25; the global referenced-attachment storage/backup cap is 10,000.
+
+The media-type metadata boundary is intentionally not described as a complete MIME grammar implementation. The App preview layer separately normalizes media types before deciding whether a format is previewable.
 
 ## 11. Text preview
 
@@ -268,11 +290,18 @@ Changes to any of these require a reviewed version/compatibility decision:
 - integer endianness;
 - AAD layout;
 - storage-name identity rules;
+- persisted attachment metadata acceptance rules;
 - maximum file/container resources.
 
 Do not change framing under `CNAT0001` if old and new implementations would interpret the same bytes differently.
 
-## 16. Security limitations
+The August 15, 2026 metadata hardening does not change `CNAT0001` binary framing. Correctly normalized existing metadata remains compatible; malformed UTF-16, Control/Format-bearing metadata, non-leaf display names, and untrimmed stored metadata now fail validation.
+
+## 16. Verification
+
+The repository-side hardening contract is recorded in `../verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md`. It includes boundary tests, source-regression guards, and an exactly 128-input deterministic hostile metadata/storage-name corpus. That corpus is reproducible regression coverage, not exhaustive coverage-guided fuzzing or an independent security audit.
+
+## 17. Security limitations
 
 The attachment format does not claim to hide:
 
