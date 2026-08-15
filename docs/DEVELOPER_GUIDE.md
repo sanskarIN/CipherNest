@@ -452,3 +452,9 @@ Do not bolt the following onto the current local-only architecture without separ
 - complete additional localization catalogs.
 
 See `NEXT_STEPS.md` for the ordered future-work process.
+
+## Attachment metadata policy rule — 2026-08-15
+
+Do not add a second attachment display/media metadata validator. Import normalization and decrypted/programmatic item validation must reuse `AttachmentImportPolicy` so rune-aware malformed-UTF-16 and Unicode Control/Format behavior cannot drift. Opaque encrypted storage names remain an Infrastructure filesystem boundary and must pass `AttachmentStorageNamePolicy` before `Path.Combine`/file access.
+
+If the metadata acceptance contract changes, update the attachment/vault-record format docs, limits, deterministic hostile corpus, source-regression tests, threat model, test plan, changelog/status, and verification record in the same candidate.
