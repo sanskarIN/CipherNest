@@ -139,6 +139,8 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Persist malformed/out-of-range enum/numeric values in a disposable settings file and verify normalization/fallback behavior.
 - Verify password mode cannot persist with every character group disabled; passphrase mode may keep those groups irrelevant/off.
 - Verify malformed/unreadable settings files fall back to defaults while cancellation is still propagated.
+- Reconfirm the implemented 64 KiB + 1 sentinel read boundary using exact-limit, oversized, invalid UTF-8, and over-depth JSON fixtures when the settings schema changes.
+- Keep the explicit JSON depth ceiling synchronized with the flat `AppPreferences` schema; increasing it requires matching tests and limits documentation.
 - Verify successful settings saves use unique sibling staging and leave no `.*.tmp` artifact.
 - Exercise inaccessible/unreadable cache subdirectories and reparse-point directories; usage/cleanup should fail softly without recursing through links.
 
@@ -191,7 +193,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Review backup destination canonicalization, duplicate ZIP handling, attachment-container size derivation, rollback cancellation semantics, and DB/WAL/SHM partial recovery.
 - Review memory-lifetime assumptions around managed strings and decrypted ViewModels; source clears bound credential properties earlier and zeroes several owned arrays, but managed string copies cannot be deterministically erased.
 - Review the SHA-256 clipboard-fingerprint approach, OS clipboard/history behavior, and plaintext export/share-sheet data remnants.
-- Extend parser fuzzing beyond the current deterministic CSV-header adversarial corpus to CSV row/import semantics, backup archives/header metadata, attachment metadata/storage names, settings JSON, TOTP Base32 input, vault records, and vault-header deserialization.
+- Extend parser fuzzing beyond the current deterministic CSV-header and settings-JSON adversarial corpora to CSV row/import semantics, backup archives/header metadata, attachment metadata/storage names, TOTP Base32 input, vault records, and vault-header deserialization.
 - Independently review the local TOTP implementation against RFC 6238/HOTP truncation rules, Base32 normalization, seed memory lifetime, same-vault second-factor tradeoffs, clock assumptions, and clipboard exposure.
 - Review rollback/downgrade behavior for future crypto/database/vault-header format versions.
 - Review dependency/supply-chain pinning and release provenance.
