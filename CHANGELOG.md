@@ -5,6 +5,7 @@ All notable changes are documented here following Semantic Versioning principles
 ## [Unreleased]
 
 ### Added
+- Strict local vault-header JSON policy with a 64 KiB byte ceiling, 16-level depth bound, exact case-sensitive historical-v1/current-v2 root and nested wrapped-key/KDF schemas, deterministic 120-case hostile corpus, replacement-database pre-swap validation, compatibility fixtures, source guards, and canonical format/verification documentation.
 - Strict encrypted-backup version-2 header JSON validation with 16..16,384-byte framing, 16-level depth, exact case-sensitive root/KDF property sets, duplicate/unknown/missing/wrong-type rejection before Argon2, exporter self-validation, deterministic hostile-header corpus coverage, and source/documentation regression guards.
 - Bounded settings-JSON ingestion with a 64 KiB + 1 sentinel read path, explicit 16-level nesting ceiling, invalid UTF-8/over-depth fallback, UTF-8 BOM compatibility coverage, deterministic adversarial JSON corpus, and source/documentation regression guards.
 - Deterministic adversarial CSV-header corpus coverage plus source-regression guards for the imported-header trust boundary.
@@ -69,6 +70,7 @@ All notable changes are documented here following Semantic Versioning principles
 - `DocumentationCoverageSourceTests` and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` to guard required documentation files, canonical entry-point links, and explicit independent-audit disclaimers.
 
 ### Changed
+- Vault header reads now validate strict structure before typed deserialization/wrapped-key unwrap; current mutations self-validate and deliberately upgrade valid legacy v1 headers to v2, preventing an undocumented v1-plus-`secondary` hybrid shape.
 - CSV header parsing now enforces the dedicated 256-character header ceiling while streaming and classifies unsafe Unicode by rune/code point, including supplementary-plane `Format` characters.
 - CSV import now bounds each header name to 256 characters and rejects Unicode control/`Format` characters before headers reach mapping UI or mapped-column lookup.
 - Vault master/recovery unlock, secondary unlock, public lock, and full-vault deletion transitions are serialized through the service transition gate so a late-finishing unlock cannot publish a new session after an already-requested lock.
