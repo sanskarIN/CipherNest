@@ -199,7 +199,7 @@ From `CsvTransferService`:
 | Aggregate characters in one row | 2,000,000 |
 | User-visible retained import warnings | 20 |
 
-Column enforcement applies to the final field at newline/EOF as well as comma-terminated fields. Header names must be non-empty, no longer than 256 characters, case-insensitively unique, and free of Unicode control/`Format` characters before they are exposed to import mapping UI. The dedicated header-name limit is intentionally stricter than the generic field limit because headers are mapping/display metadata rather than vault payload data.
+Column enforcement applies to the final field at newline/EOF as well as comma-terminated fields. Header names must be non-empty, no longer than 256 characters, case-insensitively unique, and free of Unicode control/`Format` characters before they are exposed to import mapping UI. Header preview and actual import pass the 256-character ceiling directly into the streaming parser, while post-parse validation repeats it as defense in depth. Unsafe Unicode classification is rune/code-point aware, so supplementary-plane `Format` characters are rejected rather than being treated only as isolated UTF-16 surrogate code units. The dedicated header-name limit is intentionally stricter than the generic field limit because headers are mapping/display metadata rather than vault payload data.
 
 ## CSV export columns
 
