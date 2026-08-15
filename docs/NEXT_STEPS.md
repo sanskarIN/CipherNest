@@ -82,7 +82,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Verify database record deletion occurs before best-effort attachment cleanup and does not leave a surviving record pointing to intentionally removed files.
 - Verify destructive passphrase state is cleared after success, failure, cancellation, and screen exit.
 - Verify full local-vault deletion removes CipherNest-managed database/attachment/recovery artifacts and clearly documents physical-remnant limitations.
-- Verify current vault headers remain readable while an unsupported future header or >64 KiB UTF-8 header is rejected before unwrap/deserialization.
+- Reconfirm strict vault-header compatibility with the exact historical v1/current v2 shapes, 64 KiB byte and 16-level depth boundaries, duplicate/unknown/missing/wrong-kind metadata, v1-to-v2 mutation upgrade, the deterministic 120-case hostile corpus, and malformed replacement-header pre-swap rejection; invalid structures must never reach wrapped-key unwrap.
 - Inject disposable malformed programmatic item models (null runtime values, unknown type, empty ID, bad attachment metadata, duplicate attachment IDs/storage names, excessive aggregate text) and confirm validation rejects them without unhandled null dereferences.
 - Verify decrypted record ID mismatch/invalid metadata is rejected before reaching search/UI code.
 - Exercise the 16 MiB serialized item, 24 MiB stored-envelope, 100,000-item, and 256 MiB aggregate encrypted-record safety budgets using synthetic disposable data where practical without exhausting the test host.
@@ -194,7 +194,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Review backup destination canonicalization, duplicate ZIP handling, attachment-container size derivation, rollback cancellation semantics, and DB/WAL/SHM partial recovery.
 - Review memory-lifetime assumptions around managed strings and decrypted ViewModels; source clears bound credential properties earlier and zeroes several owned arrays, but managed string copies cannot be deterministically erased.
 - Review the SHA-256 clipboard-fingerprint approach, OS clipboard/history behavior, and plaintext export/share-sheet data remnants.
-- Extend parser fuzzing beyond the current deterministic CSV-header, settings-JSON, and backup-header adversarial corpora to CSV row/import semantics, backup ZIP/archive semantics beyond header metadata, attachment metadata/storage names, TOTP Base32 input, vault records, and vault-header deserialization.
+- Extend parser fuzzing beyond the current deterministic CSV-header, settings-JSON, backup-header, and vault-header adversarial corpora to CSV row/import semantics, backup ZIP/archive semantics beyond header metadata, attachment metadata/storage names, TOTP Base32 input, and vault-record/envelope semantics.
 - Independently review the local TOTP implementation against RFC 6238/HOTP truncation rules, Base32 normalization, seed memory lifetime, same-vault second-factor tradeoffs, clock assumptions, and clipboard exposure.
 - Review rollback/downgrade behavior for future crypto/database/vault-header format versions.
 - Review dependency/supply-chain pinning and release provenance.
