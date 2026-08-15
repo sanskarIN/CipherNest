@@ -409,3 +409,9 @@ Use this consolidated document for orientation, then the specialized sources for
 Any source change affecting cryptography, authentication, authorization, persistence, migration, record/attachment/backup/CSV formats, resource limits, plaintext handling, clipboard behavior, diagnostics, lifecycle/session concurrency, biometric behavior, platform capabilities, legal/support metadata, build/release configuration, or security claims must update the corresponding specialized documentation in the same release work.
 
 The documentation coverage source tests are intentionally part of the repository so deletion or unlinking of required documentation becomes a visible regression rather than silent documentation drift.
+
+### Attachment metadata/storage-name hardening — 2026-08-15
+
+The current attachment trust boundary uses rune-aware metadata validation shared between import normalization and `VaultItemValidator`. Display names are trimmed leaf names bounded to 240 UTF-16 code units; media types are bounded to 256; malformed UTF-16 and Unicode Control/Format runes are rejected, including supplementary-plane formatting characters. Opaque encrypted storage names are exactly 36-character non-empty GUID-N `.cna` identities and fail length validation before stem parsing/path construction. An exactly 128-input deterministic hostile corpus plus source-regression tests protects these rules.
+
+This does not alter `CNAT0001` framing or constitute an independent security audit. See `formats/ATTACHMENTS.md` and `verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md`.
