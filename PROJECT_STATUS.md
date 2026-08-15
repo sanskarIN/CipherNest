@@ -142,3 +142,18 @@ The ordered release/development plan is maintained in `docs/NEXT_STEPS.md`; veri
 - Complete migration/review of the remaining UI literals into Hindi/additional catalogs; the reviewed Hindi resource-backed catalog is implemented, but complete UI translation is not claimed.
 
 Deferred features are not represented in the UI as complete.
+
+## Final repository-side hardening pass — 2026-08-15
+
+Completed in source/tests:
+
+- fixed TOTP result-window overflow at `DateTimeOffset.MaxValue` and clear the owned normalization scratch buffer on all exits;
+- added a deterministic 128-case TOTP Base32 hostile corpus with unique theory case IDs so every intended malformed seed is executed;
+- centralized 100-tag/128-character item limits and bound CSV mapped-tag materialization before item construction;
+- require backup ZIP actual extracted output to exactly match declared uncompressed lengths while staying inside the shared 1 GiB aggregate budget;
+- fixed the checkpoint-discovered missing final newline and duplicate xUnit theory-ID condition;
+- reviewed the vault-record/envelope validation chain and preserved the existing compatibility-safe authenticated/bounded validation design.
+
+Corrected pre-documentation checkpoint `483428a0146e5e086a03c9356217139712d1ea1c`: **346 Unit + 98 Integration + 110 UI/source = 554/554 passed**, with zero failed/skipped, clean analyzer builds, and successful configured core formatting verification. This checkpoint becomes historical after documentation commits; exact final-head CI/CodeQL evidence is required before release-candidate claims.
+
+Still external/not proven by repository automation: physical-device security/lifecycle/biometric/clipboard/screenshot behavior, complete accessibility/localization/performance observation, historical release migration/backup compatibility, independent professional security review, signing/package provenance, and store privacy/policy/submission validation.
