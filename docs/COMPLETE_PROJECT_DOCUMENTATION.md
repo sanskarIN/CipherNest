@@ -161,6 +161,7 @@ CipherNest intentionally rejects extreme or malformed inputs before they can con
 | Attachment media type | 256 characters |
 | Backup archive | 1 GiB aggregate plaintext archive content |
 | Backup ZIP entries | 10,001 maximum (`vault.db` plus attachment slots) |
+| Backup header JSON | 16–16,384 bytes; maximum depth 16; exact version-2 root/KDF property sets |
 | Settings JSON | 64 KiB; actual reads use a 64 KiB + 1 sentinel boundary; maximum nesting depth 16 |
 | Passphrase input | 12–4,096 characters for crypto-bound passphrases |
 | TOTP formatted seed | 4,096 characters maximum before normalization |
@@ -184,7 +185,7 @@ Encrypted `.cnbak` backup is the preferred transfer/recovery path. Backups inclu
 
 The backup implementation:
 
-- validates container version, salt length, KDF bounds, and chunk metadata before Argon2 derivation;
+- validates the bounded strict version-2 header JSON (16..16,384 bytes, depth 16, exact root/KDF property sets, duplicate/unknown/missing/wrong-type rejection) before typed deserialization/resource checks and Argon2 derivation;
 - enforces a bounded plaintext archive and entry count;
 - rejects duplicate normalized ZIP paths and unsupported nested/unexpected paths;
 - checks attachment-entry sizes against the real encrypted attachment-container envelope;
