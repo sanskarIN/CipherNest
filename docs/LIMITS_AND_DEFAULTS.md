@@ -194,11 +194,12 @@ From `CsvTransferService`:
 |---|---:|
 | Columns | 256 |
 | Data rows | 100,000 |
+| Header name characters | 256 |
 | Field characters | 1,000,000 |
 | Aggregate characters in one row | 2,000,000 |
 | User-visible retained import warnings | 20 |
 
-Column enforcement applies to the final field at newline/EOF as well as comma-terminated fields. Header names must be non-empty and case-insensitively unique.
+Column enforcement applies to the final field at newline/EOF as well as comma-terminated fields. Header names must be non-empty, no longer than 256 characters, case-insensitively unique, and free of Unicode control/`Format` characters before they are exposed to import mapping UI. The dedicated header-name limit is intentionally stricter than the generic field limit because headers are mapping/display metadata rather than vault payload data.
 
 ## CSV export columns
 
@@ -218,97 +219,3 @@ ReviewAfterUtc
 ```
 
 Attachments are not included in plaintext CSV export. The current CSV surface is generic and does not claim dedicated TOTP/`otpauth://` interoperability.
-
-## Application preference defaults and normalization
-
-From `AppPreferences` and `AppPreferencesPolicy`:
-
-| Preference | Default | Normalized range/values |
-|---|---:|---|
-| Theme | System | System / Light / Dark |
-| Language | System | System / English / Hindi |
-| Lock timeout | 60 s | 5–3,600 s |
-| Lock on background | true | boolean |
-| Clipboard clear | 30 s | 5–300 s |
-| Screenshot protection | true | boolean/platform dependent |
-| Biometric unlock | false | boolean/platform/configuration dependent |
-| Reduced motion | false | boolean |
-| Larger interface | false | boolean |
-| Trash retention | 30 days | 1–365 days |
-| Require master after | 24 h | 1–168 h |
-| Backup reminder | 7 days | 1–365 days |
-| Review reminders | true | boolean |
-| Review reminder lead | 7 days | 0–365 days |
-| Generator passphrase mode | false | boolean |
-| Password length | 20 | 8–256 |
-| Passphrase word count | 8 | 6–16 |
-| Uppercase | true | boolean |
-| Lowercase | true | boolean |
-| Digits | true | boolean |
-| Symbols | true | boolean |
-| Exclude ambiguous | true | boolean |
-
-Hindi currently covers the reviewed resource-backed catalog; unmigrated UI literals may still appear in English.
-
-If password mode has uppercase/lowercase/digits/symbols all disabled after deserialization, normalization restores lowercase so password generation still has a valid character source. That repair is not required in passphrase mode because character groups are unused there.
-
-## Settings file resource bound
-
-The current JSON settings persistence path rejects/avoids replacing settings when the non-secret preferences file exceeds its 64 KiB safety budget. Malformed/unreadable non-secret settings fall back to normalized defaults; cancellation still propagates.
-
-## Trash and review timing
-
-- Trash retention range: 1–365 days; default 30.
-- Review reminder lead range: 0–365 days; default 7.
-- Backup reminder range: 1–365 days; default 7.
-- Periodic master-passphrase interval: 1–168 hours; default 24.
-
-## Failed interactive unlock delay
-
-The current client-side bounded schedule is:
-
-| Failed attempt count | Delay |
-|---:|---:|
-| 1–4 | none |
-| 5 | 5 s |
-| 6 | 10 s |
-| 7 | 20 s |
-| 8 | 40 s |
-| 9 | 80 s |
-| 10 | 160 s |
-| 11+ | 300 s cap |
-
-This does not protect a copied database from offline guessing.
-
-## Vault UI result paging
-
-The current vault screen incrementally renders matching local results in pages of 50 items. Search/filter/sort still operates locally over decrypted data while unlocked; this is a visual-tree responsiveness boundary, not a plaintext persistent index.
-
-## Generator passphrase word list
-
-- exactly 256 validated unique lowercase words;
-- requested word count: 6–16;
-- default: 8 words;
-- random selection uses `RandomNumberGenerator`;
-- each independent uniform selection from 256 words corresponds to approximately 8 bits of random-selection entropy before user editing.
-
-## Release/build defaults
-
-- Nullable analysis: enabled.
-- Warnings as errors: enabled.
-- Analyzer level: latest.
-- Code style enforced in build.
-- Deterministic managed build setting: enabled.
-- Funding link: enabled unless `CipherNestEnableFundingLink=false` is explicitly supplied to the MAUI build.
-
-## Review rule for changing a limit
-
-For a security/resource limit change, update together:
-
-1. implementation constant/policy;
-2. all validation/persistence paths that mirror it;
-3. unit/integration/source tests;
-4. `TEST_PLAN.md` and `RELEASE_CHECKLIST.md`;
-5. affected format/security/architecture docs;
-6. this reference;
-7. `CHANGELOG.md`, `PROJECT_STATUS.md`, and `what_changed.md` when appropriate.
