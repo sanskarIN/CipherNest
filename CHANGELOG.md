@@ -67,6 +67,7 @@ All notable changes are documented here following Semantic Versioning principles
 - `DocumentationCoverageSourceTests` and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` to guard required documentation files, canonical entry-point links, and explicit independent-audit disclaimers.
 
 ### Changed
+- CSV header parsing now enforces the dedicated 256-character header ceiling while streaming and classifies unsafe Unicode by rune/code point, including supplementary-plane `Format` characters.
 - CSV import now bounds each header name to 256 characters and rejects Unicode control/`Format` characters before headers reach mapping UI or mapped-column lookup.
 - Vault master/recovery unlock, secondary unlock, public lock, and full-vault deletion transitions are serialized through the service transition gate so a late-finishing unlock cannot publish a new session after an already-requested lock.
 - Full-vault deletion requires a live session key lease while waiting for the transition gate; an intervening lock/unlock invalidates that authorization rather than allowing deletion on stale re-authentication.

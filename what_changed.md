@@ -2438,3 +2438,11 @@ A finite source audit and automated test matrix cannot prove the mathematical ab
 - Added `docs/verification/CSV_IMPORT_HARDENING_2026_08_15.md`, linked it from the documentation hub, and made documentation source coverage require the record and its audit/current-head caveats.
 - Reconciled `docs/TEST_PLAN.md`, `docs/NEXT_STEPS.md`, `PROJECT_STATUS.md`, and `CHANGELOG.md` so the implemented deterministic CSV-header corpus is distinguished from broader parser-fuzzing work that remains open.
 - This continuation does not treat deterministic adversarial tests as exhaustive fuzzing or as an independent security audit. Platform file-provider behavior, UI accessibility/layout, packaging/signing, and independent professional review remain separate release gates.
+
+### CSV streaming/rune-aware follow-up
+
+- Tightened `CsvParser.ReadRowAsync` so header-preview and real-import header reads pass the dedicated 256-character field ceiling directly into the streaming parser; oversized quoted or unquoted headers now stop accumulating immediately after the limit is exceeded rather than first reaching the generic 1,000,000-character field ceiling.
+- Kept the post-parse 256-character header validation as defense in depth and centralized stable oversized-header/field messages.
+- Replaced UTF-16-code-unit Unicode-category inspection with `EnumerateRunes()` plus `Rune.GetUnicodeCategory(...)`, so supplementary-plane Unicode `Format` code points cannot bypass the misleading-header rejection rule.
+- Extended integration coverage with a supplementary-plane formatting-control case, an oversized quoted-header streaming-bound case, rune-aware accepted-corpus invariants, and a real unlocked-vault import whose multiple individually valid-sized fields exceed the aggregate 2,000,000-character row budget.
+- Extended source-regression and verification/format documentation so early streaming enforcement, rune-aware category classification, aggregate-row coverage, and the remaining non-audit/platform limitations are explicit.
