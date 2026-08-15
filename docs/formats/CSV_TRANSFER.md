@@ -34,6 +34,8 @@ Maximum retained warnings:   20
 
 The row limit is enforced by the streaming parser rather than materializing the whole CSV first. The dedicated header-name ceiling is intentionally much smaller than the general field ceiling because header strings are presented in the import-mapping UI and should never become an unbounded display/mapping surface.
 
+Header reads pass the 256-character ceiling directly into the streaming parser. Therefore an oversized header is rejected as soon as its in-progress field exceeds that ceiling instead of first allowing the generic 1,000,000-character field budget to accumulate. `ValidateHeader` repeats the length check as defense in depth after parsing.
+
 ## 4. CSV grammar supported by current parser
 
 The parser supports standard-style comma-separated fields with quoting:
@@ -73,7 +75,7 @@ Required rules:
 - no Unicode `Format` category characters in a header name, including invisible/bidirectional formatting controls;
 - case-insensitive uniqueness.
 
-Duplicate header names are rejected rather than silently choosing one occurrence. Control/format characters are rejected before headers can be surfaced in mapping UI so an imported file cannot use tabs, embedded line breaks, NULs, zero-width formatting marks, or bidirectional controls to create misleading column labels.
+Duplicate header names are rejected rather than silently choosing one occurrence. Control/format checks enumerate Unicode runes/code points rather than inspecting isolated UTF-16 code units, so supplementary-plane `Format` characters are covered as well as BMP controls and formatting marks. These checks occur before headers can be surfaced in mapping UI, preventing tabs, embedded line breaks, NULs, zero-width formatting marks, bidirectional controls, or supplementary formatting controls from creating misleading column labels.
 
 ## 7. Explicit import mapping
 
@@ -238,8 +240,8 @@ The parser rejects conditions such as:
 
 - empty CSV;
 - empty header names;
-- header names longer than 256 characters;
-- control or invisible Unicode formatting characters in header names;
+- header names longer than 256 characters, including quoted names, during streaming parse;
+- control or invisible Unicode formatting characters in header names, including supplementary-plane `Format` code points;
 - duplicate header names;
 - too many columns;
 - too many rows;
@@ -250,7 +252,7 @@ The parser rejects conditions such as:
 - characters after closing quote before delimiter/newline;
 - mapped column not present in header.
 
-Integration tests include fixed malformed examples plus a deterministic adversarial header corpus. The corpus is intentionally deterministic so a failing input is reproducible in CI rather than dependent on ambient randomness.
+Integration tests include fixed malformed examples plus a deterministic adversarial header corpus. The corpus is intentionally deterministic so a failing input is reproducible in CI rather than dependent on ambient randomness. Separate integration coverage drives a data row past the aggregate 2,000,000-character budget using multiple individually valid-sized fields so the aggregate row guard is exercised directly.
 
 ## 19. Privacy/diagnostic behavior
 
