@@ -1,5 +1,6 @@
 using System.Text;
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Validation;
 using CipherNest.Infrastructure.Crypto;
 using CipherNest.Infrastructure.Persistence;
 using CipherNest.Infrastructure.Services;
@@ -72,5 +73,49 @@ public sealed class CsvTransferTests : IAsyncLifetime
     {
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("Title\n\"abc\"x\n"));
         await Assert.ThrowsAsync<InvalidDataException>(() => _transfer.ImportCsvAsync(stream, new CsvImportMapping("Title")));
+    }
+
+    [Fact]
+    public async Task Import_AcceptsExactlyMaximumSupportedTagCount()
+    {
+        var tags = string.Join(';', Enumerable.Range(0, VaultItemValidator.MaximumTags).Select(index => $"tag{index}"));
+        var csv = $"Title,Tags\nExample,\"{tags}\"\n";
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+
+        var result = await _transfer.ImportCsvAsync(stream, new CsvImportMapping("Title", Tags: "Tags"));
+
+        Assert.Equal(1, result.Imported);
+        Assert.Equal(0, result.Skipped);
+        var item = Assert.Single(await _vault.GetItemsAsync());
+        Assert.Equal(VaultItemValidator.MaximumTags, item.Tags.Count);
+    }
+
+    [Fact]
+    public async Task Import_SkipsHostileHighCardinalityTagsWithoutSavingItem()
+    {
+        var tags = string.Join(';', Enumerable.Repeat("x", 10_000));
+        var csv = $"Title,Tags\nExample,\"{tags}\"\n";
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+
+        var result = await _transfer.ImportCsvAsync(stream, new CsvImportMapping("Title", Tags: "Tags"));
+
+        Assert.Equal(0, result.Imported);
+        Assert.Equal(1, result.Skipped);
+        Assert.Empty(await _vault.GetItemsAsync());
+        Assert.Contains(result.Warnings, warning => warning.Contains("tag", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Import_SkipsOversizedTagBeforeItemConstruction()
+    {
+        var oversizedTag = new string('x', VaultItemValidator.MaximumTagCharacters + 1);
+        var csv = $"Title,Tags\nExample,{oversizedTag}\n";
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+
+        var result = await _transfer.ImportCsvAsync(stream, new CsvImportMapping("Title", Tags: "Tags"));
+
+        Assert.Equal(0, result.Imported);
+        Assert.Equal(1, result.Skipped);
+        Assert.Empty(await _vault.GetItemsAsync());
     }
 }
