@@ -129,7 +129,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Test encrypted attachment streaming at multiple sizes including multi-megabyte inputs.
 - Verify encryption zeroes the reusable plaintext chunk buffer after each chunk and on exit where practical.
 - Verify encrypted attachment staging uses a unique `CreateNew` sibling path and final installation refuses overwrite; a forced destination collision must fail without replacing the existing `.cna` file.
-- Verify opaque storage names accept only GUID `.cna` names without separators before app-data file access.
+- Reconfirm opaque storage names accept only exact 36-character GUID-N `.cna` names without separators before app-data file access; verify the early length bound runs before stem parsing and that mismatched attachment IDs fail. Reconfirm persisted display/media metadata rejects malformed UTF-16 plus rune-aware Unicode Control/Format characters.
 - Test explicit plaintext export warning and unique temporary-file naming.
 - Verify temporary plaintext cleanup reports failure without exposing the path and does not overwrite a previous unresolved staging file.
 - Verify that cancellation and share-sheet failures do not leave application-managed plaintext longer than necessary.
