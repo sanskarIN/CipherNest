@@ -70,6 +70,7 @@ All notable changes are documented here following Semantic Versioning principles
 - `DocumentationCoverageSourceTests` and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` to guard required documentation files, canonical entry-point links, and explicit independent-audit disclaimers.
 
 ### Changed
+- Final repository-side hardening now clears the owned TOTP normalization scratch buffer, safely clamps TOTP validity at the maximum representable timestamp, bounds CSV mapped-tag materialization to the canonical 100-tag/128-character policy before item construction, and requires actual backup ZIP extraction bytes to exactly match declared uncompressed lengths within the shared 1 GiB budget. The final defect sweep also corrected a missing source final newline and an xUnit duplicate-theory-ID condition that had prevented one intended hostile TOTP surrogate case from executing independently.
 - Vault header reads now validate strict structure before typed deserialization/wrapped-key unwrap; current mutations self-validate and deliberately upgrade valid legacy v1 headers to v2, preventing an undocumented v1-plus-`secondary` hybrid shape.
 - CSV header parsing now enforces the dedicated 256-character header ceiling while streaming and classifies unsafe Unicode by rune/code point, including supplementary-plane `Format` characters.
 - CSV import now bounds each header name to 256 characters and rejects Unicode control/`Format` characters before headers reach mapping UI or mapped-column lookup.
