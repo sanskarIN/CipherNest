@@ -53,6 +53,25 @@ public sealed class VaultHeaderSafetySourceTests
         Assert.Contains("header with { Version = VaultHeaderJsonPolicy.CurrentVersion, Secondary = null }", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ReplacementDatabase_ValidatesStrictHeaderBeforeActiveFileMutation()
+    {
+        var source = File.ReadAllText(FindRepositoryFile("src", "CipherNest.Infrastructure", "Persistence", "SqliteVaultStore.cs"));
+        var replaceStart = source.IndexOf("public async Task ReplaceDatabaseAsync", StringComparison.Ordinal);
+        var replacementValidation = source.IndexOf("await ValidateReplacementDatabaseAsync(sourceDatabasePath", replaceStart, StringComparison.Ordinal);
+        var activeMutation = source.IndexOf("StageCurrentFileSet(recovery);", replacementValidation, StringComparison.Ordinal);
+        var resourceValidationStart = source.IndexOf("private static async Task ValidateStoredVaultResourceBoundsAsync", StringComparison.Ordinal);
+        var byteConsistency = source.IndexOf("Encoding.UTF8.GetByteCount(headerJson) != headerBytes", resourceValidationStart, StringComparison.Ordinal);
+        var strictPolicy = source.IndexOf("VaultHeaderJsonPolicy.Validate(headerJson);", byteConsistency, StringComparison.Ordinal);
+
+        Assert.True(replaceStart >= 0);
+        Assert.True(replacementValidation > replaceStart);
+        Assert.True(activeMutation > replacementValidation);
+        Assert.True(resourceValidationStart >= 0);
+        Assert.True(byteConsistency > resourceValidationStart);
+        Assert.True(strictPolicy > byteConsistency);
+    }
+
     private static string FindRepositoryFile(params string[] pathParts)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
