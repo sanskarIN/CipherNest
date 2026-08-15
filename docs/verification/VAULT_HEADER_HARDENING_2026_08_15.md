@@ -76,6 +76,18 @@ The source contract requires:
 
 Invalid structural headers must not reach wrapped-key unwrap.
 
+## Replacement-database pre-swap boundary
+
+Replacement databases are subject to the same vault-header trust boundary before CipherNest mutates the active database set. While the candidate SQLite database is still opened read-only, `ValidateStoredVaultResourceBoundsAsync(...)`:
+
+1. reads the persisted UTF-8 byte length and header text together;
+2. rejects lengths outside the supported 1..65,536-byte range;
+3. verifies the materialized UTF-8 byte count still matches SQLite's persisted byte count;
+4. applies `VaultHeaderJsonPolicy.Validate(headerJson)` to the candidate;
+5. continues with canonical item-ID and encrypted-record resource checks only after the header is valid.
+
+`ReplaceDatabaseAsync(...)` completes `ValidateReplacementDatabaseAsync(...)` before `StageCurrentFileSet(...)`. A bounded-but-schema-invalid candidate therefore fails before active DB/WAL/SHM staging or replacement. Valid historical version-1 candidate headers remain replacement-compatible.
+
 ## Writer self-validation and legacy upgrade
 
 All `VaultService` header writes now go through `SerializeHeader(...)`, which validates the freshly serialized JSON before persistence.
@@ -96,6 +108,8 @@ Current writes use version 2. Importantly, a legitimate version-1 vault remains 
 - exact 65,536-byte policy acceptance;
 - 65,537-byte policy rejection.
 
+The wrong-kind fixture remains syntactically valid JSON so it exercises the schema-kind branch rather than accidentally testing only the JSON tokenizer.
+
 ## Runtime integration coverage
 
 `VaultHeaderStrictValidationIntegrationTests` covers:
@@ -104,6 +118,13 @@ Current writes use version 2. Importantly, a legitimate version-1 vault remains 
 - deliberate v1-to-v2 upgrade when the master passphrase is changed;
 - a structurally valid synthetic v2 header reaching exactly one unwrap call;
 - an oversized persisted SQLite header failing as `VaultAuthenticationException` with zero unwrap calls.
+
+`ReplacementVaultHeaderValidationIntegrationTests` additionally covers:
+
+- a malformed-but-byte-bounded candidate header being rejected before active database mutation, with the active vault header preserved and the candidate left in place;
+- a valid historical version-1 candidate remaining compatible with replacement.
+
+Existing database-replacement recovery coverage now uses a genuinely supported vault header for its valid replacement fixture, so the test continues to verify installation/recovery-artifact cleanup without bypassing the hardened candidate contract.
 
 ## Deterministic adversarial corpus
 
@@ -125,7 +146,11 @@ This deterministic corpus is reproducible regression coverage. It is not exhaust
 - malformed structural/storage failures normalized through the authentication boundary;
 - writer self-validation;
 - explicit version-2 upgrade on master/secondary header mutations;
-- absence of direct `WriteHeaderAsync(JsonSerializer.Serialize(...))` bypasses.
+- absence of direct `WriteHeaderAsync(JsonSerializer.Serialize(...))` bypasses;
+- replacement candidate validation before `StageCurrentFileSet(...)`;
+- persisted candidate byte-count consistency before strict header-policy validation.
+
+Older storage/version source guards were updated to assert the centralized `VaultHeaderJsonPolicy` and `VaultStorageLimits` contract rather than obsolete inline constants in `VaultService`.
 
 ## Compatibility rule
 
