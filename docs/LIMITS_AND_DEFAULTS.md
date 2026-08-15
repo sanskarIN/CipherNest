@@ -246,3 +246,13 @@ ReviewAfterUtc
 ```
 
 Attachments are not included in plaintext CSV export. The current CSV surface is generic and does not claim dedicated TOTP/`otpauth://` interoperability.
+
+## Final parser/extraction bounds synchronization — 2026-08-15
+
+The final repository-side hardening reuses and enforces these existing limits earlier at untrusted-input boundaries:
+
+- Tags: at most **100 per vault item** and **128 UTF-16 code units per tag**. CSV mapped Tags parsing enforces these bounds before `VaultItem` construction and materializes at most 100 accepted tag strings.
+- TOTP Base32: normalized seed remains **16..1,024 characters**, formatted input remains capped at **4,096 characters**, and the final validity timestamp is clamped at `DateTimeOffset.MaxValue` when the next period boundary is not representable.
+- Backup ZIP restore: aggregate uncompressed archive content remains capped at **1 GiB** and entry count at `VaultStorageLimits.MaximumAttachmentCountTotal + 1`; actual extracted bytes must now exactly equal each entry's declared uncompressed length, using a reusable **128 KiB** extraction buffer.
+
+These are resource/safety ceilings, not recommended target sizes for ordinary data.
