@@ -568,3 +568,15 @@ Attachment metadata/storage-name parser regression coverage now includes `Attach
 The deterministic hostile corpus contains exactly 128 inputs across display names, media types, and opaque storage names. It covers ASCII controls, BMP/supplementary Unicode Format characters, malformed isolated UTF-16 surrogates, path separators, dot/whitespace forms, oversized metadata, wrong-length storage names, invalid GUID hex, wrong extensions, and fixed-length separator-bearing names.
 
 This corpus is deterministic regression coverage, not coverage-guided fuzzing or an independent security audit. Device/filesystem validation is still required for OS-specific path, share/export, reparse/link, and cleanup behavior.
+
+## Final repository-side defect-sweep coverage — 2026-08-15
+
+The final source-side hardening adds focused regression coverage for three remaining input/resource boundaries:
+
+1. **TOTP Base32 and time boundary** — RFC vectors remain intact; `DateTimeOffset.MaxValue` no longer overflows result construction; normalization scratch storage is cleared; a deterministic 128-case hostile Base32 corpus is fully executable with unique theory case IDs; source tests keep validation/decoding before HMAC work.
+2. **CSV mapped tags** — exact 100-tag input is accepted, while high-cardinality and oversized-tag rows are rejected before item construction; source tests prevent reintroduction of whole-field `string.Split(...)` materialization.
+3. **Backup ZIP extraction** — unit tests cover exact-length extraction, over-declared expansion rejection before the extra chunk is written, truncated output, and aggregate-budget rejection before source reads; source tests require the exact bounded-copy path.
+
+The first hosted checkpoint also caught a repository-formatting newline violation and an xUnit duplicate-theory-ID diagnostic that caused one intended surrogate corpus case not to execute independently. Both were corrected before the documentation freeze. The corrected checkpoint at `483428a0146e5e086a03c9356217139712d1ea1c` completed 346 Unit, 98 Integration, and 110 UI/source tests: **554 passed, 0 failed, 0 skipped**, with analyzer builds and configured core formatting checks successful.
+
+That checkpoint is historical once later documentation commits exist; release evidence must always be taken from the exact final candidate head.
