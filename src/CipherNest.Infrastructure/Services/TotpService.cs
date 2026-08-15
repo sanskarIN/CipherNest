@@ -9,6 +9,8 @@ namespace CipherNest.Infrastructure.Services;
 
 public sealed class TotpService : ITotpService
 {
+    private static readonly long MaximumUnixTimeSeconds = DateTimeOffset.MaxValue.ToUnixTimeSeconds();
+
     public TotpCodeResult Generate(string base32Secret, TotpAlgorithm algorithm, int digits, int periodSeconds, DateTimeOffset utcNow)
     {
         TotpPolicy.ValidateSettings(algorithm, digits, periodSeconds);
@@ -45,7 +47,9 @@ public sealed class TotpService : ITotpService
                 var code = (binary % modulus).ToString($"D{digits}", System.Globalization.CultureInfo.InvariantCulture);
                 var elapsed = (int)(unixSeconds % periodSeconds);
                 var remaining = periodSeconds - elapsed;
-                var validUntil = DateTimeOffset.FromUnixTimeSeconds(unixSeconds + remaining);
+                var validUntil = unixSeconds > MaximumUnixTimeSeconds - remaining
+                    ? DateTimeOffset.MaxValue
+                    : DateTimeOffset.FromUnixTimeSeconds(unixSeconds + remaining);
 
                 return new TotpCodeResult(code, remaining, validUntil);
             }
