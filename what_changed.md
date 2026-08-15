@@ -2461,3 +2461,17 @@ A finite source audit and automated test matrix cannot prove the mathematical ab
 - Added `docs/verification/SETTINGS_JSON_HARDENING_2026_08_15.md`, linked it from the documentation hub, required it through `DocumentationCoverageSourceTests`, and synchronized `docs/LIMITS_AND_DEFAULTS.md` with the new parser/resource contract.
 - Reconciled the testing guide, test plan, next-steps roadmap, project status, and changelog so the implemented deterministic settings corpus is no longer listed as wholly outstanding parser-fuzzing work.
 - This remains deterministic adversarial regression coverage rather than exhaustive coverage-guided fuzzing or an independent security audit. Broader parser fuzzing, device behavior, signing/store validation, and independent review remain separate gates.
+
+### Encrypted backup header schema and adversarial hardening
+
+- Centralized encrypted-backup header framing limits in `BackupFormatPolicy`: 16-byte minimum, 16,384-byte maximum, and explicit JSON depth ceiling 16.
+- Added `BackupHeaderJsonPolicy` to parse only bounded header bytes with trailing commas/comments disabled and to require the exact case-sensitive version-2 root properties (`Version`, `Salt`, `Kdf`, `ChunkSize`, `CreatedUtc`) and exact KDF properties (`MemoryKiB`, `Iterations`, `Parallelism`).
+- Duplicate, unknown, missing, case-variant, and wrong-JSON-type root/KDF metadata now fails before typed deserialization and before any backup key derivation.
+- `EncryptedBackupService.RestoreEncryptedAsync` now validates declared header length before allocation/read, validates strict header structure before `BackupHeader` deserialization, then validates version/salt/KDF/chunk resources before `_crypto.DeriveKey(...)`.
+- Export now self-validates its freshly serialized version-2 header before writing so a future internal record change cannot silently emit an incompatible same-version schema.
+- Added unit coverage for framing boundaries, strict property allowlists/required sets, duplicate metadata, wrong JSON kinds, and over-depth input.
+- Extended restore integration coverage for duplicate/unknown/deep headers, exact 16,384-byte accepted JSON-whitespace padding, 16,385-byte rejection, truncated/malformed input, and zero-derive behavior for invalid metadata.
+- Added `BackupHeaderAdversarialIntegrationTests` with a fixed-seed corpus of 90 hostile headers spanning malformed roots, missing/type-invalid fields, invalid Base64, hostile KDF values, duplicate/unknown properties, randomized unexpected metadata, and invalid UTF-8/random byte sequences; every member must fail as invalid data with zero key-derivation calls.
+- Strengthened `BackupFormatSourceTests` so ordering is anchored inside `RestoreEncryptedAsync` and requires strict schema validation before deserialization/resource validation/derivation.
+- Added `docs/verification/BACKUP_HEADER_HARDENING_2026_08_15.md` and synchronized the backup format, limits, cryptographic design, threat model, testing guide/plan, recovery runbook, roadmap, consolidated documentation, project status, changelog, and documentation hub.
+- The deterministic corpus is regression coverage, not exhaustive coverage-guided fuzzing or an independent professional security audit. Broader backup ZIP/archive fuzzing, target-device behavior, release signing/store validation, and independent review remain separate gates.
