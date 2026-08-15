@@ -103,7 +103,7 @@ It also verifies that a structurally valid header padded with JSON whitespace to
 
 ## Deterministic adversarial corpus
 
-`BackupHeaderAdversarialIntegrationTests` adds a fixed-seed corpus of at least 80 hostile header inputs. It combines:
+`BackupHeaderAdversarialIntegrationTests` currently builds a fixed-seed corpus of exactly 90 hostile header inputs, and therefore retains the documented requirement of at least 80 hostile header inputs. It combines:
 
 - empty/object/array/null roots;
 - missing required metadata;
@@ -120,7 +120,7 @@ This corpus is intentionally deterministic so failures are reproducible. It is a
 
 ## Source-regression coverage
 
-`BackupFormatSourceTests` requires source ordering that keeps:
+`BackupFormatSourceTests` anchors its ordering assertion inside `RestoreEncryptedAsync` and requires source ordering that keeps:
 
 1. declared header-length validation before header allocation/read;
 2. strict `BackupHeaderJsonPolicy.Validate(headerJson)` before typed deserialization;
@@ -168,5 +168,7 @@ For an exact immutable candidate containing this change, repository evidence sho
 - iOS simulator Release build;
 - Mac Catalyst Release build;
 - CodeQL core/application build and analysis.
+
+The candidate must be frozen after the final direct commit while these gates execute. Any source, test, workflow, or documentation commit after that point creates a new candidate and requires fresh exact-head evidence.
 
 Historical green runs from earlier commits do not prove a later candidate. Hosted evidence is valid only for the exact immutable head that executed those gates.
