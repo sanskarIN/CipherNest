@@ -1,0 +1,90 @@
+name: Final repository documentation reconciliation
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: final-repository-docs-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Configure git
+        run: |
+          git config user.name "Sanskar"
+          git config user.email "sanskarin@outlook.in"
+      - name: Reconcile final documentation
+        run: |
+          python3 build/scripts/final-repository-docs-reconcile.py
+          git diff --check
+      - name: Commit documentation hub
+        run: |
+          git add docs/README.md
+          git commit -m "docs(index): link final repository hardening record"
+      - name: Commit TOTP documentation
+        run: |
+          git add docs/security/TOTP.md
+          git commit -m "docs(totp): document final parser and timestamp hardening"
+      - name: Commit CSV documentation
+        run: |
+          git add docs/formats/CSV_TRANSFER.md
+          git commit -m "docs(csv): document bounded mapped-tag parsing"
+      - name: Commit backup documentation
+        run: |
+          git add docs/formats/ENCRYPTED_BACKUP.md
+          git commit -m "docs(backup): document exact extraction accounting"
+      - name: Commit limits documentation
+        run: |
+          git add docs/LIMITS_AND_DEFAULTS.md
+          git commit -m "docs(limits): reconcile final parser resource bounds"
+      - name: Commit testing guide
+        run: |
+          git add docs/TESTING_GUIDE.md
+          git commit -m "docs(testing): record final defect-sweep coverage"
+      - name: Commit test plan
+        run: |
+          git add docs/TEST_PLAN.md
+          git commit -m "docs(test-plan): require final parser extraction regressions"
+      - name: Commit roadmap
+        run: |
+          git add docs/NEXT_STEPS.md
+          git commit -m "docs(roadmap): reconcile final repository-side closure"
+      - name: Commit complete documentation
+        run: |
+          git add docs/COMPLETE_PROJECT_DOCUMENTATION.md
+          git commit -m "docs(complete): synchronize final hardening contract"
+      - name: Commit project status
+        run: |
+          git add PROJECT_STATUS.md
+          git commit -m "docs(status): record final repository-side fixes"
+      - name: Commit changelog
+        run: |
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): record final hardening fixes"
+      - name: Commit implementation ledger
+        run: |
+          git add what_changed.md
+          git commit -m "docs(ledger): record final defect sweep"
+      - name: Commit documentation guards
+        run: |
+          git add tests/CipherNest.UiTests/DocumentationCoverageSourceTests.cs
+          git commit -m "test(docs): require final hardening verification"
+      - name: Remove helper
+        run: |
+          rm build/scripts/final-repository-docs-reconcile.py
+          rm .github/workflows/final-repository-docs-reconcile.yml
+          git add -A
+          git commit -m "build(final): remove documentation reconciliation helper"
+      - name: Push reconciliation
+        run: git push origin HEAD:main
