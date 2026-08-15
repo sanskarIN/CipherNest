@@ -194,7 +194,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Review backup destination canonicalization, duplicate ZIP handling, attachment-container size derivation, rollback cancellation semantics, and DB/WAL/SHM partial recovery.
 - Review memory-lifetime assumptions around managed strings and decrypted ViewModels; source clears bound credential properties earlier and zeroes several owned arrays, but managed string copies cannot be deterministically erased.
 - Review the SHA-256 clipboard-fingerprint approach, OS clipboard/history behavior, and plaintext export/share-sheet data remnants.
-- Extend parser fuzzing beyond the current deterministic CSV-header, settings-JSON, backup-header, vault-header, and attachment-metadata/storage-name adversarial corpora to CSV row/import semantics, backup ZIP/archive semantics beyond header metadata, TOTP Base32 input, and vault-record/envelope semantics.
+- Extend coverage-guided/deeper parser fuzzing beyond the current deterministic CSV-header, settings-JSON, backup-header, vault-header, attachment-metadata/storage-name, and **TOTP Base32** hostile corpora. The final repository pass also bounds mapped CSV tag materialization and exact backup ZIP extraction bytes; broader remaining fuzz targets include other CSV row/import semantics, ZIP/archive structures beyond the current path/count/size/exact-copy checks, and vault-record/envelope semantics.
 - Independently review the local TOTP implementation against RFC 6238/HOTP truncation rules, Base32 normalization, seed memory lifetime, same-vault second-factor tradeoffs, clock assumptions, and clipboard exposure.
 - Review rollback/downgrade behavior for future crypto/database/vault-header format versions.
 - Review dependency/supply-chain pinning and release provenance.
@@ -242,3 +242,9 @@ Each one changes the attack surface materially and should receive its own archit
 11. Produce signed/notarized release-candidate packages in protected environments.
 12. Obtain independent security review before stronger marketing claims.
 13. Tag/release only after every applicable release-checklist gate has evidence.
+
+## Final repository-side closure status — 2026-08-15
+
+The final repository pass completed the remaining concrete source defects found in TOTP Base32/time handling, CSV mapped-tag materialization, and backup ZIP actual-byte extraction accounting. The corrected pre-freeze checkpoint executed **554/554** tests with clean analyzer builds and formatting. The exact release candidate must still rerun the full configured Windows/Android/Apple CI and CodeQL gates after the documentation freeze.
+
+What remains is intentionally not represented as ordinary repository implementation debt that can be declared complete from hosted compilation alone: target-device behavior, accessibility/localization/performance observation, historical cross-version backup/migration fixtures, independent professional security review, release dependency/secret scanning evidence, signing/provenance, packaging, and store privacy/policy/submission work require the corresponding external environments or reviewers.
