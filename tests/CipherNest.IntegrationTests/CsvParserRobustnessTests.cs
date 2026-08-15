@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using CipherNest.Application.Abstractions;
 using CipherNest.Infrastructure.Crypto;
 using CipherNest.Infrastructure.Persistence;
 using CipherNest.Infrastructure.Services;
@@ -31,6 +32,7 @@ public sealed class CsvParserRobustnessTests : IDisposable
     [InlineData("Title,\tSecret")]
     [InlineData("Title,\u200BSecret")]
     [InlineData("Title,\u202ESecret")]
+    [InlineData("Title,\U000E0001Secret")]
     [InlineData("\"Title\ncontinued\",Secret")]
     public async Task ReadHeaders_RejectsControlAndInvisibleFormattingCharacters(string csv)
     {
@@ -47,6 +49,18 @@ public sealed class CsvParserRobustnessTests : IDisposable
     {
         var service = CreateService();
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(new string('a', 257)), writable: false);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
+
+        Assert.Equal("CSV header contains an oversized column name.", error.Message);
+    }
+
+    [Fact]
+    public async Task ReadHeaders_RejectsQuotedHeaderNameBeyondDedicatedLimitDuringParsing()
+    {
+        var service = CreateService();
+        var csv = $"\"{new string('a', 257)}\",Secret";
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv), writable: false);
 
         var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
 
@@ -71,7 +85,7 @@ public sealed class CsvParserRobustnessTests : IDisposable
         var service = CreateService();
         var random = new Random(0xC1F3);
         char[] alphabet = ['A', 'b', '0', ' ', ',', '"', '\r', '\n', '\t', '\0', '-', '_', 'é', '中', '\u200B', '\u202E'];
-        var corpus = new List<string> { "Title,Secret", "\0" };
+        var corpus = new List<string> { "Title,Secret", "\0", "Title,\U000E0001Secret" };
 
         for (var caseIndex = 0; caseIndex < 256; caseIndex++)
         {
@@ -96,7 +110,11 @@ public sealed class CsvParserRobustnessTests : IDisposable
                 {
                     Assert.False(string.IsNullOrWhiteSpace(header));
                     Assert.InRange(header.Length, 1, 256);
-                    Assert.False(header.Any(static ch => char.IsControl(ch) || char.GetUnicodeCategory(ch) == UnicodeCategory.Format));
+                    foreach (var rune in header.EnumerateRunes())
+                    {
+                        var category = Rune.GetUnicodeCategory(rune);
+                        Assert.False(category is UnicodeCategory.Control or UnicodeCategory.Format);
+                    }
                 });
             }
             catch (InvalidDataException)
@@ -179,15 +197,19 @@ public sealed class CsvParserRobustnessTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadHeaders_RejectsAggregateRowBeyondSafetyBudget()
+    public async Task Import_RejectsAggregateDataRowBeyondSafetyBudget()
     {
-        var service = CreateService();
-        var first = new string('a', 1_000_000);
-        var second = new string('b', 1_000_000);
-        var header = $"{first},{second},x";
-        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(header), writable: false);
+        var clock = new SystemClock();
+        using var vault = new VaultService(new SqliteVaultStore(Path.Combine(_directory, $"{Guid.NewGuid():N}.db")), new CryptoService(), clock);
+        await vault.CreateAsync("Very Strong Master Passphrase 2026!", createRecoveryKey: false);
+        var service = new CsvTransferService(vault, clock);
+        var field = new string('a', 700_000);
+        var csv = $"Title,A,B,C\nExample,{field},{field},{field}";
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv), writable: false);
 
-        await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.ImportCsvAsync(stream, new CsvImportMapping("Title")));
+
+        Assert.Equal("CSV row exceeds the aggregate character safety limit.", error.Message);
     }
 
     [Fact]
