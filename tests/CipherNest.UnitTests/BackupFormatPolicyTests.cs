@@ -17,6 +17,19 @@ public sealed class BackupFormatPolicyTests
     }
 
     [Fact]
+    public void HeaderLengthAndDepthBounds_AreExplicit()
+    {
+        BackupFormatPolicy.ValidateHeaderLength(BackupFormatPolicy.MinimumHeaderBytes);
+        BackupFormatPolicy.ValidateHeaderLength(BackupFormatPolicy.MaximumHeaderBytes);
+
+        Assert.Equal(16, BackupFormatPolicy.MinimumHeaderBytes);
+        Assert.Equal(16_384, BackupFormatPolicy.MaximumHeaderBytes);
+        Assert.Equal(16, BackupFormatPolicy.MaximumHeaderJsonDepth);
+        Assert.Throws<InvalidDataException>(() => BackupFormatPolicy.ValidateHeaderLength(BackupFormatPolicy.MinimumHeaderBytes - 1));
+        Assert.Throws<InvalidDataException>(() => BackupFormatPolicy.ValidateHeaderLength(BackupFormatPolicy.MaximumHeaderBytes + 1));
+    }
+
+    [Fact]
     public void EncryptedContainerCeiling_CoversMaximumArchiveAndFraming()
     {
         var minimumExpected = BackupArchivePolicy.MaximumArchiveBytes +
