@@ -1,0 +1,58 @@
+name: Backup Header Hardening Reconcile
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Reconcile backup header hardening
+        run: python build/scripts/reconcile_backup_header_hardening_20260815.py
+      - name: Verify whitespace
+        run: git diff --check
+      - name: Commit focused reconciliation changes
+        run: |
+          git config user.name "Sanskar"
+          git config user.email "sanskarin@outlook.in"
+          git add tests/CipherNest.UiTests/BackupFormatSourceTests.cs
+          git commit -m "test(backup): anchor restore schema ordering"
+          git add tests/CipherNest.IntegrationTests/BackupHeaderValidationIntegrationTests.cs
+          git commit -m "test(backup): avoid culture-sensitive timestamp parsing"
+          git add docs/README.md
+          git commit -m "docs(index): link backup header verification"
+          git add docs/formats/ENCRYPTED_BACKUP.md
+          git commit -m "docs(backup): document strict header schema"
+          git add docs/LIMITS_AND_DEFAULTS.md
+          git commit -m "docs(limits): publish backup header parser bounds"
+          git add docs/TEST_PLAN.md
+          git commit -m "docs(test-plan): require strict backup headers"
+          git add docs/TESTING_GUIDE.md
+          git commit -m "docs(testing): cover backup header adversarial cases"
+          git add docs/NEXT_STEPS.md
+          git commit -m "docs(roadmap): reconcile backup header fuzzing"
+          git add PROJECT_STATUS.md
+          git commit -m "docs(status): record backup header hardening"
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): record backup header hardening"
+          git add docs/COMPLETE_PROJECT_DOCUMENTATION.md
+          git commit -m "docs(complete): synchronize backup header contract"
+          git add docs/operations/BACKUP_RECOVERY_RUNBOOK.md
+          git commit -m "docs(runbook): add strict backup preflight checks"
+          git add docs/security/CRYPTOGRAPHIC_DESIGN.md
+          git commit -m "docs(crypto): record backup header trust boundary"
+          git add docs/security/THREAT_MODEL.md
+          git commit -m "docs(threat): model strict backup header parsing"
+          git add what_changed.md
+          git commit -m "docs(ledger): record backup header continuation"
+          git rm build/scripts/reconcile_backup_header_hardening_20260815.py .github/workflows/backup-header-reconcile-2026-08-15.yml
+          git commit -m "chore: remove backup header reconciliation helper"
+          git push origin main
