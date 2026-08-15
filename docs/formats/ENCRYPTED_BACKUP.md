@@ -377,3 +377,11 @@ Backup format changes require coverage for:
 - cross-platform backup compatibility where expected.
 
 See `../TEST_PLAN.md` and `../operations/BACKUP_RECOVERY_RUNBOOK.md`.
+
+## Final ZIP extraction accounting hardening — 2026-08-15
+
+Restore no longer treats `ZipArchiveEntry.Length` as sufficient proof of extraction cost. `BackupArchivePolicy.CopyEntryExactlyAsync(...)` validates the declared entry length against the remaining **1 GiB aggregate archive budget before reading**, then streams through a reusable 128 KiB buffer and independently counts actual decompressed output.
+
+The copy rejects an input chunk before writing it if the chunk would make actual output exceed the declared uncompressed length. End-of-entry is accepted only when the actual copied byte count exactly equals the declared length. A shorter stream is rejected as truncated/inconsistent, and aggregate accounting remains overflow-safe through the shared archive policy.
+
+This closes the specific declared-metadata-versus-actual-output accounting gap while preserving the current encrypted backup format and ZIP path/entry-count/attachment-container policies. It is deterministic resource-bound hardening, not a claim of exhaustive ZIP fuzzing or protection against every runtime/decompressor defect.
