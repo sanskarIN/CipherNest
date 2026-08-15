@@ -1,0 +1,62 @@
+name: Vault Header Hardening Reconcile
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Reconcile vault-header hardening documentation
+        run: python build/scripts/reconcile_vault_header_hardening_20260815.py
+      - name: Verify whitespace
+        run: git diff --check
+      - name: Commit focused reconciliation changes
+        run: |
+          git config user.name "Sanskar"
+          git config user.email "sanskarin@outlook.in"
+          git add docs/README.md
+          git commit -m "docs(index): link vault header contracts"
+          git add docs/LIMITS_AND_DEFAULTS.md
+          git commit -m "docs(limits): publish strict vault header bounds"
+          git add docs/architecture/DATABASE.md
+          git commit -m "docs(database): document vault header pre-swap validation"
+          git add docs/security/CRYPTOGRAPHIC_DESIGN.md
+          git commit -m "docs(crypto): define strict vault header trust boundary"
+          git add docs/security/THREAT_MODEL.md
+          git commit -m "docs(threat): model hostile vault header input"
+          git add docs/architecture/DATA_FLOW.md
+          git commit -m "docs(flow): trace strict vault header validation"
+          git add docs/TEST_PLAN.md
+          git commit -m "docs(test-plan): require vault header adversarial coverage"
+          git add docs/TESTING_GUIDE.md
+          git commit -m "docs(testing): add vault header compatibility matrix"
+          git add docs/NEXT_STEPS.md
+          git commit -m "docs(roadmap): reconcile vault header fuzzing"
+          git add docs/RELEASE_CHECKLIST.md
+          git commit -m "docs(release): gate strict vault header validation"
+          git add docs/operations/BACKUP_RECOVERY_RUNBOOK.md
+          git commit -m "docs(runbook): require restored vault header validation"
+          git add docs/COMPLETE_PROJECT_DOCUMENTATION.md
+          git commit -m "docs(complete): synchronize vault header contract"
+          git add PROJECT_STATUS.md
+          git commit -m "docs(status): record vault header hardening"
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): record vault header hardening"
+          git add docs/formats/VAULT_HEADER.md
+          git commit -m "docs(vault): add replacement validation boundary"
+          git add tests/CipherNest.UiTests/DocumentationCoverageSourceTests.cs
+          git commit -m "test(docs): require vault header contracts"
+          git add what_changed.md
+          git commit -m "docs(ledger): record vault header continuation"
+          git rm build/scripts/reconcile_vault_header_hardening_20260815.py .github/workflows/vault-header-reconcile-2026-08-15.yml
+          git commit -m "chore(vault): remove reconciliation helper"
+          git push origin main
