@@ -23,10 +23,14 @@ public sealed class VaultDeletionOrderingSourceTests
     [Fact]
     public void VaultHeader_RejectsUnsupportedVersions()
     {
-        var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "VaultService.cs"));
-        Assert.Contains("MinimumSupportedHeaderVersion = 1", source, StringComparison.Ordinal);
-        Assert.Contains("CurrentHeaderVersion = 2", source, StringComparison.Ordinal);
-        Assert.Contains("header.Version is < MinimumSupportedHeaderVersion or > CurrentHeaderVersion", source, StringComparison.Ordinal);
+        var service = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "VaultService.cs"));
+        var policy = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "VaultHeaderJsonPolicy.cs"));
+
+        Assert.Contains("public const int MinimumSupportedVersion = 1;", policy, StringComparison.Ordinal);
+        Assert.Contains("public const int CurrentVersion = 2;", policy, StringComparison.Ordinal);
+        Assert.Contains("version is < MinimumSupportedVersion or > CurrentVersion", policy, StringComparison.Ordinal);
+        Assert.Contains("header.Version is < VaultHeaderJsonPolicy.MinimumSupportedVersion or > VaultHeaderJsonPolicy.CurrentVersion", service, StringComparison.Ordinal);
+        Assert.Contains("VaultHeaderJsonPolicy.Validate(headerJson);", service, StringComparison.Ordinal);
     }
 
     private static string PathAt(params string[] segments)
