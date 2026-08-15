@@ -120,3 +120,9 @@ A TOTP seed is a long-lived authentication secret and a generated code is short-
 The implementation partially mitigates accidental exposure with bounded seed parsing, local-only HMAC generation, temporary byte-buffer clearing where practical, protected-item re-authentication, explicit refresh/copy actions, privacy-safe diagnostics, and the existing conditional timed clipboard policy. It does not defend against a compromised OS, process-memory inspection while unlocked, screen capture outside supported controls, clipboard/history capture, a materially wrong device clock, provider recovery bypass, or a user deliberately exporting/copying a seed.
 
 QR/`otpauth://` parsing and provider/autofill enrollment remain out of scope until separately threat-modeled.
+
+### Attachment metadata spoofing/parser boundary — 2026-08-15
+
+Attachment display/media metadata is attacker-controlled after database/file tampering even though valid records are authenticated. The application now rejects malformed UTF-16 plus Unicode Control/Format runes, including supplementary-plane formatting characters, before treating decrypted attachment metadata as valid. Stored display names must be trimmed leaf names; opaque encrypted filenames are exact GUID-N `.cna` identities and are length-bounded before stem parsing/path construction.
+
+These checks reduce parser/resource and invisible-directional-metadata risk; they do not make arbitrary filesystem/display behavior trustworthy on a compromised OS and do not replace independent review or target-device testing.
