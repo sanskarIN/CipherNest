@@ -300,3 +300,9 @@ These failures must remain fixed/privacy-safe at user-facing surfaces; raw decry
 After successful deserialization, item strings/objects—including a TOTP seed—exist in managed process memory while the vault is unlocked/using them. Clearing ViewModels/references reduces lifetime but cannot guarantee deterministic erasure of immutable .NET strings or GC/runtime copies.
 
 See `../security/DATA_LIFECYCLE.md` and `../security/TOTP.md`.
+
+## Attachment metadata validation addendum — 2026-08-15
+
+`AttachmentReference` values inside decrypted item JSON are validated before records leave the infrastructure boundary. Display names and media types now reuse `AttachmentImportPolicy` persisted-metadata predicates: outer whitespace/non-leaf display forms, malformed UTF-16, and Unicode Control/Format runes are rejected. Opaque storage names remain bound to their attachment IDs and use the exact 36-character GUID-N `.cna` form.
+
+The encrypted vault-record JSON format itself is unchanged by this policy hardening. Existing correctly normalized metadata remains compatible; newly rejected malformed/invisible-format metadata is treated as invalid decrypted record content.
