@@ -59,6 +59,7 @@ These format documents are implementation documentation, not promises of permane
 - [`verification/POST_BASELINE_CHECKLIST_2026_08_13.md`](verification/POST_BASELINE_CHECKLIST_2026_08_13.md) — rerun checklist for every post-baseline release candidate.
 - [`verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md`](verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md) — repository-side scope and gate for the complete-documentation consolidation, including the required current-head rerun and external validation limits.
 - [`verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md`](verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md) — exact current-head source/test/platform/CodeQL contract for local TOTP plus the reviewed Hindi resource-backed catalog.
+- [`verification/CSV_IMPORT_HARDENING_2026_08_15.md`](verification/CSV_IMPORT_HARDENING_2026_08_15.md) — source/test/current-head verification contract for bounded, control-safe CSV header metadata and deterministic adversarial parser coverage.
 - [`TEST_PLAN.md`](TEST_PLAN.md) — complete automated/manual release test matrix.
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized, how to add tests, what source tests prove, and what still requires devices.
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
