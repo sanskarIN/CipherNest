@@ -44,6 +44,7 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "POST_BASELINE_CHECKLIST_2026_08_13.md"],
         ["docs", "verification", "DOCUMENTATION_CONSOLIDATION_2026_08_14.md"],
         ["docs", "verification", "TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md"],
+        ["docs", "verification", "CSV_IMPORT_HARDENING_2026_08_15.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -126,6 +127,7 @@ public sealed class DocumentationCoverageSourceTests
                      "verification/POST_BASELINE_CHECKLIST_2026_08_13.md",
                      "verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md",
                      "verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md",
+                     "verification/CSV_IMPORT_HARDENING_2026_08_15.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
@@ -156,6 +158,7 @@ public sealed class DocumentationCoverageSourceTests
         var faq = File.ReadAllText(PathAt("docs", "FAQ.md"));
         var verification = File.ReadAllText(PathAt("docs", "verification", "DOCUMENTATION_CONSOLIDATION_2026_08_14.md"));
         var totpVerification = File.ReadAllText(PathAt("docs", "verification", "TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md"));
+        var csvVerification = File.ReadAllText(PathAt("docs", "verification", "CSV_IMPORT_HARDENING_2026_08_15.md"));
 
         Assert.Contains("not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cannot be deterministically erased", complete, StringComparison.OrdinalIgnoreCase);
@@ -167,6 +170,9 @@ public sealed class DocumentationCoverageSourceTests
         Assert.Contains("exact current-head candidate", totpVerification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("does not provide cryptographic factor separation", totpVerification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("does not claim every remaining UI literal is translated", totpVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("exact final `main` head", csvVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("deterministic adversarial corpus", csvVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Independent professional security review remains outstanding", csvVerification, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string PathAt(params string[] segments)
