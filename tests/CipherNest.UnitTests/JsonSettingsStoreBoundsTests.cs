@@ -42,6 +42,21 @@ public sealed class JsonSettingsStoreBoundsTests : IDisposable
     }
 
     [Fact]
+    public async Task Utf8Bom_RemainsReadableThroughBoundedBuffer()
+    {
+        var preamble = Encoding.UTF8.GetPreamble();
+        var json = Encoding.UTF8.GetBytes("{\"theme\":2}");
+        var bytes = new byte[preamble.Length + json.Length];
+        preamble.CopyTo(bytes, 0);
+        json.CopyTo(bytes, preamble.Length);
+        await File.WriteAllBytesAsync(_path, bytes);
+
+        var loaded = await new JsonSettingsStore(_path).LoadAsync();
+
+        Assert.Equal(AppThemePreference.Dark, loaded.Theme);
+    }
+
+    [Fact]
     public async Task InvalidUtf8_FallsBackToDefaults()
     {
         await File.WriteAllBytesAsync(_path, [(byte)'{', (byte)'\"', (byte)'x', (byte)'\"', (byte)':', 0xC3, (byte)'}']);
