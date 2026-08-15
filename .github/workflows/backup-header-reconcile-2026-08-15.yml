@@ -66,6 +66,6 @@ jobs:
           git commit -m "docs(threat): model strict backup header parsing"
           git add what_changed.md
           git commit -m "docs(ledger): record backup header continuation"
-          git rm build/scripts/reconcile_backup_header_hardening_20260815.py .github/workflows/backup-header-reconcile-2026-08-15.yml
+          git rm -f build/scripts/reconcile_backup_header_hardening_20260815.py .github/workflows/backup-header-reconcile-2026-08-15.yml
           git commit -m "chore: remove backup header reconciliation helper"
           git push origin main
