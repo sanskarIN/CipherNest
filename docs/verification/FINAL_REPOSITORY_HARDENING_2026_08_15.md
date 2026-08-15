@@ -148,6 +148,12 @@ Candidate `483428a0146e5e086a03c9356217139712d1ea1c` completed the corrected cor
 
 This checkpoint is not the final immutable-candidate evidence because documentation commits follow it. The exact final `main` head must rerun the complete configured CI and CodeQL gates.
 
+## Documentation freeze synchronization
+
+Before this final direct candidate-contract revision, the canonical documentation suite was synchronized with the completed fixes and test evidence: the documentation hub, TOTP security reference, CSV and encrypted-backup format references, limits/defaults, testing guide, test plan, roadmap, consolidated documentation, project status, changelog, and `what_changed.md` ledger all describe the same final repository-side behavior. `DocumentationCoverageSourceTests` now requires this verification record and its hub link.
+
+The temporary documentation reconciliation script and workflow removed themselves after producing focused permanent commits. This revision is intended to be the final direct repository mutation for the completion candidate; no further source or documentation changes should be made unless exact-head verification exposes a concrete defect. The configured CI and CodeQL gates below must therefore succeed against this revision's exact commit SHA before it can be treated as the repository-side completion candidate.
+
 ## Required exact-final-candidate gates
 
 The immutable final source candidate must complete all of the following on the exact same SHA:
