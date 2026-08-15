@@ -57,6 +57,6 @@ public sealed class BackupHeaderJsonPolicyTests
                      new string('}', BackupFormatPolicy.MaximumHeaderJsonDepth + 1);
         var json = ValidHeader[..^1] + ",\"Unexpected\":" + nested + "}";
 
-        Assert.Throws<JsonException>(() => BackupHeaderJsonPolicy.Validate(Encoding.UTF8.GetBytes(json)));
+        Assert.ThrowsAny<JsonException>(() => BackupHeaderJsonPolicy.Validate(Encoding.UTF8.GetBytes(json)));
     }
 }
