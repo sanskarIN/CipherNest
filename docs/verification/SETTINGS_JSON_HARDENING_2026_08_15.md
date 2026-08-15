@@ -40,6 +40,7 @@ The current loader behavior is:
 - file larger than 64 KiB: return default preferences;
 - actual read crossing 64 KiB after the initial size observation: return default preferences;
 - unreadable/unauthorized local settings file: return default preferences;
+- valid UTF-8 JSON with the normal UTF-8 BOM: remain readable through the bounded-memory path;
 - cancellation: propagate cancellation rather than converting it into a settings fallback.
 
 The fallback path does not publish raw parser/filesystem exception messages to the application as preference values.
@@ -69,6 +70,7 @@ The JSON parser boundary and preferences normalization are complementary control
 
 - a 64 KiB + 1 byte file falls back before normal parsing;
 - a valid JSON document padded with whitespace to exactly 64 KiB remains readable;
+- valid UTF-8 JSON with a UTF-8 BOM remains readable through bounded-memory deserialization;
 - invalid UTF-8 falls back safely;
 - excessive nesting beyond the explicit depth ceiling falls back safely;
 - saved settings remain within the file budget and round-trip through normalization;
@@ -121,6 +123,7 @@ Source-regression assertions supplement runtime tests; they do not replace behav
 
 The following files should remain aligned with this contract when settings persistence changes:
 
+- `docs/COMPLETE_PROJECT_DOCUMENTATION.md`
 - `docs/LIMITS_AND_DEFAULTS.md`
 - `docs/TEST_PLAN.md`
 - `docs/NEXT_STEPS.md`
@@ -129,7 +132,9 @@ The following files should remain aligned with this contract when settings persi
 - `CHANGELOG.md`
 - `what_changed.md`
 
-Any future settings schema expansion that genuinely requires nesting deeper than 16 must update the source constant, tests, limits documentation, and this verification contract together rather than silently weakening the parser boundary.
+The consolidated project documentation now mirrors the 64 KiB + 1 actual-read boundary, 16-level JSON depth ceiling, invalid UTF-8/over-depth fallback, cancellation behavior, BOM compatibility, normalization, and output-size/staging rules rather than retaining the older size-only summary.
+
+Any future settings schema expansion that genuinely requires nesting deeper than 16 must update the source constant, tests, limits documentation, consolidated documentation, and this verification contract together rather than silently weakening the parser boundary.
 
 ## Remaining limitations
 
@@ -154,4 +159,4 @@ For an exact candidate commit containing this change, repository evidence should
 - Mac Catalyst Release build;
 - CodeQL core/application build and analysis.
 
-Historical green runs from earlier commits do not prove a later candidate. Record hosted evidence only for the exact immutable head being evaluated.
+Historical green runs from earlier commits do not prove a later candidate. This direct documentation-finalization commit is intended to create the immutable candidate head that receives the normal push-triggered CI and CodeQL runs after all temporary reconciliation helpers have removed themselves. Record hosted evidence only for that exact immutable head being evaluated.
