@@ -194,7 +194,7 @@ See `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_
 - Review backup destination canonicalization, duplicate ZIP handling, attachment-container size derivation, rollback cancellation semantics, and DB/WAL/SHM partial recovery.
 - Review memory-lifetime assumptions around managed strings and decrypted ViewModels; source clears bound credential properties earlier and zeroes several owned arrays, but managed string copies cannot be deterministically erased.
 - Review the SHA-256 clipboard-fingerprint approach, OS clipboard/history behavior, and plaintext export/share-sheet data remnants.
-- Extend parser fuzzing beyond the current deterministic CSV-header, settings-JSON, backup-header, and vault-header adversarial corpora to CSV row/import semantics, backup ZIP/archive semantics beyond header metadata, attachment metadata/storage names, TOTP Base32 input, and vault-record/envelope semantics.
+- Extend parser fuzzing beyond the current deterministic CSV-header, settings-JSON, backup-header, vault-header, and attachment-metadata/storage-name adversarial corpora to CSV row/import semantics, backup ZIP/archive semantics beyond header metadata, TOTP Base32 input, and vault-record/envelope semantics.
 - Independently review the local TOTP implementation against RFC 6238/HOTP truncation rules, Base32 normalization, seed memory lifetime, same-vault second-factor tradeoffs, clock assumptions, and clipboard exposure.
 - Review rollback/downgrade behavior for future crypto/database/vault-header format versions.
 - Review dependency/supply-chain pinning and release provenance.
