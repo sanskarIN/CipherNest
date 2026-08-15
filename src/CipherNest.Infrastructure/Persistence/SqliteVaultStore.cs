@@ -262,13 +262,13 @@ public sealed class SqliteVaultStore : IVaultStore
         await using (var header = connection.CreateCommand())
         {
             header.CommandText = "SELECT length(CAST(HeaderJson AS BLOB)), HeaderJson FROM VaultHeader WHERE Id = 1;";
-            await using var reader = await header.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            await using var headerReader = await header.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            if (!await headerReader.ReadAsync(cancellationToken).ConfigureAwait(false))
                 throw new InvalidDataException("Replacement vault database does not contain a vault header.");
-            var headerBytes = reader.GetInt64(0);
+            var headerBytes = headerReader.GetInt64(0);
             if (headerBytes is < 1 or > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes)
                 throw new InvalidDataException("Replacement vault header exceeds the supported size limit.");
-            var headerJson = reader.GetString(1);
+            var headerJson = headerReader.GetString(1);
             if (Encoding.UTF8.GetByteCount(headerJson) != headerBytes)
                 throw new InvalidDataException("Replacement vault header length is inconsistent.");
             VaultHeaderJsonPolicy.Validate(headerJson);
