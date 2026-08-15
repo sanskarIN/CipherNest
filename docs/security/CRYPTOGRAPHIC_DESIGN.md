@@ -81,7 +81,7 @@ Wrapped-key parsing also requires non-null salt/KDF/nonce/ciphertext/tag members
 
 The current vault-header document version is `2`; version `1` remains the minimum supported historical header. Any version outside the explicit supported range is rejected before key unwrap.
 
-Vault-header JSON is also bounded to 64 KiB UTF-8. The SQLite store checks byte length before materializing header text, and `VaultService` applies the same bound before deserialization for alternate store implementations. Malformed JSON is mapped to vault authentication failure at the service boundary. Future header expansion must fit that budget or deliberately version/review it.
+Vault-header JSON is also bounded to 64 KiB UTF-8 with a maximum JSON depth of 16. The SQLite store checks byte length before materializing header text. Before typed header deserialization or any wrapped-key unwrap, `VaultHeaderJsonPolicy` requires the exact case-sensitive version-aware root schema (v1: `version/master/recovery`; v2: `version/master/recovery/secondary`), exact non-null wrapped-key properties (`version/salt/kdf/nonce/ciphertext/tag`), and exact integer KDF properties (`memoryKiB/iterations/parallelism`). Duplicate, unknown, missing, case-variant, or wrong-kind metadata is rejected. Malformed/schema-invalid input is mapped to vault authentication failure at the service boundary. Replacement-database validation applies the same strict policy before active DB/WAL/SHM mutation. Future header expansion must deliberately version/review this compatibility contract.
 
 ## Recovery key
 
@@ -183,7 +183,7 @@ AES-GCM security requires nonce uniqueness for a given key. CipherNest generates
 ## Versioning and review
 
 - `CryptoFormatVersion` controls record/key-wrapper encrypted-envelope compatibility.
-- Vault-header document versioning is separate and explicitly range/size/JSON checked.
+- Vault-header document versioning is separate and explicitly range/size/depth/schema checked; current writes self-validate as version 2 while valid historical version 1 remains readable.
 - Backup versioning is independent because backup framing differs from record envelopes.
 - Database schema versioning is independent and handled by transactional migrations plus current-shape/resource validation.
 - A cryptographic format change requires design review, known-answer/compatibility tests, tamper tests, migration/restore planning, changelog entries, and an update to this document/threat model before release.
