@@ -560,3 +560,11 @@ Release is blocked by unresolved:
 - known high-severity dependency issue without a documented owned exception.
 
 See `RELEASE_CHECKLIST.md`.
+
+## Attachment metadata adversarial boundary — 2026-08-15
+
+Attachment metadata/storage-name parser regression coverage now includes `AttachmentImportPolicyTests`, `AttachmentStorageNamePolicyTests`, `VaultItemValidatorTests`, `AttachmentMetadataAdversarialTests`, and `AttachmentMetadataSafetySourceTests`.
+
+The deterministic hostile corpus contains exactly 128 inputs across display names, media types, and opaque storage names. It covers ASCII controls, BMP/supplementary Unicode Format characters, malformed isolated UTF-16 surrogates, path separators, dot/whitespace forms, oversized metadata, wrong-length storage names, invalid GUID hex, wrong extensions, and fixed-length separator-bearing names.
+
+This corpus is deterministic regression coverage, not coverage-guided fuzzing or an independent security audit. Device/filesystem validation is still required for OS-specific path, share/export, reparse/link, and cleanup behavior.
