@@ -5,6 +5,7 @@ All notable changes are documented here following Semantic Versioning principles
 ## [Unreleased]
 
 ### Added
+- Bounded settings-JSON ingestion with a 64 KiB + 1 sentinel read path, explicit 16-level nesting ceiling, invalid UTF-8/over-depth fallback, UTF-8 BOM compatibility coverage, deterministic adversarial JSON corpus, and source/documentation regression guards.
 - Deterministic adversarial CSV-header corpus coverage plus source-regression guards for the imported-header trust boundary.
 - Local RFC 6238-compatible TOTP vault items with encrypted Base32 seed/settings, SHA-1/SHA-256/SHA-512, 6/8-digit output, bounded periods/input parsing, explicit refresh/copy UI, RFC known-answer tests, real encrypted SQLite round-trip coverage, audit semantics, and persisted-enum compatibility protection.
 - Reviewed Hindi (`hi-IN`) resource catalog for the current resource-backed interface, System/English/Hindi preference wiring, catalog-parity/security-translation tests, and explicit English fallback for not-yet-migrated UI literals.
