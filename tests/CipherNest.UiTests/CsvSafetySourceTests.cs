@@ -29,6 +29,19 @@ public sealed class CsvSafetySourceTests
         Assert.DoesNotContain("_reader.Read()", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CsvTransfer_BoundsAndSanitizesHeaderNamesBeforeMapping()
+    {
+        var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "CsvTransferService.cs"));
+
+        Assert.Contains("private const int MaxHeaderNameChars = 256", source, StringComparison.Ordinal);
+        Assert.Contains("h.Length > MaxHeaderNameChars", source, StringComparison.Ordinal);
+        Assert.Contains("char.IsControl(ch)", source, StringComparison.Ordinal);
+        Assert.Contains("UnicodeCategory.Format", source, StringComparison.Ordinal);
+        Assert.Contains("CSV header contains an unsafe control or formatting character.", source, StringComparison.Ordinal);
+        Assert.Contains("CSV header contains an oversized column name.", source, StringComparison.Ordinal);
+    }
+
     private static string PathAt(params string[] segments)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
