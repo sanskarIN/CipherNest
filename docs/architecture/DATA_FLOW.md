@@ -26,7 +26,8 @@ IVaultService.CreateAsync
               separate DEK wrapper
         |
         v
-bounded versioned vault header JSON
+self-validated current-v2 vault header JSON
+(exact root/wrapper/KDF schema; <=64 KiB; depth <=16)
         |
         v
 SQLite VaultHeader
@@ -42,8 +43,9 @@ entered credential
       v
 VaultService
       |
-      +--> read bounded vault header
-      +--> validate header version/shape/resource limits
+      +--> read byte-bounded vault header
+      +--> strict v1/v2 root/wrapper/KDF JSON validation (depth <=16)
+      +--> typed header/version/resource validation
       +--> select master or recovery wrapper path
       +--> validate KDF resource metadata
       +--> Argon2id -> KEK
@@ -56,7 +58,7 @@ owned shared unlocked-session DEK
       +--> LockStateChanged(true)
 ```
 
-Invalid credential or malformed wrapper authentication maps to vault authentication failure. Future/unsupported vault-header versions are rejected before unwrap.
+Invalid credential or malformed wrapper authentication maps to vault authentication failure. Duplicate/unknown/missing/wrong-kind/deep vault-header JSON and future/unsupported versions are rejected before typed deserialization/wrapped-key unwrap. Historical v1 remains readable; current header mutations self-validate and write v2.
 
 ## 3. Secondary/biometric convenience unlock
 
@@ -360,7 +362,7 @@ staged vault.db candidate validation
       +--> SQLite quick_check
       +--> exact supported schema version
       +--> required table/column shape
-      +--> bounded header
+      +--> byte/depth-bounded strict supported vault-header schema
       +--> canonical item IDs
       +--> count/per-envelope/aggregate limits
       |
