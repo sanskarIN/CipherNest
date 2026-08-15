@@ -114,6 +114,8 @@ Unlock follows this order:
 
 Malformed JSON/schema/storage data is normalized to `VaultAuthenticationException` at the vault-service unlock boundary. No invalid structural header is allowed to reach wrapped-key unwrap.
 
+Replacement-database validation uses the same byte/depth/schema policy while the candidate SQLite database is still read-only and before active DB/WAL/SHM mutation. A malformed-but-small candidate header therefore fails the pre-swap boundary rather than replacing the active vault and failing only at a later unlock.
+
 ## 7. Writer self-validation
 
 `VaultService.SerializeHeader(...)` serializes every header written by the service and immediately validates the result through `VaultHeaderJsonPolicy` before persistence.
