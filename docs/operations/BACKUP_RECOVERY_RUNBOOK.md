@@ -101,7 +101,7 @@ The implementation is designed to:
 
 1. copy/select the encrypted backup;
 2. verify `CNBK0002` framing;
-3. validate bounded header/KDF/chunk metadata before Argon2;
+3. validate the 16..16,384-byte header boundary, strict version-2 JSON schema/depth, and bounded KDF/chunk metadata before Argon2;
 4. authenticate/decrypt encrypted payload chunks;
 5. reject trailing unauthenticated data;
 6. enforce ZIP entry count/aggregate/path/duplicate limits;
@@ -212,6 +212,7 @@ Current backup limits include:
 
 ```text
 Header JSON:          16..16,384 bytes framing
+Header JSON depth:    max 16; exact version-2 root/KDF property sets
 Salt:                 16..64 bytes
 Chunk size accepted:  64 KiB..4 MiB
 Current chunk size:   1 MiB
