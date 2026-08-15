@@ -81,11 +81,16 @@ Restore header-size framing currently requires:
 
 ```text
 16 <= serialized header bytes <= 16,384
+maximum JSON nesting depth = 16
 ```
 
-## 5. Header validation before Argon2
+For version 2, the root JSON object must contain exactly one each of the case-sensitive `Version`, `Salt`, `Kdf`, `ChunkSize`, and `CreatedUtc` properties. `Kdf` must contain exactly one each of `MemoryKiB`, `Iterations`, and `Parallelism`. Duplicate, unknown, missing, case-variant, or wrong-JSON-type metadata is rejected before typed deserialization/key derivation.
 
-Before key derivation restore requires:
+## 5. Header structure and resource validation before Argon2
+
+Before typed deserialization/key derivation, restore validates the declared header length, parses only the bounded header bytes with comments/trailing commas disallowed and a maximum depth of 16, and enforces the exact version-2 root/KDF property sets described above.
+
+After strict JSON structure validation and typed deserialization, restore requires:
 
 ```text
 Version       exactly 2
@@ -190,8 +195,8 @@ Restore:
 1. opens the source read-only;
 2. reads/compares `CNBK0002` using fixed-time byte comparison;
 3. validates header-length framing;
-4. reads/deserializes the header;
-5. validates version/salt/KDF/chunk resources;
+4. reads the bounded header bytes and validates strict version-2 JSON structure/depth before typed deserialization;
+5. deserializes the header and validates version/salt/KDF/chunk resources;
 6. derives the backup key;
 7. reads each framed encrypted chunk;
 8. bounds the chunk index and plaintext length;
@@ -359,6 +364,8 @@ Backup format changes require coverage for:
 - wrong passphrase;
 - corrupted/tampered/truncated container;
 - invalid magic/version/header size;
+- strict version-2 header schema: duplicate/unknown/missing/wrong-type properties and excessive nesting rejected before Argon2;
+- deterministic adversarial backup-header corpus with zero key-derivation calls for hostile inputs;
 - hostile salt/KDF/chunk metadata rejected before Argon2;
 - chunk-count bounds;
 - duplicate/unexpected archive paths;
