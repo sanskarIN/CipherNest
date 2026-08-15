@@ -96,7 +96,7 @@ public sealed class VaultHeaderJsonPolicyTests
         "duplicate-wrapper" => json.Replace("\"master\":{\"version\":1", "\"master\":{\"version\":1,\"version\":1", StringComparison.Ordinal),
         "unexpected-wrapper" => json.Replace("\"master\":{\"version\":1", "\"master\":{\"unexpected\":true,\"version\":1", StringComparison.Ordinal),
         "missing-wrapper-field" => json.Replace(",\"tag\":\"AAAAAAAAAAAAAAAAAAAAAA==\"", string.Empty, StringComparison.Ordinal),
-        "wrong-wrapper-kind" => json.Replace("\"master\":{", "\"master\":[", StringComparison.Ordinal).Replace("},\"recovery\":null", "],\"recovery\":null", StringComparison.Ordinal),
+        "wrong-wrapper-kind" => json.Replace($"\"master\":{BuildWrapper()}", "\"master\":[]", StringComparison.Ordinal),
         "duplicate-kdf" => json.Replace("\"kdf\":{\"memoryKiB\":65536", "\"kdf\":{\"memoryKiB\":65536,\"memoryKiB\":65536", StringComparison.Ordinal),
         "unexpected-kdf" => json.Replace("\"kdf\":{", "\"kdf\":{\"unexpected\":1,", StringComparison.Ordinal),
         "missing-kdf-field" => json.Replace(",\"parallelism\":1", string.Empty, StringComparison.Ordinal),
