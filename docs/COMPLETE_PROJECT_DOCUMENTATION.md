@@ -415,3 +415,17 @@ The documentation coverage source tests are intentionally part of the repository
 The current attachment trust boundary uses rune-aware metadata validation shared between import normalization and `VaultItemValidator`. Display names are trimmed leaf names bounded to 240 UTF-16 code units; media types are bounded to 256; malformed UTF-16 and Unicode Control/Format runes are rejected, including supplementary-plane formatting characters. Opaque encrypted storage names are exactly 36-character non-empty GUID-N `.cna` identities and fail length validation before stem parsing/path construction. An exactly 128-input deterministic hostile corpus plus source-regression tests protects these rules.
 
 This does not alter `CNAT0001` framing or constitute an independent security audit. See `formats/ATTACHMENTS.md` and `verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md`.
+
+## Final repository-side hardening and defect sweep — 2026-08-15
+
+The final source pass closed three concrete remaining resource/correctness gaps without changing CipherNest's cryptographic format versions:
+
+- TOTP normalization clears its owned mutable scratch buffer, malformed Base32 is covered by a uniquely executable 128-case deterministic corpus, and validity-window arithmetic clamps safely at `DateTimeOffset.MaxValue`.
+- CSV mapped Tags parsing enforces the canonical 100-tag/128-character limits with a span scan before item construction instead of materializing an unbounded number of split substrings.
+- Backup ZIP restore enforces the 1 GiB aggregate budget before entry reads and requires actual decompressed bytes to equal each declared uncompressed entry length; expansion and truncation are rejected through a reusable 128 KiB streaming buffer.
+
+The first hosted checkpoint exposed and led to fixes for a missing source-file final newline and an xUnit duplicate-theory-ID condition that silently prevented one intended hostile-surrogate TOTP row from executing independently. The corrected checkpoint at `483428a0146e5e086a03c9356217139712d1ea1c` recorded **554 passed, 0 failed, 0 skipped**, zero analyzer warnings/errors in the three test builds, and successful core formatting verification.
+
+The vault-record/envelope boundary was reviewed and retains its compatibility-preserving defense stack: pre-materialization storage bounds, crypto version/nonce/tag checks, AES-GCM authentication with row-ID associated data, decrypted-byte bounds, authenticated row/decrypted-item ID equality, and `VaultItemValidator` before records leave infrastructure.
+
+This repository-side completion is not an independent audit and does not replace physical-device/simulator behavior testing, accessibility/performance observation, historical migration/backup compatibility evidence, signing, packaging, store-policy/privacy work, or professional security review.
