@@ -42,7 +42,7 @@ All notable changes are documented here following Semantic Versioning principles
 - Backup archive duplicate-path rejection and attachment encrypted-container size bounds.
 - Cancellation-safe backup rollback coverage requiring an uncancelled recovery database replacement once active mutation begins.
 - Multi-megabyte attachment streaming, plaintext-buffer zeroing, encrypted attachment tamper/truncation, backup corruption, and wrong-backup-passphrase integration coverage.
-- Pre-encryption attachment import metadata normalization/bounds plus control-character rejection.
+- Rune-aware attachment metadata normalization/validation with malformed UTF-16 and Unicode Control/Format rejection, canonical persisted-metadata predicate reuse, supplementary-plane coverage, and an exactly 128-input deterministic hostile metadata/storage-name corpus.
 - Serialized attachment add/remove/permanent-delete mutations with a cancellable mutation gate and global backup-compatible attachment budget.
 - Opaque attachment storage-name validation requiring GUID-based `.cna` names without path separators, plus attachment metadata/uniqueness validation.
 - Malformed CSV parser robustness corpus, final-field maximum-column enforcement, and reusable parser character buffer.
