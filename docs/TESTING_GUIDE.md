@@ -170,8 +170,10 @@ Core scenarios:
 - recovery unlock;
 - wrong credential rejection;
 - secondary wrapper lifecycle;
-- future/unsupported vault-header rejection;
-- bounded/malformed header rejection;
+- exact v1/v2 vault-header compatibility and v1-to-v2 mutation upgrade;
+- future/unsupported/hybrid vault-header rejection;
+- 64 KiB byte, 16-level depth, strict root/wrapper/KDF schema, duplicate/unknown/missing/wrong-kind rejection before unwrap;
+- deterministic hostile-header corpus with zero unwrap calls;
 - master-passphrase rotation;
 - lock;
 - full-vault deletion authorization;
@@ -211,6 +213,7 @@ Required classes of coverage:
 - required table/column shape;
 - rollback primary-error preservation;
 - header/resource limits before BLOB/text materialization;
+- strict vault-header schema validation on replacement candidates before active database mutation, including legacy-v1 acceptance;
 - canonical stored IDs;
 - aggregate record limits;
 - replacement database validation before active mutation;
