@@ -113,7 +113,7 @@ public sealed class BackupHeaderValidationIntegrationTests : IDisposable
             Salt = new byte[16],
             Kdf = new KdfParameters(64 * 1024, 3, 1),
             ChunkSize = 1024 * 1024,
-            CreatedUtc = DateTimeOffset.Parse("2026-08-15T00:00:00+00:00")
+            CreatedUtc = new DateTimeOffset(2026, 8, 15, 0, 0, 0, TimeSpan.Zero)
         });
         var padded = new byte[BackupFormatPolicy.MaximumHeaderBytes];
         Array.Fill(padded, (byte)' ');
