@@ -1,5 +1,6 @@
 using System.Text;
 using CipherNest.Application.Abstractions;
+using CipherNest.Infrastructure.Services;
 using CipherNest.Shared;
 using Microsoft.Data.Sqlite;
 
@@ -260,11 +261,17 @@ public sealed class SqliteVaultStore : IVaultStore
     {
         await using (var header = connection.CreateCommand())
         {
-            header.CommandText = "SELECT length(CAST(HeaderJson AS BLOB)) FROM VaultHeader WHERE Id = 1;";
-            var result = await header.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            if (result is null or DBNull) throw new InvalidDataException("Replacement vault database does not contain a vault header.");
-            var headerBytes = Convert.ToInt64(result, System.Globalization.CultureInfo.InvariantCulture);
-            if (headerBytes is < 1 or > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes) throw new InvalidDataException("Replacement vault header exceeds the supported size limit.");
+            header.CommandText = "SELECT length(CAST(HeaderJson AS BLOB)), HeaderJson FROM VaultHeader WHERE Id = 1;";
+            await using var reader = await header.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                throw new InvalidDataException("Replacement vault database does not contain a vault header.");
+            var headerBytes = reader.GetInt64(0);
+            if (headerBytes is < 1 or > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes)
+                throw new InvalidDataException("Replacement vault header exceeds the supported size limit.");
+            var headerJson = reader.GetString(1);
+            if (Encoding.UTF8.GetByteCount(headerJson) != headerBytes)
+                throw new InvalidDataException("Replacement vault header length is inconsistent.");
+            VaultHeaderJsonPolicy.Validate(headerJson);
         }
 
         await ValidateStoredItemSetBoundsAsync(connection, cancellationToken).ConfigureAwait(false);
