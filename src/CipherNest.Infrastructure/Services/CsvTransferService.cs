@@ -13,6 +13,8 @@ public sealed class CsvTransferService : IPlaintextTransferService
     private const int MaxHeaderNameChars = 256;
     private const int MaxFieldChars = 1_000_000;
     private const int MaxRowChars = 2_000_000;
+    private const string OversizedHeaderMessage = "CSV header contains an oversized column name.";
+    private const string OversizedFieldMessage = "CSV field exceeds the safety limit.";
     private readonly IVaultService _vault;
     private readonly IClock _clock;
 
@@ -27,7 +29,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
         ArgumentNullException.ThrowIfNull(source);
         if (!source.CanRead) throw new ArgumentException("CSV source stream must be readable.", nameof(source));
         await using var parser = new CsvParser(source, 1);
-        var row = await parser.ReadRowAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
+        var row = await parser.ReadRowAsync(cancellationToken, MaxHeaderNameChars, OversizedHeaderMessage).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
         ValidateHeader(row);
         return row;
     }
@@ -40,7 +42,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
         ArgumentException.ThrowIfNullOrWhiteSpace(mapping.Title);
         if (!_vault.IsUnlocked) throw new InvalidOperationException("Unlock the vault before importing.");
         await using var parser = new CsvParser(source, checked(MaxRows + 1));
-        var headers = await parser.ReadRowAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
+        var headers = await parser.ReadRowAsync(cancellationToken, MaxHeaderNameChars, OversizedHeaderMessage).ConfigureAwait(false) ?? throw new InvalidDataException("CSV is empty.");
         ValidateHeader(headers);
         var indexes = headers.Select((name, index) => (name, index)).ToDictionary(static x => x.name, static x => x.index, StringComparer.OrdinalIgnoreCase);
         if (!indexes.ContainsKey(mapping.Title)) throw new InvalidDataException("The mapped title column does not exist.");
@@ -123,10 +125,20 @@ public sealed class CsvTransferService : IPlaintextTransferService
     {
         if (row.Count is 0 or > MaxColumns) throw new InvalidDataException("CSV header has an unsupported number of columns.");
         if (row.Any(static h => string.IsNullOrWhiteSpace(h))) throw new InvalidDataException("CSV header contains an empty column name.");
-        if (row.Any(static h => h.Length > MaxHeaderNameChars)) throw new InvalidDataException("CSV header contains an oversized column name.");
-        if (row.Any(static h => h.Any(static ch => char.IsControl(ch) || char.GetUnicodeCategory(ch) == UnicodeCategory.Format)))
+        if (row.Any(static h => h.Length > MaxHeaderNameChars)) throw new InvalidDataException(OversizedHeaderMessage);
+        if (row.Any(static h => ContainsUnsafeHeaderCharacter(h)))
             throw new InvalidDataException("CSV header contains an unsafe control or formatting character.");
         if (row.Distinct(StringComparer.OrdinalIgnoreCase).Count() != row.Count) throw new InvalidDataException("CSV header contains duplicate column names.");
+    }
+
+    private static bool ContainsUnsafeHeaderCharacter(string value)
+    {
+        foreach (var rune in value.EnumerateRunes())
+        {
+            var category = Rune.GetUnicodeCategory(rune);
+            if (category is UnicodeCategory.Control or UnicodeCategory.Format) return true;
+        }
+        return false;
     }
 
     private static void ValidateMappedColumns(CsvImportMapping mapping, IReadOnlyDictionary<string, int> indexes)
@@ -157,8 +169,13 @@ public sealed class CsvTransferService : IPlaintextTransferService
             _maxRows = maxRows > 0 ? maxRows : throw new ArgumentOutOfRangeException(nameof(maxRows));
         }
 
-        public async Task<IReadOnlyList<string>?> ReadRowAsync(CancellationToken cancellationToken)
+        public async Task<IReadOnlyList<string>?> ReadRowAsync(
+            CancellationToken cancellationToken,
+            int maxFieldChars = MaxFieldChars,
+            string fieldLimitMessage = OversizedFieldMessage)
         {
+            if (maxFieldChars <= 0) throw new ArgumentOutOfRangeException(nameof(maxFieldChars));
+            ArgumentException.ThrowIfNullOrWhiteSpace(fieldLimitMessage);
             if (_finished) return null;
             if (_rowsRead >= _maxRows)
             {
@@ -249,7 +266,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                     IncrementRowCharacters(ref rowCharacters);
                     atFieldStart = false;
                 }
-                if (field.Length > MaxFieldChars) throw new InvalidDataException("CSV field exceeds the safety limit.");
+                if (field.Length > maxFieldChars) throw new InvalidDataException(fieldLimitMessage);
             }
         }
 
