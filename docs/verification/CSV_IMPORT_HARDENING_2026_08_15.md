@@ -11,31 +11,37 @@ Implemented source rules:
 - CSV input remains strict UTF-8; malformed UTF-8 is rejected.
 - One optional UTF-8 BOM is accepted only at the beginning of the stream.
 - Header column count remains bounded to 256.
-- Each header name is now bounded to 256 UTF-16 characters even though ordinary CSV fields retain the larger general field budget.
+- Each header name is bounded to 256 UTF-16 characters even though ordinary CSV fields retain the larger general field budget.
+- Header reads pass that 256-character ceiling into the streaming parser, so a header stops accumulating immediately after exceeding the dedicated bound instead of first consuming the generic 1,000,000-character field allowance.
+- `ValidateHeader(...)` repeats the header-length check as defense in depth after parsing.
 - Empty or whitespace-only header names remain rejected.
 - Header names containing Unicode control characters are rejected.
 - Header names containing Unicode `Format` category characters are rejected, including invisible formatting marks and bidirectional controls.
+- Unsafe-character classification enumerates Unicode runes/code points, covering supplementary-plane `Format` characters rather than classifying isolated UTF-16 surrogate code units.
 - Header names remain case-insensitively unique.
-- These checks execute in `ValidateHeader(...)`, which is shared by header preview and actual import before mapping dictionaries are built.
+- Header preview and actual import use the same bounded header parse and validation path before mapping dictionaries are built.
 
 The dedicated header ceiling is intentionally smaller than the generic field ceiling because a header is mapping/display metadata. Allowing a million-character or visually deceptive header would provide no useful interoperability benefit and would unnecessarily expand the UI/resource/spoofing surface.
 
 ## Runtime integration coverage
 
-`CsvParserRobustnessTests` now verifies:
+`CsvParserRobustnessTests` verifies:
 
-- 257-character header names are rejected;
+- 257-character unquoted header names are rejected;
+- 257-character quoted header names are rejected through the dedicated streaming field bound;
 - 256-character header names remain accepted;
 - NUL and tab controls are rejected in header names;
 - embedded line breaks parsed from quoted header fields are rejected by header validation;
 - zero-width formatting characters are rejected;
 - bidirectional formatting controls are rejected;
-- prior malformed-quote, duplicate/empty-header, strict UTF-8, BOM, UTF-16 rejection, column-count, row-budget, quoted-comma, and escaped-quote coverage remains in place.
+- a supplementary-plane Unicode `Format` code point is rejected;
+- an aggregate data row over 2,000,000 characters is exercised with multiple individual fields that remain below the per-field ceiling, proving the row-level guard independently;
+- prior malformed-quote, duplicate/empty-header, strict UTF-8, BOM, UTF-16 rejection, column-count, quoted-comma, and escaped-quote coverage remains in place.
 
-The suite also includes a deterministic adversarial corpus seeded with a fixed pseudo-random value. Generated cases mix ordinary characters, delimiters, quotes, line endings, controls, Unicode text, and invisible/bidirectional formatting characters. Every corpus case must either:
+The suite also includes a deterministic adversarial corpus seeded with a fixed pseudo-random value. Generated cases mix ordinary characters, delimiters, quotes, line endings, controls, Unicode text, and invisible/bidirectional formatting characters, with an explicit supplementary-plane `Format` case. Every corpus case must either:
 
 1. be rejected with the parser's public `InvalidDataException` boundary; or
-2. produce headers satisfying all published header invariants.
+2. produce headers satisfying all published header invariants using rune-aware Unicode category checks.
 
 The corpus is deterministic so any regression is reproducible in local and hosted CI rather than depending on ambient randomness.
 
@@ -44,10 +50,13 @@ The corpus is deterministic so any regression is reproducible in local and hoste
 `CsvSafetySourceTests` requires the production source to retain:
 
 - `MaxHeaderNameChars = 256`;
-- the dedicated header-length check;
-- `char.IsControl(...)` rejection;
-- Unicode `Format` category rejection;
-- stable privacy-safe error text for oversized/unsafe header metadata.
+- the dedicated bound passed directly to header `ReadRowAsync(...)` calls;
+- enforcement against the in-progress field length;
+- the defense-in-depth post-parse header-length check;
+- `EnumerateRunes()` and `Rune.GetUnicodeCategory(...)` classification;
+- Unicode `Control` and `Format` category rejection;
+- stable privacy-safe error text for oversized/unsafe header metadata;
+- absence of the previous UTF-16-code-unit-only `char.GetUnicodeCategory(...)` classification path.
 
 This source test complements runtime behavior tests. It does not replace them.
 
@@ -83,7 +92,7 @@ A successful historical run from an earlier commit is not evidence for a later f
 
 ## Remaining limits
 
-This deterministic adversarial corpus is a practical regression layer, not exhaustive parser fuzzing or a mathematical proof of bug absence. Broader fuzzing opportunities remain for CSV row/import semantics, encrypted backup framing/archive metadata, attachment metadata and storage names, settings JSON, TOTP Base32 parsing, vault records, and vault-header deserialization.
+This deterministic adversarial corpus is a practical regression layer, not exhaustive parser fuzzing or a mathematical proof of bug absence. Broader fuzzing opportunities remain for CSV row/import semantics beyond these bounded cases, encrypted backup framing/archive metadata, attachment metadata and storage names, settings JSON, TOTP Base32 parsing, vault records, and vault-header deserialization.
 
 Target-platform file providers, share sheets, storage permissions, large-file behavior, accessibility/layout of mapping controls, and OS lifecycle behavior still require appropriate platform/device validation. Independent professional security review remains outstanding; this work must not be described as an audit or as proving CipherNest unhackable, military-grade, 100% secure, or suitable for high-risk use.
 
