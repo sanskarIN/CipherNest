@@ -2446,3 +2446,18 @@ A finite source audit and automated test matrix cannot prove the mathematical ab
 - Replaced UTF-16-code-unit Unicode-category inspection with `EnumerateRunes()` plus `Rune.GetUnicodeCategory(...)`, so supplementary-plane Unicode `Format` code points cannot bypass the misleading-header rejection rule.
 - Extended integration coverage with a supplementary-plane formatting-control case, an oversized quoted-header streaming-bound case, rune-aware accepted-corpus invariants, and a real unlocked-vault import whose multiple individually valid-sized fields exceed the aggregate 2,000,000-character row budget.
 - Extended source-regression and verification/format documentation so early streaming enforcement, rune-aware category classification, aggregate-row coverage, and the remaining non-audit/platform limitations are explicit.
+
+
+### Settings JSON bounded-read and adversarial hardening
+
+- Hardened `JsonSettingsStore.LoadAsync` so the existing 64 KiB file-size snapshot is no longer the only input resource check; the actual read now goes through a fixed 64 KiB + 1 sentinel buffer before JSON deserialization.
+- Deserialization now occurs from the bounded in-memory byte range rather than directly from the mutable filesystem stream, preventing a settings file that grows after the initial length observation from feeding unbounded parser input.
+- Added `MaximumSettingsJsonDepth = 16` and applied it to the shared settings `JsonSerializerOptions`; the persisted `AppPreferences` schema is flat and does not require deep nesting.
+- Preserved cancellation propagation: malformed/unreadable/unauthorized settings fall back to defaults, while caller cancellation is not converted into a successful fallback result.
+- Preserved successful-parse normalization through `AppPreferencesPolicy.Normalize(...)` so syntactically valid JSON still cannot publish undefined enums, out-of-range numeric values, or an unusable all-disabled password-generator configuration.
+- Extended `JsonSettingsStoreBoundsTests` with the exact 64 KiB accepted boundary, 64 KiB + 1 rejection, invalid UTF-8 fallback, excessive-depth fallback, and UTF-8 BOM compatibility through the bounded-memory path.
+- Added `JsonSettingsAdversarialTests` with a fixed-seed corpus covering valid/default roots, malformed roots, extreme values, duplicate properties, malformed dates, unknown nested content, generator repair, controls, Unicode, escapes, and randomized JSON-like byte-safe text; every result must satisfy the normalized settings contract.
+- Added `SettingsJsonSafetySourceTests` so the actual-read sentinel, depth ceiling, bounded-memory deserialization, normalization call, and absence of an unbounded `ReadToEnd` path cannot silently disappear.
+- Added `docs/verification/SETTINGS_JSON_HARDENING_2026_08_15.md`, linked it from the documentation hub, required it through `DocumentationCoverageSourceTests`, and synchronized `docs/LIMITS_AND_DEFAULTS.md` with the new parser/resource contract.
+- Reconciled the testing guide, test plan, next-steps roadmap, project status, and changelog so the implemented deterministic settings corpus is no longer listed as wholly outstanding parser-fuzzing work.
+- This remains deterministic adversarial regression coverage rather than exhaustive coverage-guided fuzzing or an independent security audit. Broader parser fuzzing, device behavior, signing/store validation, and independent review remain separate gates.
