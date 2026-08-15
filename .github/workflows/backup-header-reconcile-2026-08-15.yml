@@ -15,6 +15,19 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - name: Patch current consolidated-documentation marker
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("build/scripts/reconcile_backup_header_hardening_20260815.py")
+          text = path.read_text(encoding="utf-8")
+          old = '"| Backup ZIP entries | 10,001 maximum (`vault.db` plus attachment slots) |\\n| Settings JSON | 64 KiB |",\n    "| Backup ZIP entries | 10,001 maximum (`vault.db` plus attachment slots) |\\n| Backup header JSON | 16–16,384 bytes; maximum depth 16; exact version-2 root/KDF property sets |\\n| Settings JSON | 64 KiB |",'
+          new = '"| Backup ZIP entries | 10,001 maximum (`vault.db` plus attachment slots) |\\n| Settings JSON | 64 KiB; actual reads use a 64 KiB + 1 sentinel boundary; maximum nesting depth 16 |",\n    "| Backup ZIP entries | 10,001 maximum (`vault.db` plus attachment slots) |\\n| Backup header JSON | 16–16,384 bytes; maximum depth 16; exact version-2 root/KDF property sets |\\n| Settings JSON | 64 KiB; actual reads use a 64 KiB + 1 sentinel boundary; maximum nesting depth 16 |",'
+          if old not in text:
+              raise SystemExit("Expected consolidated-documentation marker was not found in reconciliation script")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
       - name: Reconcile backup header hardening
         run: python build/scripts/reconcile_backup_header_hardening_20260815.py
       - name: Verify whitespace
