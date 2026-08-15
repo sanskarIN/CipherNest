@@ -7,7 +7,7 @@ public sealed class TotpBase32AdversarialTests
 {
     private const string ValidSeed = "JBSWY3DPEHPK3PXP";
 
-    public static IEnumerable<object[]> HostileSecrets => BuildHostileSecrets().Select(static value => new object[] { value });
+    public static IEnumerable<object[]> HostileSecrets => BuildHostileSecrets().Select(static (value, index) => new object[] { index, value });
 
     [Fact]
     public void Corpus_IsExactly128DistinctDeterministicInputs()
@@ -20,8 +20,9 @@ public sealed class TotpBase32AdversarialTests
 
     [Theory]
     [MemberData(nameof(HostileSecrets))]
-    public void Generate_RejectsHostileBase32BeforeCodeGeneration(string secret)
+    public void Generate_RejectsHostileBase32BeforeCodeGeneration(int caseId, string secret)
     {
+        Assert.InRange(caseId, 0, 127);
         var service = new TotpService();
 
         Assert.Throws<ArgumentException>(() => service.Generate(
