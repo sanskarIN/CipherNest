@@ -1,10 +1,11 @@
-name: CSV ledger reconciliation 2026-08-15
+name: CSV ledger reconciliation
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - '.github/workflows/csv-ledger-2026-08-15.yml'
+      - .github/workflows/csv-ledger-2026-08-15.yml
 
 permissions:
   contents: write
@@ -18,8 +19,8 @@ jobs:
         with:
           fetch-depth: 0
       - name: Reconcile canonical CSV hardening records
-        shell: python
         run: |
+          cat > /tmp/reconcile.py <<'PY'
           from pathlib import Path
 
           def replace_once(path: str, old: str, new: str) -> None:
@@ -79,6 +80,8 @@ jobs:
               ledger.write_text(text.rstrip() + entry + "\n", encoding="utf-8", newline="\n")
 
           Path(".github/workflows/csv-ledger-2026-08-15.yml").unlink()
+          PY
+          python3 /tmp/reconcile.py
       - name: Commit reconciled records
         run: |
           git config user.name "Sanskar"
