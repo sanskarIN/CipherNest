@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using CipherNest.Application.Abstractions;
 using CipherNest.Application.Exceptions;
@@ -11,8 +10,6 @@ namespace CipherNest.Infrastructure.Services;
 
 public sealed class VaultService : IVaultService, IDisposable
 {
-    private const int MinimumSupportedHeaderVersion = 1;
-    private const int CurrentHeaderVersion = 2;
     public const int MaximumSearchQueryCharacters = 4_096;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IVaultStore _store;
@@ -63,7 +60,7 @@ public sealed class VaultService : IVaultService, IDisposable
             {
                 WrappedKeyEnvelope? recoveryWrapped = null;
                 if (createRecoveryKey) { recoveryKey = GenerateRecoveryKey(); recoveryWrapped = _crypto.WrapKey(dataKey, recoveryKey.AsSpan()); }
-                await _store.WriteHeaderAsync(JsonSerializer.Serialize(new VaultHeaderDocument(CurrentHeaderVersion, masterWrapped, recoveryWrapped, null), JsonOptions), cancellationToken).ConfigureAwait(false);
+                await _store.WriteHeaderAsync(SerializeHeader(new VaultHeaderDocument(VaultHeaderJsonPolicy.CurrentVersion, masterWrapped, recoveryWrapped, null)), cancellationToken).ConfigureAwait(false);
                 ReplaceDataKey(dataKey.ToArray());
             }
             finally { CryptographicOperations.ZeroMemory(dataKey); }
@@ -132,7 +129,7 @@ public sealed class VaultService : IVaultService, IDisposable
             var header = await ReadHeaderUnlockedAsync(authorizationLease.Token).ConfigureAwait(false);
             var wrapped = _crypto.WrapKey(authorizationLease.Key, secondarySecret.AsSpan());
             authorizationLease.Token.ThrowIfCancellationRequested();
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = wrapped }, JsonOptions), authorizationLease.Token).ConfigureAwait(false);
+            await _store.WriteHeaderAsync(SerializeHeader(header with { Version = VaultHeaderJsonPolicy.CurrentVersion, Secondary = wrapped }), authorizationLease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
@@ -146,7 +143,7 @@ public sealed class VaultService : IVaultService, IDisposable
         try
         {
             var header = await ReadHeaderUnlockedAsync(authorizationLease.Token).ConfigureAwait(false);
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Version = CurrentHeaderVersion, Secondary = null }, JsonOptions), authorizationLease.Token).ConfigureAwait(false);
+            await _store.WriteHeaderAsync(SerializeHeader(header with { Version = VaultHeaderJsonPolicy.CurrentVersion, Secondary = null }), authorizationLease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
@@ -170,7 +167,7 @@ public sealed class VaultService : IVaultService, IDisposable
             var header = await ReadHeaderUnlockedAsync(authorizationLease.Token).ConfigureAwait(false);
             var newMaster = _crypto.WrapKey(authorizationLease.Key, newMasterPassphrase.AsSpan());
             authorizationLease.Token.ThrowIfCancellationRequested();
-            await _store.WriteHeaderAsync(JsonSerializer.Serialize(header with { Master = newMaster }, JsonOptions), authorizationLease.Token).ConfigureAwait(false);
+            await _store.WriteHeaderAsync(SerializeHeader(header with { Version = VaultHeaderJsonPolicy.CurrentVersion, Master = newMaster }), authorizationLease.Token).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
@@ -457,19 +454,30 @@ public sealed class VaultService : IVaultService, IDisposable
 
     private async Task<VaultHeaderDocument> ReadHeaderUnlockedAsync(CancellationToken cancellationToken)
     {
-        var headerJson = await _store.ReadHeaderAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("No local vault exists yet.");
-        if (Encoding.UTF8.GetByteCount(headerJson) is < 1 or > VaultStorageLimits.MaximumVaultHeaderUtf8Bytes) throw new VaultAuthenticationException();
-        VaultHeaderDocument header;
         try
         {
-            header = JsonSerializer.Deserialize<VaultHeaderDocument>(headerJson, JsonOptions) ?? throw new VaultAuthenticationException();
+            var headerJson = await _store.ReadHeaderAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("No local vault exists yet.");
+            VaultHeaderJsonPolicy.Validate(headerJson);
+            var header = JsonSerializer.Deserialize<VaultHeaderDocument>(headerJson, JsonOptions) ?? throw new VaultAuthenticationException();
+            if (header.Version is < VaultHeaderJsonPolicy.MinimumSupportedVersion or > VaultHeaderJsonPolicy.CurrentVersion || header.Master is null)
+                throw new VaultAuthenticationException();
+            return header;
         }
-        catch (JsonException ex)
+        catch (VaultAuthenticationException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidDataException)
         {
             throw new VaultAuthenticationException(ex);
         }
-        if (header.Version is < MinimumSupportedHeaderVersion or > CurrentHeaderVersion || header.Master is null) throw new VaultAuthenticationException();
-        return header;
+    }
+
+    private static string SerializeHeader(VaultHeaderDocument header)
+    {
+        var headerJson = JsonSerializer.Serialize(header, JsonOptions);
+        VaultHeaderJsonPolicy.Validate(headerJson);
+        return headerJson;
     }
 
     private void TryDeleteAttachment(string encryptedFileName)
