@@ -226,7 +226,11 @@ Required classes of coverage:
 Test:
 
 - magic/version;
-- header length;
+- 16..16,384-byte header length boundaries;
+- strict version-2 root/KDF property allowlists and required-property sets;
+- duplicate/unknown/case-variant/wrong-type header metadata;
+- 16-level JSON depth and invalid UTF-8/malformed JSON normalization;
+- deterministic adversarial header corpus rejected before key derivation;
 - salt bounds;
 - KDF memory/iteration/parallelism;
 - chunk size/count;
