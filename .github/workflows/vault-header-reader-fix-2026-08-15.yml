@@ -1,0 +1,30 @@
+name: Vault Header Reader Fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Fix replacement header reader name
+        run: python build/scripts/fix_vault_header_reader_20260815.py
+      - name: Verify whitespace
+        run: git diff --check
+      - name: Commit fix and cleanup helper
+        run: |
+          git config user.name "Sanskar"
+          git config user.email "sanskarin@outlook.in"
+          git add src/CipherNest.Infrastructure/Persistence/SqliteVaultStore.cs
+          git commit -m "fix(vault): avoid replacement header reader shadowing"
+          git rm build/scripts/fix_vault_header_reader_20260815.py .github/workflows/vault-header-reader-fix-2026-08-15.yml
+          git commit -m "chore(vault): remove reader fix helper"
+          git push origin main
