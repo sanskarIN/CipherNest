@@ -63,6 +63,14 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 AddWarning(warnings, logicalRowNumber, "title is empty.");
                 continue;
             }
+
+            if (!TrySplitTags(Get(row, indexes, mapping.Tags), out var tags))
+            {
+                skipped++;
+                AddWarning(warnings, logicalRowNumber, $"tags exceed the {VaultItemValidator.MaximumTags}-tag or {VaultItemValidator.MaximumTagCharacters}-character-per-tag safety limits.");
+                continue;
+            }
+
             var now = _clock.UtcNow;
             var item = new VaultItem
             {
@@ -73,7 +81,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
                 Url = Get(row, indexes, mapping.Url),
                 Notes = Get(row, indexes, mapping.Notes),
                 Collection = Get(row, indexes, mapping.Collection),
-                Tags = SplitTags(Get(row, indexes, mapping.Tags)),
+                Tags = tags,
                 Type = ParseType(Get(row, indexes, mapping.Type)),
                 CreatedUtc = now,
                 ModifiedUtc = now
@@ -148,7 +156,37 @@ public sealed class CsvTransferService : IPlaintextTransferService
     }
 
     private static string Get(IReadOnlyList<string> row, IReadOnlyDictionary<string, int> indexes, string? name) => string.IsNullOrEmpty(name) || !indexes.TryGetValue(name, out var index) || index >= row.Count ? string.Empty : row[index];
-    private static IReadOnlyList<string> SplitTags(string value) => value.Split(new[] { ';', ',' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+    private static bool TrySplitTags(string value, out IReadOnlyList<string> tags)
+    {
+        if (value.Length == 0)
+        {
+            tags = Array.Empty<string>();
+            return true;
+        }
+
+        var parsed = new List<string>(Math.Min(16, VaultItemValidator.MaximumTags));
+        var start = 0;
+        for (var index = 0; index <= value.Length; index++)
+        {
+            if (index < value.Length && value[index] is not (';' or ',')) continue;
+
+            var segment = value.AsSpan(start, index - start).Trim();
+            start = index + 1;
+            if (segment.IsEmpty) continue;
+            if (segment.Length > VaultItemValidator.MaximumTagCharacters || parsed.Count >= VaultItemValidator.MaximumTags)
+            {
+                tags = Array.Empty<string>();
+                return false;
+            }
+
+            parsed.Add(segment.ToString());
+        }
+
+        tags = parsed;
+        return true;
+    }
+
     private static VaultItemType ParseType(string value) => Enum.TryParse<VaultItemType>(value, true, out var parsed) ? parsed : VaultItemType.Login;
     private static string Escape(string value) => value.IndexOfAny([',', '"', '\r', '\n']) >= 0 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
 
