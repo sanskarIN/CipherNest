@@ -15,14 +15,14 @@ SQLite WAL files are treated as sensitive encrypted-container material. No plain
 
 The current source treats database length/count metadata as untrusted resource input and applies explicit budgets:
 
-- vault-header JSON: maximum 64 KiB UTF-8;
+- vault-header JSON: maximum 64 KiB UTF-8, maximum depth 16, exact version-aware root/wrapped-key/KDF schema;
 - serialized decrypted item JSON: maximum 16 MiB;
 - stored encrypted item envelope: maximum 24 MiB per row;
 - item count: maximum 100,000 rows;
 - aggregate stored encrypted envelope bytes: maximum 256 MiB;
 - application-level combined item text: maximum 2,000,000 characters before serialization.
 
-`ReadHeaderAsync` reads the UTF-8 byte length before materializing header text. `ReadAllItemsAsync` checks aggregate count/bytes and each `length(Envelope)` before reading the BLOB. Writes enforce the corresponding limits as well. Stored item IDs must be canonical lower-case GUID `D` strings; after decryption the payload ID must still equal the authenticated row ID.
+`ReadHeaderAsync` reads the UTF-8 byte length before materializing header text. `VaultService` then applies `VaultHeaderJsonPolicy` before typed header deserialization or wrapped-key unwrap: v1/v2 roots, non-null wrappers, nested KDF objects, duplicate/unknown/missing/wrong-kind metadata, and depth are all validated explicitly. `ReadAllItemsAsync` checks aggregate count/bytes and each `length(Envelope)` before reading the BLOB. Writes enforce the corresponding limits as well. Stored item IDs must be canonical lower-case GUID `D` strings; after decryption the payload ID must still equal the authenticated row ID.
 
 These are safety/resource limits, not recommendations that ordinary vaults should approach them. Raising them requires memory/performance/security review and compatibility testing.
 
@@ -57,7 +57,7 @@ Callers are expected to supply a unique staging path. The encrypted-backup servi
 2. run `PRAGMA quick_check;` and require `ok`;
 3. require exactly `AppConstants.DatabaseSchemaVersion`;
 4. validate the required current table/column shape;
-5. require a bounded vault header;
+5. require a byte-bounded vault header and validate its strict supported v1/v2 JSON schema/depth before active mutation;
 6. validate item count, aggregate envelope bytes, per-envelope sizes, and canonical item IDs;
 7. only then stage the active SQLite file set and install the replacement database.
 
@@ -80,6 +80,7 @@ CipherNest intentionally does not create a SQLite full-text index because that w
 ## Related canonical references
 
 - `../formats/VAULT_RECORDS.md` — logical/encrypted row representation and identity binding.
+- `../formats/VAULT_HEADER.md` — local vault-header schema, version compatibility, parser bounds, and pre-unwrap/pre-replacement validation.
 - `../formats/ATTACHMENTS.md` — separately encrypted `.cna` files referenced from encrypted item payloads.
 - `../formats/ENCRYPTED_BACKUP.md` — snapshot/archive/restore framing and validation order.
 - `SESSION_AND_CONCURRENCY.md` — transition/mutation/recovery cancellation rules.
