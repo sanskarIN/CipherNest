@@ -42,7 +42,7 @@ This directory is the canonical navigation point for CipherNest project document
 
 - [`formats/VAULT_RECORDS.md`](formats/VAULT_RECORDS.md) — logical vault item model, encrypted record identity binding, validation, TOTP record parameters, and storage limits.
 - [`formats/VAULT_HEADER.md`](formats/VAULT_HEADER.md) — strict version-aware local vault-header JSON schema, wrapped-key/KDF metadata contract, parser bounds, compatibility, and pre-unwrap validation order.
-- [`formats/ATTACHMENTS.md`](formats/ATTACHMENTS.md) — encrypted attachment naming/framing, chunk processing, metadata policy, preview, and export boundary.
+- [`formats/ATTACHMENTS.md`](formats/ATTACHMENTS.md) — encrypted attachment naming/framing, chunk processing, rune-aware metadata policy, preview, and export boundary.
 - [`formats/ENCRYPTED_BACKUP.md`](formats/ENCRYPTED_BACKUP.md) — `.cnbak` container framing, KDF/header validation, encrypted chunks, bounded archive contents, restore validation, and rollback.
 - [`formats/CSV_TRANSFER.md`](formats/CSV_TRANSFER.md) — explicit CSV mapping/import behavior and guarded plaintext export.
 
@@ -64,6 +64,7 @@ These format documents are implementation documentation, not promises of permane
 - [`verification/SETTINGS_JSON_HARDENING_2026_08_15.md`](verification/SETTINGS_JSON_HARDENING_2026_08_15.md) — source/test/current-head verification contract for bounded settings reads, explicit JSON depth, invalid UTF-8 fallback, normalization, and deterministic adversarial settings coverage.
 - [`verification/BACKUP_HEADER_HARDENING_2026_08_15.md`](verification/BACKUP_HEADER_HARDENING_2026_08_15.md) — source/test/current-head verification contract for strict bounded version-2 backup-header JSON, pre-Argon2 rejection, and deterministic adversarial header coverage.
 - [`verification/VAULT_HEADER_HARDENING_2026_08_15.md`](verification/VAULT_HEADER_HARDENING_2026_08_15.md) — source/test/current-head verification contract for strict v1/v2 local vault-header JSON, pre-unwrap/replacement rejection, legacy compatibility, and the deterministic hostile-header corpus.
+- [`verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md`](verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md) — source/test/current-head contract for rune-aware attachment display/media metadata, exact opaque `.cna` storage-name bounds, validator reuse, and the deterministic 128-input hostile corpus.
 - [`TEST_PLAN.md`](TEST_PLAN.md) — complete automated/manual release test matrix.
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized, how to add tests, what source tests prove, and what still requires devices.
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
