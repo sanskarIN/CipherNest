@@ -145,6 +145,27 @@ public sealed class VaultItemValidatorTests
         };
         Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(controlCharacters));
 
+        var formatId = Guid.NewGuid();
+        var formatCharacters = valid with
+        {
+            Attachments = [new AttachmentReference(formatId, "bad\U000E0001name.txt", "text/\u202Eplain", 1, $"{formatId:N}.cna", DateTimeOffset.UtcNow)]
+        };
+        Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(formatCharacters));
+
+        var malformedUtf16Id = Guid.NewGuid();
+        var malformedUtf16 = valid with
+        {
+            Attachments = [new AttachmentReference(malformedUtf16Id, "bad\uD800name.txt", "text/plain", 1, $"{malformedUtf16Id:N}.cna", DateTimeOffset.UtcNow)]
+        };
+        Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(malformedUtf16));
+
+        var nonCanonicalDisplayNameId = Guid.NewGuid();
+        var nonCanonicalDisplayName = valid with
+        {
+            Attachments = [new AttachmentReference(nonCanonicalDisplayNameId, "folder/file.txt", " text/plain", 1, $"{nonCanonicalDisplayNameId:N}.cna", DateTimeOffset.UtcNow)]
+        };
+        Assert.Contains("An attachment contains invalid metadata.", VaultItemValidator.Validate(nonCanonicalDisplayName));
+
         var mismatchedStorage = valid with
         {
             Attachments = [new AttachmentReference(id, "file.txt", "text/plain", 1, $"{Guid.NewGuid():N}.cna", DateTimeOffset.UtcNow)]
