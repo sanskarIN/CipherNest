@@ -1,0 +1,30 @@
+name: Replacement Vault Header Patch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Patch replacement vault-header validation
+        run: python build/scripts/patch_replacement_vault_header_20260815.py
+      - name: Verify whitespace
+        run: git diff --check
+      - name: Commit replacement validation and cleanup helper
+        run: |
+          git config user.name "Sanskar"
+          git config user.email "sanskarin@outlook.in"
+          git add src/CipherNest.Infrastructure/Persistence/SqliteVaultStore.cs
+          git commit -m "security(vault): validate replacement header schema pre-swap"
+          git rm build/scripts/patch_replacement_vault_header_20260815.py .github/workflows/replacement-vault-header-patch-2026-08-15.yml
+          git commit -m "chore(vault): remove replacement header patch helper"
+          git push origin main
