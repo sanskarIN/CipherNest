@@ -17,56 +17,63 @@ public static class TotpPolicy
             throw new ArgumentException($"Formatted TOTP secret exceeds the {MaximumFormattedInputCharacters:N0}-character input safety limit.", nameof(secret));
 
         var normalized = new char[secret.Length];
-        var length = 0;
-        var paddingCount = 0;
-        var paddingStarted = false;
-
-        foreach (var raw in secret)
+        try
         {
-            if (char.IsWhiteSpace(raw) || raw == '-') continue;
+            var length = 0;
+            var paddingCount = 0;
+            var paddingStarted = false;
 
-            var value = char.ToUpperInvariant(raw);
-            if (value == '=')
+            foreach (var raw in secret)
             {
-                paddingStarted = true;
-                paddingCount++;
+                if (char.IsWhiteSpace(raw) || raw == '-') continue;
+
+                var value = char.ToUpperInvariant(raw);
+                if (value == '=')
+                {
+                    paddingStarted = true;
+                    paddingCount++;
+                    normalized[length++] = value;
+                    continue;
+                }
+
+                if (paddingStarted)
+                    throw new ArgumentException("TOTP Base32 padding must appear only at the end of the secret.", nameof(secret));
+                if (value is not (>= 'A' and <= 'Z') && value is not (>= '2' and <= '7'))
+                    throw new ArgumentException("TOTP secret must use Base32 characters A-Z and 2-7.", nameof(secret));
+
                 normalized[length++] = value;
-                continue;
+                if (length > MaximumSecretCharacters)
+                    throw new ArgumentException($"TOTP secret exceeds the {MaximumSecretCharacters:N0}-character safety limit.", nameof(secret));
             }
 
-            if (paddingStarted)
-                throw new ArgumentException("TOTP Base32 padding must appear only at the end of the secret.", nameof(secret));
-            if (value is not (>= 'A' and <= 'Z') && value is not (>= '2' and <= '7'))
-                throw new ArgumentException("TOTP secret must use Base32 characters A-Z and 2-7.", nameof(secret));
-
-            normalized[length++] = value;
+            while (length > 0 && normalized[length - 1] == '=') length--;
+            if (length < MinimumSecretCharacters)
+                throw new ArgumentException($"TOTP secret must contain at least {MinimumSecretCharacters} Base32 characters.", nameof(secret));
             if (length > MaximumSecretCharacters)
                 throw new ArgumentException($"TOTP secret exceeds the {MaximumSecretCharacters:N0}-character safety limit.", nameof(secret));
+
+            var remainder = length % 8;
+            if (remainder is 1 or 3 or 6)
+                throw new ArgumentException("TOTP secret has an invalid Base32 length.", nameof(secret));
+
+            var expectedPadding = remainder switch
+            {
+                0 => 0,
+                2 => 6,
+                4 => 4,
+                5 => 3,
+                7 => 1,
+                _ => throw new ArgumentException("TOTP secret has an invalid Base32 length.", nameof(secret))
+            };
+            if (paddingCount > 0 && paddingCount != expectedPadding)
+                throw new ArgumentException("TOTP Base32 padding length is invalid.", nameof(secret));
+
+            return new string(normalized, 0, length);
         }
-
-        while (length > 0 && normalized[length - 1] == '=') length--;
-        if (length < MinimumSecretCharacters)
-            throw new ArgumentException($"TOTP secret must contain at least {MinimumSecretCharacters} Base32 characters.", nameof(secret));
-        if (length > MaximumSecretCharacters)
-            throw new ArgumentException($"TOTP secret exceeds the {MaximumSecretCharacters:N0}-character safety limit.", nameof(secret));
-
-        var remainder = length % 8;
-        if (remainder is 1 or 3 or 6)
-            throw new ArgumentException("TOTP secret has an invalid Base32 length.", nameof(secret));
-
-        var expectedPadding = remainder switch
+        finally
         {
-            0 => 0,
-            2 => 6,
-            4 => 4,
-            5 => 3,
-            7 => 1,
-            _ => throw new ArgumentException("TOTP secret has an invalid Base32 length.", nameof(secret))
-        };
-        if (paddingCount > 0 && paddingCount != expectedPadding)
-            throw new ArgumentException("TOTP Base32 padding length is invalid.", nameof(secret));
-
-        return new string(normalized, 0, length);
+            Array.Clear(normalized, 0, normalized.Length);
+        }
     }
 
     public static void ValidateSettings(TotpAlgorithm algorithm, int digits, int periodSeconds)
