@@ -3,6 +3,7 @@
 ## Current release: 0.1.0 + unreleased hardening
 
 ### Completed in source
+- Local vault-header JSON now has strict version-aware validation before typed deserialization/wrapped-key unwrap: 64 KiB UTF-8, maximum depth 16, exact case-sensitive v1/v2 root + wrapped-key/KDF property sets, duplicate/unknown/missing/wrong-kind rejection, writer self-validation, deliberate v1-to-v2 mutation upgrade, strict replacement-database pre-swap validation, deterministic 120-case hostile corpus, and source/documentation regression guards.
 - Settings JSON loading now enforces both the 64 KiB file ceiling and a fixed 64 KiB + 1 actual-read sentinel boundary before bounded-memory deserialization, caps nesting at 16, falls back safely on invalid UTF-8/over-depth input, preserves UTF-8 BOM compatibility, and has deterministic adversarial-corpus plus source-regression coverage.
 - Encrypted backup version-2 header JSON is now strict and bounded before Argon2: 16..16,384 bytes, maximum depth 16, exact case-sensitive root/KDF property sets, duplicate/unknown/missing/wrong-type rejection, exporter self-validation, restore-order source guards, and a deterministic hostile-header corpus that requires zero key-derivation calls.
 - CSV import header metadata has a dedicated 256-character ceiling enforced during streaming parse and again after parsing, and rune-aware Unicode category checks reject control/`Format` characters including supplementary-plane formatting controls before mapping; fixed malformed cases, a deterministic adversarial corpus, aggregate-row coverage, and source-regression guards protect this trust boundary.
@@ -20,7 +21,7 @@
 - SQLite replacement stages the active database, WAL, and SHM into a unique recovery file set. Component-aware rollback restores only components that actually staged, preventing deletion of an unstaged sidecar during partial recovery.
 - Full database deletion attempts the primary DB, WAL, SHM, legacy recovery file, and generated recovery artifacts before reporting aggregate cleanup failure.
 - Local vault creation, master/recovery unlock, lock lifecycle, bounded failed-attempt backoff, master-passphrase rotation, and guarded full local-vault deletion.
-- Supported vault-header versions are explicit; future/unknown or malformed JSON headers are rejected as authentication failures before key unwrap.
+- Supported vault-header versions are explicit: exact historical v1 remains readable, v2 is the current self-validated write format, hybrid/future/malformed structures are rejected before key unwrap, and current header mutations deliberately upgrade legacy v1 metadata to v2.
 - Master/recovery unlock, secondary unlock, public lock, and full-vault deletion are serialized through the same service transition gate so a late-finishing unlock cannot publish a new session after an already-requested lock.
 - Full-vault deletion acquires a live session key lease after current-master re-authentication and waits for the transition gate with that lease token; an intervening lock/unlock invalidates the session and cancels stale destructive authorization.
 - Once full-vault deletion clears the session key, managed database and encrypted-attachment cleanup are both attempted with an uncancelled destructive transition, and incomplete deletion is reported generically.
