@@ -273,3 +273,11 @@ If exported columns are added/renamed/reordered, consider:
 - parser/round-trip tests.
 
 Do not add recovery keys, master passphrases, backup passphrases, or biometric secondary secrets to CSV.
+
+## Final mapped-tag row hardening — 2026-08-15
+
+Mapped Tags values are bounded before `VaultItem` construction. CipherNest reuses the canonical vault-item limits of **100 tags per item** and **128 UTF-16 code units per tag**.
+
+The importer scans comma/semicolon delimiters with spans rather than calling `string.Split(...)` across the entire mapped field. Empty trimmed segments are ignored as before, but import rejects the row before materializing a 101st non-empty tag or a tag longer than 128 characters. At most 100 accepted tag strings are materialized. This prevents a parser-valid field near the general 1,000,000-character field ceiling from forcing hundreds of thousands of tag-substring allocations before normal item validation runs.
+
+Integration coverage includes exact-100-tag acceptance, a 10,000-short-tag hostile row that is skipped without saving an item, and an oversized-tag row that is skipped before item construction. The broader CSV field/row/column ceilings and explicit user mapping rules remain unchanged.
