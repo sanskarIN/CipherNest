@@ -58,12 +58,19 @@ public sealed class DatabaseReplacementRecoveryIntegrationTests : IDisposable
         var replacementPath = Path.Combine(_directory, "replacement.db");
         var replacement = new SqliteVaultStore(replacementPath);
         await replacement.InitializeAsync();
-        await replacement.WriteHeaderAsync("{\"marker\":\"replacement\"}");
+        var replacementHeader = BuildSupportedVaultHeader();
+        await replacement.WriteHeaderAsync(replacementHeader);
 
         await active.ReplaceDatabaseAsync(replacementPath);
 
-        Assert.Equal("{\"marker\":\"replacement\"}", await active.ReadHeaderAsync());
+        Assert.Equal(replacementHeader, await active.ReadHeaderAsync());
         Assert.Empty(Directory.GetFiles(_directory, "vault.db.previous.*", SearchOption.TopDirectoryOnly));
+    }
+
+    private static string BuildSupportedVaultHeader()
+    {
+        const string wrapper = "{\"version\":1,\"salt\":\"AAAAAAAAAAAAAAAAAAAAAA==\",\"kdf\":{\"memoryKiB\":65536,\"iterations\":3,\"parallelism\":1},\"nonce\":\"AAAAAAAAAAAAAAAA\",\"ciphertext\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\",\"tag\":\"AAAAAAAAAAAAAAAAAAAAAA==\"}";
+        return $"{{\"version\":2,\"master\":{wrapper},\"recovery\":null,\"secondary\":null}}";
     }
 
     public void Dispose()
