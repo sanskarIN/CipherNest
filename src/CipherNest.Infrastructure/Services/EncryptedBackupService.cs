@@ -42,6 +42,7 @@ public sealed class EncryptedBackupService : IBackupService
             key = _crypto.DeriveKey(backupPassphrase.AsSpan(), salt, kdf);
             var header = new BackupHeader(BackupFormatPolicy.CurrentVersion, salt, kdf, ChunkSize, DateTimeOffset.UtcNow);
             var headerJson = JsonSerializer.SerializeToUtf8Bytes(header);
+            BackupHeaderJsonPolicy.Validate(headerJson);
             await using var output = new FileStream(tempOutput, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
             await output.WriteAsync(Magic, cancellationToken).ConfigureAwait(false);
             await WriteInt32Async(output, headerJson.Length, cancellationToken).ConfigureAwait(false);
@@ -103,9 +104,10 @@ public sealed class EncryptedBackupService : IBackupService
                 await ReadExactlyAsync(input, magic, cancellationToken).ConfigureAwait(false);
                 if (!CryptographicOperations.FixedTimeEquals(magic, Magic)) throw new InvalidDataException("Unsupported or invalid CipherNest backup.");
                 var headerLength = await ReadInt32Async(input, cancellationToken).ConfigureAwait(false);
-                if (headerLength is < 16 or > 16_384) throw new InvalidDataException("Invalid backup header size.");
+                BackupFormatPolicy.ValidateHeaderLength(headerLength);
                 var headerJson = new byte[headerLength];
                 await ReadExactlyAsync(input, headerJson, cancellationToken).ConfigureAwait(false);
+                BackupHeaderJsonPolicy.Validate(headerJson);
                 var header = JsonSerializer.Deserialize<BackupHeader>(headerJson) ?? throw new InvalidDataException("Invalid backup header.");
                 if (header.Salt is null || header.Kdf is null) throw new InvalidDataException("Invalid backup header.");
                 BackupFormatPolicy.ValidateHeader(header.Version, header.Salt.Length, header.Kdf, header.ChunkSize);
