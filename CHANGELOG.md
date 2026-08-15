@@ -44,7 +44,7 @@ All notable changes are documented here following Semantic Versioning principles
 - Multi-megabyte attachment streaming, plaintext-buffer zeroing, encrypted attachment tamper/truncation, backup corruption, and wrong-backup-passphrase integration coverage.
 - Rune-aware attachment metadata normalization/validation with malformed UTF-16 and Unicode Control/Format rejection, canonical persisted-metadata predicate reuse, supplementary-plane coverage, and an exactly 128-input deterministic hostile metadata/storage-name corpus.
 - Serialized attachment add/remove/permanent-delete mutations with a cancellable mutation gate and global backup-compatible attachment budget.
-- Opaque attachment storage-name validation requiring GUID-based `.cna` names without path separators, plus attachment metadata/uniqueness validation.
+- Opaque attachment storage-name validation requiring an exact 36-character GUID-N `.cna` shape, early length rejection before stem parsing, canonical normalization, attachment-ID binding, plus attachment metadata/uniqueness validation.
 - Malformed CSV parser robustness corpus, final-field maximum-column enforcement, and reusable parser character buffer.
 - Null-safe item validation plus decrypted-record identity/metadata validation before records leave the infrastructure boundary.
 - Settings persistence round-trip/corruption tests, centralized normalization of enum/numeric/generator defaults, unique `CreateNew` sibling staging, and a 64 KiB pre-parse/pre-replace file-size ceiling.
