@@ -165,6 +165,8 @@ From `BackupFormatPolicy`:
 | Parameter | Minimum | Maximum/current |
 |---|---:|---:|
 | Format version | — | exactly `2` |
+| Header JSON bytes | 16 bytes | 16,384 bytes |
+| Header JSON nesting depth | — | 16 |
 | Salt | 16 bytes | 64 bytes |
 | Chunk size accepted | 64 KiB | 4 MiB |
 | Current export chunk size | 1 MiB |
@@ -173,7 +175,7 @@ From `BackupFormatPolicy`:
 | KDF iterations | 1 | 10 |
 | KDF parallelism | 1 | 16 |
 
-The header bounds are validated before Argon2 derivation during restore.
+The declared and actual header byte bounds are validated before Argon2 derivation during restore. Version-2 header JSON additionally uses an explicit 16-level parser depth ceiling and exact case-sensitive root/KDF property sets; duplicate, unknown, missing, case-variant, and wrong-type metadata is rejected before typed deserialization/key derivation.
 
 ## Backup archive limits
 
