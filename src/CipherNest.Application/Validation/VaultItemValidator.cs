@@ -6,6 +6,8 @@ public static class VaultItemValidator
 {
     private const long MaximumAttachmentBytes = 100L * 1024 * 1024;
     public const int MaximumAggregateTextCharacters = 2_000_000;
+    public const int MaximumTags = 100;
+    public const int MaximumTagCharacters = 128;
 
     public static IReadOnlyList<string> Validate(VaultItem item)
     {
@@ -25,10 +27,10 @@ public static class VaultItemValidator
         if (item.Notes is null || item.Notes.Length > SafeNoteLimits.MaximumCharacters) errors.Add($"Notes are invalid or exceed the {SafeNoteLimits.MaximumCharacters:N0}-character safety limit.");
         if (item.Notes is not null && SafeNoteLimits.ExceedsLineLimit(item.Notes)) errors.Add($"Notes exceed the {SafeNoteLimits.MaximumLines:N0}-line safety limit.");
         if (item.Collection is null || item.Collection.Length > 128) errors.Add("Collection name is invalid or exceeds 128 characters.");
-        if (item.Tags is null || tags.Count > 100) errors.Add("An item can have at most 100 tags and the tag collection must be present.");
+        if (item.Tags is null || tags.Count > MaximumTags) errors.Add($"An item can have at most {MaximumTags} tags and the tag collection must be present.");
         if (item.CustomFields is null || customFields.Count > 100) errors.Add("An item can have at most 100 custom fields and the custom-field collection must be present.");
         if (item.Attachments is null || attachments.Count > 25) errors.Add("An item can have at most 25 attachments and the attachment collection must be present.");
-        if (tags.Any(static tag => string.IsNullOrWhiteSpace(tag) || tag.Length > 128)) errors.Add("Tags cannot be empty and cannot exceed 128 characters.");
+        if (tags.Any(static tag => string.IsNullOrWhiteSpace(tag) || tag.Length > MaximumTagCharacters)) errors.Add($"Tags cannot be empty and cannot exceed {MaximumTagCharacters} characters.");
         if (customFields.Any(static field => field is null || string.IsNullOrWhiteSpace(field.Name) || field.Name.Length > 128 || field.Value is null || field.Value.Length > 100_000)) errors.Add("A custom field name or value is invalid.");
         if (attachments.Any(static attachment =>
                 attachment is null ||
