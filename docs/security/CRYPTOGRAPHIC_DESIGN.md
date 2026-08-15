@@ -43,7 +43,7 @@ KDF values can be read from encrypted-container metadata before authentication, 
 
 Values outside these ranges are rejected before Argon2 allocation/work. These are parser/resource bounds, not a statement that every accepted low-end combination is recommended for new vault creation. New wrappers use `DefaultKdf`.
 
-Encrypted backup headers additionally require backup format version `2`, salt length 16–64 bytes, chunk size 64 KiB–4 MiB, and the same bounded Argon2 resource ranges. `BackupFormatPolicy.ValidateHeader` executes before backup key derivation.
+Encrypted backup headers additionally require 16..16,384 bounded JSON bytes, maximum nesting depth 16, and the exact case-sensitive version-2 root/KDF property sets before typed deserialization. Duplicate, unknown, missing, case-variant, or wrong-type metadata is rejected before key derivation. After that structural gate, backup format version `2`, salt length 16–64 bytes, chunk size 64 KiB–4 MiB, and the same bounded Argon2 resource ranges are enforced by `BackupFormatPolicy.ValidateHeader` before backup key derivation.
 
 ## Vault key hierarchy
 
@@ -146,7 +146,7 @@ Backup format magic is `CNBK0002`; backup format version is `2`.
 6. Backup framing rejects more than 65,536 encrypted chunks in addition to the aggregate archive-byte budget.
 7. The reusable plaintext archive buffer span is zeroed in `finally` after each chunk encryption/write attempt.
 8. Export canonicalizes the requested destination and rejects the active database, WAL/SHM/recovery files, and encrypted attachment directory. Encrypted staging uses a unique sibling `CreateNew` file.
-9. Restore validates magic/header-size framing and backup version/salt/KDF/chunk bounds before Argon2, authenticates encrypted chunks, enforces the chunk-count ceiling, bounds total archive size/entry count/paths, rejects duplicate normalized ZIP paths, and rejects attachment entries outside the implemented encrypted-container size envelope.
+9. Restore validates magic/header-size framing, strict version-2 JSON schema/depth, and backup version/salt/KDF/chunk bounds before Argon2, authenticates encrypted chunks, enforces the chunk-count ceiling, bounds total archive size/entry count/paths, rejects duplicate normalized ZIP paths, and rejects attachment entries outside the implemented encrypted-container size envelope.
 10. The staged `vault.db` must pass SQLite `PRAGMA quick_check`, exact database schema version, valid migration history, required table/column shape, required bounded vault header, canonical item IDs, item count, per-record envelope size, and aggregate envelope size before active DB/WAL/SHM mutation.
 11. Active SQLite DB/WAL/SHM files are staged into unique recovery names. Component-aware rollback restores only components that actually moved.
 12. Encrypted-backup rollback uses an uncancelled recovery token once active-state mutation begins, so caller cancellation cannot cancel the rollback database replacement. Secondary rollback errors remain best-effort and do not intentionally replace the original restore failure.
