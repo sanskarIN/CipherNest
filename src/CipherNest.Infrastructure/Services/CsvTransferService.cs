@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using CipherNest.Application.Abstractions;
 using CipherNest.Application.Validation;
@@ -9,6 +10,7 @@ public sealed class CsvTransferService : IPlaintextTransferService
 {
     private const int MaxColumns = 256;
     private const int MaxRows = 100_000;
+    private const int MaxHeaderNameChars = 256;
     private const int MaxFieldChars = 1_000_000;
     private const int MaxRowChars = 2_000_000;
     private readonly IVaultService _vault;
@@ -121,6 +123,9 @@ public sealed class CsvTransferService : IPlaintextTransferService
     {
         if (row.Count is 0 or > MaxColumns) throw new InvalidDataException("CSV header has an unsupported number of columns.");
         if (row.Any(static h => string.IsNullOrWhiteSpace(h))) throw new InvalidDataException("CSV header contains an empty column name.");
+        if (row.Any(static h => h.Length > MaxHeaderNameChars)) throw new InvalidDataException("CSV header contains an oversized column name.");
+        if (row.Any(static h => h.Any(static ch => char.IsControl(ch) || char.GetUnicodeCategory(ch) == UnicodeCategory.Format)))
+            throw new InvalidDataException("CSV header contains an unsafe control or formatting character.");
         if (row.Distinct(StringComparer.OrdinalIgnoreCase).Count() != row.Count) throw new InvalidDataException("CSV header contains duplicate column names.");
     }
 
