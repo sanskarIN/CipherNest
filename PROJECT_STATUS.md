@@ -4,13 +4,14 @@
 
 ### Completed in source
 - Settings JSON loading now enforces both the 64 KiB file ceiling and a fixed 64 KiB + 1 actual-read sentinel boundary before bounded-memory deserialization, caps nesting at 16, falls back safely on invalid UTF-8/over-depth input, preserves UTF-8 BOM compatibility, and has deterministic adversarial-corpus plus source-regression coverage.
+- Encrypted backup version-2 header JSON is now strict and bounded before Argon2: 16..16,384 bytes, maximum depth 16, exact case-sensitive root/KDF property sets, duplicate/unknown/missing/wrong-type rejection, exporter self-validation, restore-order source guards, and a deterministic hostile-header corpus that requires zero key-derivation calls.
 - CSV import header metadata has a dedicated 256-character ceiling enforced during streaming parse and again after parsing, and rune-aware Unicode category checks reject control/`Format` characters including supplementary-plane formatting controls before mapping; fixed malformed cases, a deterministic adversarial corpus, aggregate-row coverage, and source-regression guards protect this trust boundary.
 - A consolidated `docs/COMPLETE_PROJECT_DOCUMENTATION.md` reference and `docs/FAQ.md` now provide complete orientation/support entry points over the canonical specialist documentation; `DocumentationCoverageSourceTests` requires both files and their root/hub links.
 - Repository and multi-project solution scaffolding with Domain/Application/Infrastructure/Shared/MAUI/test separation.
 - Versioned cryptographic envelope with Argon2id key derivation and AES-256-GCM authenticated encryption.
 - Random vault data-encryption key wrapped independently by master passphrase, optional recovery key, and optional biometric secondary secret.
 - Untrusted KDF metadata is resource-bounded before Argon2 work: salt 16–64 bytes, memory 16–512 MiB, iterations 1–10, and parallelism 1–16; new wrappers use the current 64 MiB / 3 iteration / parallelism 1 default.
-- Backup restore validates backup format version, salt length, KDF bounds, and chunk size before Argon2 key derivation.
+- Backup restore additionally validates format version, salt length, KDF bounds, and chunk size after strict header-structure validation and still before Argon2 key derivation.
 - Encrypted SQLite record persistence with minimized plaintext metadata and a transactional ordered schema-migration runner that rejects unsupported future schema versions.
 - Migration completion validates required current table/column shapes, rejects forged current-version history that omits required schema objects, and preserves the original migration error if rollback itself fails.
 - Vault storage budgets are explicit and enforced: 64 KiB vault-header UTF-8, 16 MiB serialized/decrypted item JSON, 24 MiB per stored encrypted envelope, 100,000 item rows, 256 MiB aggregate encrypted-envelope bytes, 10,000 referenced attachments total, and 2,000,000 aggregate item-text characters before serialization.
