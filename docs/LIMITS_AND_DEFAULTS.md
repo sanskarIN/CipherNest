@@ -86,11 +86,15 @@ From `CipherNest.Shared.VaultStorageLimits`:
 | Resource | Maximum |
 |---|---:|
 | Vault-header UTF-8 bytes | 64 KiB |
+| Vault-header JSON nesting depth | 16 |
+| Vault-header JSON schema | exact case-sensitive v1/v2 root + wrapped-key/KDF property sets |
 | Serialized/decrypted item JSON | 16 MiB |
 | Stored encrypted envelope per row | 24 MiB |
 | Encrypted item rows | 100,000 |
 | Aggregate stored encrypted-envelope bytes | 256 MiB |
 | Referenced attachments across vault | 10,000 |
+
+Vault-header version 1 is read-compatible only with the exact `version`/`master`/`recovery` root; version 2 is the current write format and additionally requires `secondary` (which may be null). Every non-null wrapped-key object and nested KDF object uses an exact case-sensitive property set, and duplicate/unknown/missing/wrong-kind metadata or nesting beyond 16 is rejected before typed header deserialization/wrapped-key unwrap. Replacement-database validation applies the same strict header policy before active DB/WAL/SHM mutation.
 
 SQLite and service-level paths enforce overlapping limits so a custom store cannot intentionally bypass every boundary.
 
