@@ -15,7 +15,7 @@ Importing does not delete/encrypt the original CSV. Exported CSV can be retained
 
 ## 2. Encoding
 
-The parser uses `StreamReader` with UTF-8 and BOM detection enabled.
+The parser uses strict UTF-8 decoding and rejects malformed UTF-8 byte sequences. It does not auto-detect alternate encodings. One optional UTF-8 BOM at the beginning of the stream is accepted explicitly.
 
 Plaintext export writes UTF-8 with a BOM.
 
@@ -26,12 +26,13 @@ Current `CsvTransferService` limits:
 ```text
 Maximum columns:             256
 Maximum data rows:           100,000
+Maximum header-name chars:   256
 Maximum characters/field:    1,000,000
 Maximum characters/row:      2,000,000
 Maximum retained warnings:   20
 ```
 
-The row limit is enforced by the streaming parser rather than materializing the whole CSV first.
+The row limit is enforced by the streaming parser rather than materializing the whole CSV first. The dedicated header-name ceiling is intentionally much smaller than the general field ceiling because header strings are presented in the import-mapping UI and should never become an unbounded display/mapping surface.
 
 ## 4. CSV grammar supported by current parser
 
@@ -41,7 +42,7 @@ The parser supports standard-style comma-separated fields with quoting:
 - `"..."` quoted fields;
 - doubled quote `""` inside a quoted field represents one quote;
 - embedded commas are allowed inside quoted fields;
-- embedded CR/LF content is allowed while inside quotes;
+- embedded CR/LF content is allowed while inside quotes for normal fields, but header validation rejects control/formatting characters before a parsed header is returned;
 - CRLF row endings are handled together;
 - LF and CR row endings are accepted;
 - characters after a closing quote are not accepted before delimiter/newline.
@@ -67,9 +68,12 @@ Required rules:
 - at least one header column;
 - at most 256 columns;
 - no empty/whitespace-only header names;
+- at most 256 UTF-16 characters in each header name;
+- no Unicode control characters in a header name;
+- no Unicode `Format` category characters in a header name, including invisible/bidirectional formatting controls;
 - case-insensitive uniqueness.
 
-Duplicate header names are rejected rather than silently choosing one occurrence.
+Duplicate header names are rejected rather than silently choosing one occurrence. Control/format characters are rejected before headers can be surfaced in mapping UI so an imported file cannot use tabs, embedded line breaks, NULs, zero-width formatting marks, or bidirectional controls to create misleading column labels.
 
 ## 7. Explicit import mapping
 
@@ -234,14 +238,19 @@ The parser rejects conditions such as:
 
 - empty CSV;
 - empty header names;
+- header names longer than 256 characters;
+- control or invisible Unicode formatting characters in header names;
 - duplicate header names;
 - too many columns;
 - too many rows;
 - field over 1,000,000 characters;
 - row over 2,000,000 characters;
+- malformed UTF-8;
 - EOF inside a quoted field;
 - characters after closing quote before delimiter/newline;
 - mapped column not present in header.
+
+Integration tests include fixed malformed examples plus a deterministic adversarial header corpus. The corpus is intentionally deterministic so a failing input is reproducible in CI rather than dependent on ambient randomness.
 
 ## 19. Privacy/diagnostic behavior
 
