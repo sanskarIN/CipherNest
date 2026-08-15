@@ -168,6 +168,8 @@ Keep these surfaces aligned when attachment metadata/storage-name rules change:
 - `CHANGELOG.md`;
 - `what_changed.md`.
 
+The repository documentation gate now requires this verification record to exist and remain non-empty, requires the documentation hub to link it, and asserts that the record retains the exactly 128-input corpus, supplementary-plane coverage, and independent-audit disclaimer. The large canonical-document reconciliation was committed as focused file-level changes, checked with `git diff --check`, and its temporary workflow/script removed from the permanent tree before the final candidate was frozen.
+
 ## Remaining limitations and next parser work
 
 This work does not prove safety against every malicious `.cna` container, filesystem race/reparse behavior, compromised OS/process, future Unicode/runtime defect, backup archive path issue, or plaintext export destination behavior.
