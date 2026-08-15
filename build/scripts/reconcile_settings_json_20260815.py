@@ -69,8 +69,8 @@ insert_after(
 
 replace_once(
     "PROJECT_STATUS.md",
-    "settings normalization/persistence/staging and 64 KiB file bounds,",
-    "settings normalization/persistence/staging, bounded 64 KiB + 1 reads, 16-level JSON depth, invalid UTF-8 fallback, and deterministic settings adversarial coverage,",
+    "- Settings persistence normalizes supported enum/numeric bounds on load/save, restores a valid password character group when password mode has none, falls back to defaults on malformed/unreadable non-secret settings files, rejects files above 64 KiB before JSON parsing, checks serialized output against the same 64 KiB ceiling, uses unique sibling `CreateNew` staging, and best-effort cleans staging without swallowing cancellation.",
+    "- Settings persistence normalizes supported enum/numeric bounds on load/save, restores a valid password character group when password mode has none, falls back to defaults on malformed/unreadable non-secret settings files, rejects files above 64 KiB before parsing, independently bounds the actual read to 64 KiB + 1 sentinel byte, caps JSON depth at 16, preserves UTF-8 BOM compatibility, checks serialized output against the same 64 KiB ceiling, uses unique sibling `CreateNew` staging, and best-effort cleans staging without swallowing cancellation.",
 )
 
 insert_after(
