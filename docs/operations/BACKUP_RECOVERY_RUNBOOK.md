@@ -108,7 +108,7 @@ The implementation is designed to:
 7. enforce `.cna` entry size/name rules;
 8. require a staged `vault.db`;
 9. validate SQLite signature;
-10. validate the replacement DB through store integrity/schema/resource checks before active mutation;
+10. validate the replacement DB through store integrity/schema/resource checks, including strict supported v1/v2 vault-header JSON, before active mutation;
 11. create a rollback snapshot;
 12. replace the active DB/attachments;
 13. attempt uncancelled rollback if failure occurs after active mutation;
@@ -219,6 +219,7 @@ Current chunk size:   1 MiB
 Chunk count:          max 65,536
 Archive entries:      max 10,001
 Archive bytes:        max 1 GiB
+Restored vault header: max 64 KiB UTF-8; depth 16; exact supported v1/v2 root/wrapper/KDF schemas
 ```
 
 A backup intentionally outside these limits is not supported by the current release.
