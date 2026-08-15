@@ -130,12 +130,13 @@ Record handling includes:
 Local search and audit operations work over decrypted in-memory objects while unlocked. Large result sets render incrementally instead of adding all matches to the visual tree at once.
 
 The canonical logical-record contract is `docs/formats/VAULT_RECORDS.md`.
+The local header compatibility/parser contract is `docs/formats/VAULT_HEADER.md`.
 
 ## 7. Storage and SQLite
 
 CipherNest persists encrypted records in SQLite with minimized plaintext metadata. Schema changes use an ordered migration runner. Migration completion validates required current schema objects and rejects forged current-version history that omits required objects.
 
-Replacement databases are validated before active mutation. Validation includes SQLite integrity checks, exact supported schema version, required table/column shape, bounded vault header, canonical item IDs, and encrypted-record resource budgets.
+Replacement databases are validated before active mutation. Validation includes SQLite integrity checks, exact supported schema version, required table/column shape, byte/depth-bounded strict supported v1/v2 vault-header schema, canonical item IDs, and encrypted-record resource budgets. Normal unlock likewise validates the exact vault-header root/wrapped-key/KDF JSON structure before typed deserialization or wrapped-key unwrap; valid historical v1 remains readable while current mutations write self-validated v2.
 
 Database replacement accounts for the main database plus WAL/SHM sidecars. Recovery staging uses unique names, and rollback restores only components actually moved so a partial staging failure does not incorrectly delete an unstaged sidecar.
 
@@ -147,7 +148,7 @@ CipherNest intentionally rejects extreme or malformed inputs before they can con
 
 | Resource | Current ceiling / rule |
 | --- | --- |
-| Vault header | 64 KiB UTF-8 |
+| Vault header | 64 KiB UTF-8; maximum JSON depth 16; exact supported v1/v2 root/wrapped-key/KDF schemas |
 | Serialized/decrypted item JSON | 16 MiB |
 | Stored encrypted item envelope | 24 MiB per record |
 | Vault item rows | 100,000 |
