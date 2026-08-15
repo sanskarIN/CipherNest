@@ -72,15 +72,13 @@ public sealed class JsonSettingsAdversarialTests : IDisposable
         Assert.InRange(preferences.ReviewReminderLeadDays, 0, 365);
         Assert.InRange(preferences.GeneratorPasswordLength, 8, 256);
         Assert.InRange(preferences.GeneratorPassphraseWordCount, 6, 16);
-
-        if (!preferences.GeneratorPassphraseMode &&
-            !preferences.GeneratorUppercase &&
-            !preferences.GeneratorLowercase &&
-            !preferences.GeneratorDigits &&
-            !preferences.GeneratorSymbols)
-        {
-            Assert.Fail("Password generator mode must retain at least one enabled character group after normalization.");
-        }
+        Assert.True(
+            preferences.GeneratorPassphraseMode ||
+            preferences.GeneratorUppercase ||
+            preferences.GeneratorLowercase ||
+            preferences.GeneratorDigits ||
+            preferences.GeneratorSymbols,
+            "Password generator mode must retain at least one enabled character group after normalization.");
     }
 
     public void Dispose()
