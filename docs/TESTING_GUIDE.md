@@ -334,6 +334,11 @@ Cover:
 - unique staging path;
 - `CreateNew` semantics;
 - 64 KiB input/output file ceiling;
+- actual input reads bounded by a fixed 64 KiB + 1 sentinel byte before JSON deserialization;
+- 16-level JSON nesting ceiling;
+- invalid UTF-8 fallback;
+- UTF-8 BOM compatibility through the bounded-memory path;
+- deterministic adversarial JSON corpus returning only normalized preferences;
 - no stale staging after success;
 - cleanup failure not masking primary result.
 
