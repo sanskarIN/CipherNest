@@ -41,7 +41,6 @@ def main() -> None:
     marker = "## 2026-08-15 — CSV import trust-boundary hardening and deterministic adversarial coverage"
     if marker not in text:
         entry = """
-
 ## 2026-08-15 — CSV import trust-boundary hardening and deterministic adversarial coverage
 
 - Added a dedicated 256-character ceiling for each imported CSV header name before mapping dictionaries or mapping UI consume it.
@@ -57,7 +56,7 @@ def main() -> None:
 - Reconciled `docs/TEST_PLAN.md`, `docs/NEXT_STEPS.md`, `PROJECT_STATUS.md`, and `CHANGELOG.md` so the implemented deterministic CSV-header corpus is distinguished from broader parser-fuzzing work that remains open.
 - This continuation does not treat deterministic adversarial tests as exhaustive fuzzing or as an independent security audit. Platform file-provider behavior, UI accessibility/layout, packaging/signing, and independent professional review remain separate release gates.
 """
-        ledger.write_text(text.rstrip() + entry + "\n", encoding="utf-8", newline="\n")
+        ledger.write_text(text.rstrip() + "\n\n" + entry.strip() + "\n", encoding="utf-8", newline="\n")
 
     Path(".github/workflows/csv-ledger-2026-08-15.yml").unlink()
     Path("build/scripts/reconcile_csv_ledger_20260815.py").unlink()
