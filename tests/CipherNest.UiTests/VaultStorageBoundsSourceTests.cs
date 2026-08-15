@@ -21,10 +21,15 @@ public sealed class VaultStorageBoundsSourceTests
     public void VaultService_BoundsSerializedAndDecryptedRecordSizes()
     {
         var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "VaultService.cs"));
+        var policy = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "VaultHeaderJsonPolicy.cs"));
+        var limits = File.ReadAllText(PathAt("src", "CipherNest.Shared", "VaultStorageLimits.cs"));
 
         Assert.Contains("VaultStorageLimits.MaximumItemPlaintextJsonBytes", source, StringComparison.Ordinal);
         Assert.Contains("VaultStorageLimits.MaximumStoredEnvelopeBytes", source, StringComparison.Ordinal);
-        Assert.Contains("VaultStorageLimits.MaximumVaultHeaderUtf8Bytes", source, StringComparison.Ordinal);
+        Assert.Contains("VaultHeaderJsonPolicy.Validate(headerJson);", source, StringComparison.Ordinal);
+        Assert.Contains("VaultStorageLimits.MaximumVaultHeaderUtf8Bytes", policy, StringComparison.Ordinal);
+        Assert.Contains("public const int MaximumVaultHeaderUtf8Bytes = 64 * 1024;", limits, StringComparison.Ordinal);
+        Assert.Contains("public const int MaximumVaultHeaderJsonDepth = 16;", limits, StringComparison.Ordinal);
         Assert.Contains("JsonSerializer.SerializeToUtf8Bytes(item, JsonOptions)", source, StringComparison.Ordinal);
         Assert.Contains("CryptographicOperations.ZeroMemory(plaintext)", source, StringComparison.Ordinal);
     }
