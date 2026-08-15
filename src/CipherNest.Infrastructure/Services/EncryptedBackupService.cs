@@ -218,10 +218,10 @@ public sealed class EncryptedBackupService : IBackupService
         var hasDatabase = false;
         var seenEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         long total = 0;
+        var copyBuffer = new byte[128 * 1024];
         foreach (var entry in archive.Entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            total = BackupArchivePolicy.AddEntryLength(total, entry.Length);
             var normalized = entry.FullName.Replace('\\', '/');
             if (!seenEntries.Add(normalized)) throw new InvalidDataException("Backup contains duplicate paths.");
             var allowedDb = normalized == "vault.db";
@@ -239,7 +239,13 @@ public sealed class EncryptedBackupService : IBackupService
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             await using var source = entry.Open();
             await using var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
-            await source.CopyToAsync(output, 128 * 1024, cancellationToken).ConfigureAwait(false);
+            total = await BackupArchivePolicy.CopyEntryExactlyAsync(
+                source,
+                output,
+                entry.Length,
+                total,
+                copyBuffer,
+                cancellationToken).ConfigureAwait(false);
         }
         if (!hasDatabase) throw new InvalidDataException("Backup does not contain a vault database.");
     }
