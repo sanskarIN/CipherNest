@@ -6,6 +6,7 @@ public sealed class BackupArchiveSourceTests
     public void ExportAndRestore_UseSharedArchiveResourcePolicy()
     {
         var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "EncryptedBackupService.cs"));
+        var policy = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "BackupArchivePolicy.cs"));
 
         var createArchive = Method(source, "private async Task CreateArchiveAsync", "private static async Task<(long TotalBytes, int EntryCount)> AddBoundedFileAsync");
         var addBounded = Method(source, "private static async Task<(long TotalBytes, int EntryCount)> AddBoundedFileAsync", "private static async Task AddFileAsync");
@@ -18,7 +19,15 @@ public sealed class BackupArchiveSourceTests
         Assert.Contains("BackupArchivePolicy.ValidateEntryCount", addBounded, StringComparison.Ordinal);
         Assert.Contains("BackupArchivePolicy.AddEntryLength", decrypt, StringComparison.Ordinal);
         Assert.Contains("BackupArchivePolicy.ValidateEntryCount", extract, StringComparison.Ordinal);
-        Assert.Contains("BackupArchivePolicy.AddEntryLength", extract, StringComparison.Ordinal);
+        Assert.Contains("var copyBuffer = new byte[128 * 1024];", extract, StringComparison.Ordinal);
+        Assert.Contains("BackupArchivePolicy.CopyEntryExactlyAsync", extract, StringComparison.Ordinal);
+        Assert.DoesNotContain("source.CopyToAsync", extract, StringComparison.Ordinal);
+
+        var validateBeforeRead = policy.IndexOf("var nextTotal = AddEntryLength(currentTotal, declaredLength);", StringComparison.Ordinal);
+        var readLoop = policy.IndexOf("var read = await source.ReadAsync", StringComparison.Ordinal);
+        Assert.True(validateBeforeRead >= 0 && validateBeforeRead < readLoop, "Aggregate archive budget must be validated before extraction reads begin.");
+        Assert.Contains("read > declaredLength - copied", policy, StringComparison.Ordinal);
+        Assert.Contains("copied != declaredLength", policy, StringComparison.Ordinal);
     }
 
     private static string Method(string source, string signature, string nextSignature)
