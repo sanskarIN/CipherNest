@@ -35,11 +35,15 @@ public sealed class CsvSafetySourceTests
         var source = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "CsvTransferService.cs"));
 
         Assert.Contains("private const int MaxHeaderNameChars = 256", source, StringComparison.Ordinal);
+        Assert.Contains("ReadRowAsync(cancellationToken, MaxHeaderNameChars, OversizedHeaderMessage)", source, StringComparison.Ordinal);
+        Assert.Contains("if (field.Length > maxFieldChars)", source, StringComparison.Ordinal);
         Assert.Contains("h.Length > MaxHeaderNameChars", source, StringComparison.Ordinal);
-        Assert.Contains("char.IsControl(ch)", source, StringComparison.Ordinal);
-        Assert.Contains("UnicodeCategory.Format", source, StringComparison.Ordinal);
+        Assert.Contains("value.EnumerateRunes()", source, StringComparison.Ordinal);
+        Assert.Contains("Rune.GetUnicodeCategory(rune)", source, StringComparison.Ordinal);
+        Assert.Contains("UnicodeCategory.Control or UnicodeCategory.Format", source, StringComparison.Ordinal);
         Assert.Contains("CSV header contains an unsafe control or formatting character.", source, StringComparison.Ordinal);
         Assert.Contains("CSV header contains an oversized column name.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("char.GetUnicodeCategory(ch)", source, StringComparison.Ordinal);
     }
 
     private static string PathAt(params string[] segments)
