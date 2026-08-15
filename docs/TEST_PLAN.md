@@ -108,3 +108,14 @@ A release is blocked by failing tests/builds/formatting/analyzers, unresolved hi
 - Verify device clock/time-zone changes produce expected RFC time-counter behavior and that no code is generated while a protected item still requires re-authentication.
 - Verify TOTP copy uses the same real clipboard cleanup/history behavior as other secrets and preserves unrelated newer clipboard content.
 - Verify System/English/Hindi selection, restart, suspend/resume, fallback, large text, screen readers, and narrow-window layout; record which remaining literals still appear in English.
+
+## Final repository-side parser and extraction regression requirements
+
+Before treating a final source candidate as repository-clean, additionally require:
+
+- all 128 deterministic hostile TOTP Base32 rows to execute as unique test cases; malformed/oversized/impossible/padded/non-zero-residual inputs must fail before HMAC work, mutable normalization scratch must be cleared, and `DateTimeOffset.MaxValue` must not overflow validity-window construction;
+- mapped CSV Tags parsing to enforce the canonical 100-tag/128-character limits before `VaultItem` construction and without whole-field `string.Split(...)`; exact-limit input must remain accepted while high-cardinality/oversized-tag rows are skipped without saving an item;
+- backup ZIP restore to validate declared length against the remaining aggregate budget before reading, reject actual output that expands beyond the declared length before writing the over-limit chunk, reject truncated output, and require actual copied bytes to equal each declared uncompressed length;
+- any formatter/analyzer/test-discovery diagnostic found during a checkpoint to be treated as a defect even when ordinary pass/fail test totals look green.
+
+The vault-record/envelope boundary remains covered by existing size-before-materialization, envelope shape, AEAD row-ID binding, decrypted-byte ceiling, decrypted-ID equality, and full item-validation gates. A compatibility-breaking strict unknown-property rule must not be added without an explicit format/migration decision and tests.
