@@ -140,3 +140,15 @@ Before release, maintainers should:
 - verify security audit exclusions and duplicate behavior;
 - verify no TOTP seed/code is emitted through diagnostics;
 - verify documentation does not claim QR import, autofill, full second-factor isolation, or independent audit.
+
+## Final repository-side TOTP hardening — 2026-08-15
+
+The final repository pass adds three implementation guarantees without changing the RFC 6238 code-generation algorithm:
+
+- the mutable normalization `char[]` owned by `TotpPolicy.NormalizeSecret(...)` is cleared in a `finally` block on success and failure;
+- Base32 normalization/decoding still completes before HMAC construction, including impossible-length, supplied-padding, invalid alphabet, and non-zero residual-bit rejection;
+- a validity window that would extend beyond `DateTimeOffset.MaxValue` is clamped to `DateTimeOffset.MaxValue` instead of throwing after a valid code has already been computed.
+
+`TotpBase32AdversarialTests` now contains exactly 128 deterministic hostile seeds with explicit numeric case IDs so every row is independently discoverable by xUnit. The corpus covers malformed length/padding, invalid digits and punctuation, Unicode control/format/non-ASCII forms, isolated UTF-16 surrogates, oversized normalized/formatted input, and non-zero residual bits. A source-regression test preserves parser-before-HMAC ordering and cleanup of owned mutable key/counter/hash/scratch buffers.
+
+These cleanups narrow the lifetime of mutable buffers owned by CipherNest. They do **not** make immutable managed `string` copies of a seed deterministically erasable, and they do not provide independent second-factor separation when the TOTP seed and login secret live in the same unlocked vault.
