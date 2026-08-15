@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using CipherNest.Infrastructure.Crypto;
 using CipherNest.Infrastructure.Persistence;
@@ -23,6 +24,89 @@ public sealed class CsvParserRobustnessTests : IDisposable
         var service = CreateService();
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv), writable: false);
         await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
+    }
+
+    [Theory]
+    [InlineData("Title,\0Secret")]
+    [InlineData("Title,\tSecret")]
+    [InlineData("Title,\u200BSecret")]
+    [InlineData("Title,\u202ESecret")]
+    [InlineData("\"Title\ncontinued\",Secret")]
+    public async Task ReadHeaders_RejectsControlAndInvisibleFormattingCharacters(string csv)
+    {
+        var service = CreateService();
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv), writable: false);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
+
+        Assert.Equal("CSV header contains an unsafe control or formatting character.", error.Message);
+    }
+
+    [Fact]
+    public async Task ReadHeaders_RejectsHeaderNameBeyondDedicatedLimit()
+    {
+        var service = CreateService();
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(new string('a', 257)), writable: false);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.ReadHeadersAsync(stream));
+
+        Assert.Equal("CSV header contains an oversized column name.", error.Message);
+    }
+
+    [Fact]
+    public async Task ReadHeaders_AcceptsHeaderNameAtDedicatedLimit()
+    {
+        var service = CreateService();
+        var header = new string('a', 256);
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(header), writable: false);
+
+        var headers = await service.ReadHeadersAsync(stream);
+
+        Assert.Equal([header], headers);
+    }
+
+    [Fact]
+    public async Task ReadHeaders_DeterministicAdversarialCorpusStaysWithinPublicContract()
+    {
+        var service = CreateService();
+        var random = new Random(0xC1F3);
+        char[] alphabet = ['A', 'b', '0', ' ', ',', '"', '\r', '\n', '\t', '\0', '-', '_', 'é', '中', '\u200B', '\u202E'];
+        var corpus = new List<string> { "Title,Secret", "\0" };
+
+        for (var caseIndex = 0; caseIndex < 256; caseIndex++)
+        {
+            var length = random.Next(0, 129);
+            var builder = new StringBuilder(length);
+            for (var index = 0; index < length; index++) builder.Append(alphabet[random.Next(alphabet.Length)]);
+            corpus.Add(builder.ToString());
+        }
+
+        var accepted = 0;
+        var rejected = 0;
+        foreach (var csv in corpus)
+        {
+            await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv), writable: false);
+            try
+            {
+                var headers = await service.ReadHeadersAsync(stream);
+                accepted++;
+                Assert.InRange(headers.Count, 1, 256);
+                Assert.Equal(headers.Count, headers.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+                Assert.All(headers, static header =>
+                {
+                    Assert.False(string.IsNullOrWhiteSpace(header));
+                    Assert.InRange(header.Length, 1, 256);
+                    Assert.False(header.Any(static ch => char.IsControl(ch) || char.GetUnicodeCategory(ch) == UnicodeCategory.Format));
+                });
+            }
+            catch (InvalidDataException)
+            {
+                rejected++;
+            }
+        }
+
+        Assert.True(accepted > 0);
+        Assert.True(rejected > 0);
     }
 
     [Fact]
