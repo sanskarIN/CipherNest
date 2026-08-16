@@ -1,5 +1,11 @@
 # CipherNest
 
+<p align="center">
+  <img src="src/CipherNest.App/Resources/Images/ciphernest_logo.svg" alt="CipherNest logo" width="150" />
+</p>
+
+<p align="center"><strong>Local-first encrypted vault for passwords, secure notes, identities, credentials, TOTP, and protected documents.</strong></p>
+
 CipherNest is a local-first, open-source password, secure-note, identity, credential, and encrypted-document vault built with .NET MAUI and C#.
 
 > **Security status:** CipherNest has not yet undergone an independent professional security audit. It uses established primitives and a deliberately small security-sensitive core, but must not be described as “unhackable”, “military-grade”, or “100% secure”.
@@ -73,7 +79,7 @@ Primary entry points:
 - [Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [TOTP Security](docs/security/TOTP.md) · [Session Security](docs/security/SESSION_SECURITY.md) · [Sensitive Data Lifecycle](docs/security/DATA_LIFECYCLE.md).
 - [Vault Records](docs/formats/VAULT_RECORDS.md) · [Encrypted Attachments](docs/formats/ATTACHMENTS.md) · [Encrypted Backup](docs/formats/ENCRYPTED_BACKUP.md) · [CSV Transfer](docs/formats/CSV_TRANSFER.md).
 - [Testing Guide](docs/TESTING_GUIDE.md) · [Accessibility](docs/ACCESSIBILITY.md) · [Release Process](docs/releases/RELEASE_PROCESS.md) · [Backup/Recovery Runbook](docs/operations/BACKUP_RECOVERY_RUNBOOK.md) · [Security Response Runbook](docs/operations/SECURITY_RESPONSE.md).
-- [Hosted CI Evidence — 2026-08-13](docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md) — exact candidate/run evidence and remaining external validation limits.
+- [Verified `main` Baseline — 2026-08-15](docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md) — exact candidate, test counts, platform build results, CodeQL result, and remaining external validation limits.
 
 Documentation is required to follow current source behavior rather than planned features; governance rules are in [`docs/DOCUMENTATION_MAINTENANCE.md`](docs/DOCUMENTATION_MAINTENANCE.md).
 
@@ -90,23 +96,24 @@ Committed verification entry points:
 
 GitHub CI is configured for core restore/build/test/format gates plus Windows, Android, iOS, and Mac Catalyst Release compilation. Windows CI also compiles the funding-disabled variant. CodeQL v4 builds the MAUI Android application path in addition to analyzable core code.
 
-For exact hosted candidate `2327abba1646082a4d94a689d452b1116701cc0b`, observed evidence is:
+The last fully observed immutable baseline before the 2026-08-16 presentation/support-surface pass is `d405bb3ae0a88f4abfcdcb574227c372683dd790`. For that exact candidate:
 
-- **106 UnitTests passed**;
-- **60 IntegrationTests passed**;
-- **74 UiTests/source tests passed**;
-- **240 total passed, 0 failed, 0 skipped**;
-- core formatting passed;
+- **346 UnitTests passed**;
+- **98 IntegrationTests passed**;
+- **110 UiTests/source tests passed**;
+- **554 total passed, 0 failed, 0 skipped**;
+- all three analyzer-enabled test-project builds completed with 0 warnings and 0 errors;
+- configured core formatting passed;
 - Windows default Release passed;
 - Windows funding-disabled Release passed;
-- Android `android-arm64` Release passed;
-- iOS `iossimulator-arm64` Release passed;
-- Mac Catalyst `maccatalyst-arm64` Release passed;
-- CodeQL v4 passed after analyzable core and Android MAUI builds.
+- Android Release passed;
+- iOS simulator Release passed;
+- Mac Catalyst Release passed;
+- CodeQL v4 passed after analyzable core and MAUI Android application builds.
 
-The Apple hosted build used `macos-26`, .NET SDK `10.0.302`, Xcode 26.5, and workload set `10.0.300.3`. Full run identifiers and limitations are recorded in [`docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`](docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md).
+Exact run identifiers and limitations are recorded in [`docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md`](docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md). Any later commit is a new candidate and must rerun the configured gates before inheriting exact-head verification status.
 
-These results are historical evidence for that exact commit; later candidates must rerun the gates. Compile/static-analysis evidence does not replace physical-device biometric/lifecycle/clipboard/screenshot/accessibility tests, signing/notarization/store validation, pull-request dependency review, or an independent professional security audit.
+Compile/static-analysis evidence does not replace physical-device biometric/lifecycle/clipboard/screenshot/accessibility tests, signing/notarization/store validation, pull-request dependency review, or an independent professional security audit.
 
 The optional in-app Buy Me a Coffee surface is enabled by default. A distribution build that must omit the external funding CTA can use:
 
