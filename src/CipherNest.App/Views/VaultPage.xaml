@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="CipherNest.App.Views.VaultPage">
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:services="clr-namespace:CipherNest.App.Services" x:Class="CipherNest.App.Views.VaultPage">
   <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" Padding="18" RowSpacing="12">
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><VerticalStackLayout><Label Text="Your vault" Style="{StaticResource TitleLabel}"/><Label Text="Secrets stay hidden until you explicitly open or copy them." Style="{StaticResource SubtitleLabel}"/></VerticalStackLayout><Button Grid.Column="1" Text="Lock" Command="{Binding LockCommand}" Style="{StaticResource SecondaryButton}"/></Grid>
     <Label Grid.Row="1" Text="{Binding BackupReminderMessage}" TextColor="{StaticResource Primary}" FontAttributes="Bold" SemanticProperties.Description="Backup reminder status"/>
@@ -21,6 +21,7 @@
       <Button Text="Trash" Command="{Binding TrashCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,8"/>
       <Button Text="Settings" Command="{Binding SettingsCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,8"/>
       <Button Text="About" Command="{Binding AboutCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,8"/>
+      <Button Text="☕ Support" Command="{Binding AboutCommand}" IsVisible="{x:Static services:BuildFeatureFlags.IsFundingLinkEnabled}" BackgroundColor="#FFDD57" TextColor="#171717" FontAttributes="Bold" Margin="0,0,8,8" SemanticProperties.Description="Open the About page with Buy Me a Coffee support"/>
       <Button Text="Refresh" Command="{Binding LoadCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,8"/>
     </FlexLayout>
   </Grid>
