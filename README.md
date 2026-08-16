@@ -6,9 +6,9 @@
 
 <p align="center"><strong>Local-first encrypted vault for passwords, secure notes, identities, credentials, TOTP, and protected documents.</strong></p>
 
-CipherNest is a local-first, open-source password, secure-note, identity, credential, and encrypted-document vault built with .NET MAUI and C#.
+CipherNest is an open-source local-first vault built with C#, .NET 10, and .NET MAUI. Ordinary use does not require a CipherNest account, email address, phone number, application server, or cloud synchronization service.
 
-> **Security status:** CipherNest has not yet undergone an independent professional security audit. It uses established primitives and a deliberately small security-sensitive core, but must not be described as “unhackable”, “military-grade”, or “100% secure”.
+> **Security status:** CipherNest has **not** completed an independent professional security audit. It uses established primitives and extensive automated hardening/tests, but must not be described as “unhackable”, “military-grade”, “100% secure”, capable of guaranteed managed-memory erasure, or capable of guaranteed physical-media sanitization.
 
 ## ☕ Support CipherNest development
 
@@ -22,98 +22,347 @@ CipherNest is a local-first, open-source password, secure-note, identity, creden
 
 Project support is optional. It does not change feature access, security/privacy treatment, support priority, licensing, recovery behavior, or open-source rights. Store/distribution builds can disable the in-app funding surface while repository funding metadata remains separate.
 
-## Current release
+# Documentation
 
-- No account, email, phone number, application server, or cloud synchronization is required.
-- Vault records and attachments are encrypted locally; searchable item fields are not stored in plaintext SQL indexes.
-- The master passphrase is never stored. A random 256-bit vault data-encryption key is wrapped with an Argon2id-derived key.
-- AES-256-GCM authenticates encrypted records, wrapped keys, backups, and attachment chunks using unique nonces and contextual associated data.
-- Optional one-time recovery material provides an independent wrapped-key path and must be retained separately by the user.
-- Optional Android/iOS/Mac Catalyst biometric convenience unlock uses a separately generated random secondary secret protected by platform secure storage; Windows currently falls back to the master passphrase. Android uses the API-28 `BiometricPrompt` baseline and Apple request cancellation invalidates its native authentication context.
-- Master-passphrase re-authentication is required periodically after biometric use and for security-sensitive actions such as plaintext export, biometric configuration, manual permanent deletion, and vault deletion. Changing the master passphrase ends the current security session and requires the new passphrase before biometric convenience unlock can resume.
-- Vault master/recovery unlock, secondary unlock, public lock, and full-vault deletion transitions are serialized. Full-vault deletion must keep a live session authorization while waiting for that transition gate, so an intervening lock/unlock cancels stale destructive authorization.
-- Key-using vault work runs with private 32-byte key leases linked to the current unlock session and caller cancellation. Locking zeroes the shared session key and cancels active leases; lease copies zero on disposal. An integration test specifically blocks a plaintext attachment export and requires lock to cancel it.
-- Repeated interactive unlock failures use a bounded exponential delay. This is a client-side control and is not claimed to stop offline guessing against a copied database.
-- Supported vault-header versions are explicit; future/unknown header versions are rejected before key unwrap. Header metadata is capped at 64 KiB UTF-8 before deserialization.
-- Local search, favorites, collections, item-type filters, review reminders, recent-use sorting, and weak/reused/duplicate-secret audit operate only over decrypted data while unlocked. Large matching result sets render incrementally in 50-item pages.
-- Local TOTP items keep the Base32 seed and SHA-1/SHA-256/SHA-512 + 6/8-digit + period settings inside the authenticated encrypted record, generate RFC 6238-compatible codes only while unlocked, use explicit refresh/copy actions, and do not persist generated codes. QR/`otpauth://` enrollment and autofill integration are not claimed.
-- Decrypted records must match their authenticated SQLite row ID and pass null-safe metadata validation before reaching application/search/UI code.
-- Resource limits bound stored/decrypted item work: 16 MiB serialized/decrypted item JSON, 24 MiB per stored encrypted envelope, 100,000 rows, 256 MiB aggregate encrypted-envelope bytes, and 2,000,000 aggregate item-text characters. These are safety ceilings, not recommended target sizes.
-- Trash has configurable retention; routine vault maintenance removes expired encrypted trash records. Manual permanent deletion and empty-trash actions require current-master re-authentication plus explicit confirmation. Permanent item deletion removes its database record before best-effort encrypted attachment cleanup.
-- Password generation uses `RandomNumberGenerator`; memorable passphrases use a validated 256-word local list with explicit random-selection entropy guidance and configurable defaults. Temporary generator arrays are cleared after constructing the returned managed string where practical.
-- Secure notes support a deliberately small Markdown-like subset plus checklists; raw HTML is not rendered. Stored/imported notes share the renderer's 200,000-character and 5,000-line limits.
-- Attachments are encrypted in bounded streaming chunks. Reusable plaintext chunk buffers are zeroed where practical. Encrypted staging uses unique `CreateNew` files and refuses final overwrite. Small UTF-8 text-family attachments can be previewed in memory; other formats require explicit plaintext export.
-- Opaque encrypted attachment storage names must be GUID-based `.cna` filenames without path separators. Attachment metadata enforces size/count/uniqueness bounds before save/use.
-- Temporary decrypted export names include a random component and cleanup failures are reported without displaying the path.
-- Encrypted backup/restore includes encrypted attachments and is the recommended transfer path. Backup header version/salt/KDF/chunk metadata is validated before Argon2 derivation.
-- Backup export refuses destinations that resolve to the active database, WAL/SHM/recovery files, or encrypted attachment directory and uses a unique encrypted sibling staging file.
-- Backup restore rejects duplicate normalized ZIP paths and encrypted attachment entries outside the implemented container-size envelope in addition to total archive/path/count limits.
-- A staged replacement database must pass SQLite `quick_check`, exact supported schema version, required table/column validation, bounded vault-header/resource checks, and canonical item-ID checks before active DB/WAL/SHM mutation.
-- SQLite replacement stages DB/WAL/SHM into unique recovery names. Rollback restores only components that actually moved, and encrypted-backup rollback uses an uncancelled recovery token once active mutation begins so request cancellation cannot cancel the recovery replacement.
-- Database migrations validate required schema shape after version resolution, reject forged-current history with missing schema objects, and prevent rollback errors from hiding the original migration failure.
-- Generic CSV import and deliberately guarded plaintext CSV/attachment export are available for interoperability; warnings explain that operating systems and destination apps can retain plaintext copies. CSV final-field column limits are enforced at newline/EOF as well as delimiters.
-- Username, primary-secret, and secret custom-field clipboard writes require explicit copy actions. Delayed cleanup retains only a SHA-256 fingerprint rather than the copied plaintext secret, uses fixed-time matching, and preserves unrelated newer clipboard content. Manual/background/timeout locks use the same conditional cleanup policy where the platform permits it.
-- Sensitive credential/decrypted ViewModel fields are cleared when sensitive pages disappear. Bound passphrase fields are also cleared before longer authentication/file/share operations where practical, while .NET managed-memory limitations are documented rather than hidden.
-- Lifecycle fallback separately contains and privacy-safe reports lock/clipboard cleanup failures so a second cleanup exception is not allowed to escape the native lifecycle callback.
-- Sensitive Settings, transfer, backup, restore, item-open, and attachment file failures use fixed user-facing text plus redacted diagnostic events instead of directly surfacing exception messages that can contain paths/context.
-- Settings include theme, larger-interface/reduced-motion preferences, local reminder controls, biometric configuration, generator defaults, storage/cache inspection, security information, backup/restore, import/export, and destructive local-vault deletion.
-- Settings persistence normalizes supported enum/numeric bounds on load/save, falls back safely on malformed/unreadable files, and uses unique sibling staging with best-effort cleanup. Cache/storage enumeration is guarded and does not recurse through reparse-point directories.
-- Neutral English remains the fallback resource catalog; persisted System/English/Hindi preferences are supported for the reviewed resource-backed interface, while not-yet-migrated UI literals may still appear in English.
-- Central exception reporting intentionally omits exception messages/stacks and vault content. No third-party analytics or crash-reporting service is enabled.
-- Original vector branding includes launcher/adaptive sources, a splash wordmark with `Made by the Sanskar`, a monochrome source, a dark-surface logo variant, and an original BMC project-support badge.
+The complete documentation suite is indexed at **[`docs/README.md`](docs/README.md)**.
 
-## Documentation
+For a new reader, use these entry points:
 
-The complete documentation suite is indexed at [`docs/README.md`](docs/README.md).
+- **[Quick Start](docs/QUICK_START.md)** — first launch, vault creation, items, TOTP, attachments, backup/restore, settings, and contributor bootstrap.
+- **[Feature Matrix](docs/FEATURE_MATRIX.md)** — exhaustive implemented, platform-dependent, external-validation, and deferred feature status.
+- **[UI & Navigation Reference](docs/UI_REFERENCE.md)** — every current route/page, major control, security gate, and navigation behavior.
+- **[Configuration Reference](docs/CONFIGURATION_REFERENCE.md)** — application ID, target frameworks, build flags, packages, settings defaults/bounds, resource limits, and toolchain configuration.
+- **[Complete Project Documentation](docs/COMPLETE_PROJECT_DOCUMENTATION.md)** — 52-section end-to-end reference covering the whole project.
+- **[User Guide](docs/USER_GUIDE.md)** — detailed end-user workflows.
+- **[FAQ](docs/FAQ.md)** — common product/security/build/release questions.
+- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** — architecture, DI, security boundaries, extension rules, tests, and review practice.
+- **[Maintainer Guide](docs/MAINTAINER_GUIDE.md)** — repository/security/release/support ownership.
+- **[API Reference](docs/API_REFERENCE.md)** — internal Application contracts and Domain models.
+- **[Limits & Defaults](docs/LIMITS_AND_DEFAULTS.md)** — authoritative safety ceilings, defaults, versions, and timing bounds.
 
-Primary entry points:
+Specialist references:
 
-- [Complete Project Documentation](docs/COMPLETE_PROJECT_DOCUMENTATION.md) — consolidated project reference covering architecture, security, storage, features, limits, build/test/release flow, support, and external validation gates.
-- [FAQ](docs/FAQ.md) — common user, security, platform, backup, build, CI, release, and support questions.
-- [User Guide](docs/USER_GUIDE.md) — setup, unlock, items, attachments, backup/restore, CSV transfer, settings, trash, deletion, and recovery limitations.
-- [Developer Guide](docs/DEVELOPER_GUIDE.md) — architecture, DI, contracts, persistence, session rules, testing, review, and extension guidance.
-- [Maintainer Guide](docs/MAINTAINER_GUIDE.md) — repository/security/release/support ownership.
-- [API Reference](docs/API_REFERENCE.md) — current Application contracts and Domain models.
-- [Limits and Defaults](docs/LIMITS_AND_DEFAULTS.md) — implemented resource ceilings, defaults, versions, and timing bounds.
-- [Architecture and Data Flow](docs/architecture/ARCHITECTURE.md) · [Data Flow](docs/architecture/DATA_FLOW.md) · [Session/Concurrency](docs/architecture/SESSION_AND_CONCURRENCY.md) · [Dependency Map](docs/architecture/DEPENDENCY_MAP.md).
-- [Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [TOTP Security](docs/security/TOTP.md) · [Session Security](docs/security/SESSION_SECURITY.md) · [Sensitive Data Lifecycle](docs/security/DATA_LIFECYCLE.md).
-- [Vault Records](docs/formats/VAULT_RECORDS.md) · [Encrypted Attachments](docs/formats/ATTACHMENTS.md) · [Encrypted Backup](docs/formats/ENCRYPTED_BACKUP.md) · [CSV Transfer](docs/formats/CSV_TRANSFER.md).
-- [Testing Guide](docs/TESTING_GUIDE.md) · [Accessibility](docs/ACCESSIBILITY.md) · [Release Process](docs/releases/RELEASE_PROCESS.md) · [Backup/Recovery Runbook](docs/operations/BACKUP_RECOVERY_RUNBOOK.md) · [Security Response Runbook](docs/operations/SECURITY_RESPONSE.md).
-- [Verified `main` Baseline — 2026-08-15](docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md) — exact candidate, test counts, platform build results, CodeQL result, and remaining external validation limits.
+- Architecture: [Architecture](docs/architecture/ARCHITECTURE.md) · [Dependency Map](docs/architecture/DEPENDENCY_MAP.md) · [Data Flow](docs/architecture/DATA_FLOW.md) · [Session/Concurrency](docs/architecture/SESSION_AND_CONCURRENCY.md) · [Database](docs/architecture/DATABASE.md) · [Localization](docs/architecture/LOCALIZATION.md)
+- Security: [Threat Model](docs/security/THREAT_MODEL.md) · [Cryptographic Design](docs/security/CRYPTOGRAPHIC_DESIGN.md) · [Session Security](docs/security/SESSION_SECURITY.md) · [Sensitive Data Lifecycle](docs/security/DATA_LIFECYCLE.md) · [Biometric Unlock](docs/security/BIOMETRIC_UNLOCK.md) · [TOTP](docs/security/TOTP.md) · [Secure Notes](docs/security/SECURE_NOTES.md) · [Passphrase Generator](docs/security/PASSPHRASE_GENERATOR.md)
+- Formats: [Vault Header](docs/formats/VAULT_HEADER.md) · [Vault Records](docs/formats/VAULT_RECORDS.md) · [Attachments](docs/formats/ATTACHMENTS.md) · [Encrypted Backup](docs/formats/ENCRYPTED_BACKUP.md) · [CSV Transfer](docs/formats/CSV_TRANSFER.md)
+- Build/release: [Build](docs/setup/BUILD.md) · [Testing Guide](docs/TESTING_GUIDE.md) · [Test Plan](docs/TEST_PLAN.md) · [CI Gates](docs/verification/CI_GATES.md) · [Release Checklist](docs/RELEASE_CHECKLIST.md) · [Release Process](docs/releases/RELEASE_PROCESS.md) · [Packaging](docs/releases/PACKAGING.md)
+- Operations: [Backup/Recovery Runbook](docs/operations/BACKUP_RECOVERY_RUNBOOK.md) · [Security Response](docs/operations/SECURITY_RESPONSE.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
 
-Documentation is required to follow current source behavior rather than planned features; governance rules are in [`docs/DOCUMENTATION_MAINTENANCE.md`](docs/DOCUMENTATION_MAINTENANCE.md).
+# Current implemented scope
 
-## Verification and build
+## Local encrypted vault
 
-Requirements: a current .NET 10 SDK with the .NET MAUI workload and platform SDKs for the desired target.
+- Local SQLite vault with authenticated encrypted item envelopes.
+- Searchable vault fields are not persisted in a plaintext SQL/FTS index.
+- Random 256-bit vault data-encryption key (DEK).
+- Master passphrase is never stored; it derives a wrapping key with Argon2id.
+- Optional independent one-time recovery material wraps the same random DEK.
+- AES-256-GCM authenticates encrypted records, wrapped keys, backup chunks, and attachment chunks with contextual associated data.
+- Explicit versioned vault header, attachment, backup, and database compatibility surfaces.
 
-Committed verification entry points:
+## Authentication and session security
 
-- `scripts/verify-core.ps1` or `scripts/verify-core.sh`
-- `scripts/verify-windows.ps1`
-- `scripts/verify-android.sh`
-- `scripts/verify-apple.sh`
+- Master-passphrase and recovery unlock.
+- Optional Android/iOS/Mac Catalyst biometric convenience unlock using a separate random secondary secret protected by platform secure storage.
+- Windows currently uses master-passphrase fallback instead of claiming Windows Hello support.
+- Fresh-process and configurable periodic master-passphrase requirements before biometric convenience can continue.
+- Current-master re-authentication for sensitive/destructive actions.
+- Bounded exponential delay for repeated interactive unlock failures.
+- Serialized vault create/unlock/secondary-unlock/lock/full-delete transitions.
+- Private 32-byte `VaultKeyLease` copies linked to caller + current session cancellation; buffers zero on disposal where practical.
+- Lock removes/zeroes shared session key state and cancels session-linked cancellable work.
+- Full-vault deletion binds authorization to the live security session while waiting for the transition gate.
 
-GitHub CI is configured for core restore/build/test/format gates plus Windows, Android, iOS, and Mac Catalyst Release compilation. Windows CI also compiles the funding-disabled variant. CodeQL v4 builds the MAUI Android application path in addition to analyzable core code.
+## Vault item types
 
-The last fully observed immutable baseline before the 2026-08-16 presentation/support-surface pass is `d405bb3ae0a88f4abfcdcb574227c372683dd790`. For that exact candidate:
+Current persisted item types:
+
+1. Login
+2. Secure Note
+3. Identity
+4. Payment Card Reference
+5. Wi-Fi Credential
+6. Software License
+7. Server/SSH Reference
+8. Document
+9. Custom
+10. Time-Based One-Time Password (TOTP)
+
+Items support encrypted metadata such as tags, collection, favorite status, review dates, custom fields, attachment references, recent-access timestamp, trash state, and optional per-item re-authentication.
+
+## Search, organization, and reminders
+
+- Local text search while unlocked.
+- Favorites.
+- Collections/folders.
+- Item-type filtering.
+- Review-due filtering.
+- Favorite/title, recently used, recently modified, and title sorting.
+- Encrypted `LastAccessedUtc` recent-use tracking.
+- Incremental 50-item visual rendering with Load More.
+- Local backup reminders.
+- Local review reminders.
+
+## Local security audit
+
+The in-app vault-content audit can identify:
+
+- weak secrets;
+- reused secrets;
+- exact duplicate entries;
+- missing titles;
+- overdue review dates.
+
+This is not an independent professional audit of the CipherNest codebase.
+
+## TOTP
+
+- Encrypted Base32 seed inside the authenticated vault record.
+- SHA-1, SHA-256, SHA-512.
+- 6 or 8 digits.
+- 15–120-second periods, default 30 seconds.
+- RFC 6238-compatible known-answer coverage.
+- Explicit manual refresh and code copy.
+- Generated codes are transient and are not persisted.
+- QR scanning/rendering, `otpauth://` import/export, and autofill/provider integration are intentionally not claimed in the current source.
+
+## Password and passphrase generation
+
+- Cryptographically secure password generation.
+- Configurable uppercase/lowercase/digits/symbols.
+- Ambiguous-character exclusion.
+- Password length 8–256 after normalization.
+- Memorable passphrase mode using a validated local 256-word list.
+- 6–16 words, default 8.
+- Persisted non-secret generator defaults.
+- Strength/entropy guidance without claiming formal attack resistance.
+
+## Secure notes
+
+- Bounded Markdown-like safe subset.
+- Headings, paragraphs, bullets, checklists, fenced code.
+- Raw HTML is neutralized rather than rendered.
+- Shared 200,000-character and 5,000-line ceilings across note paths.
+
+## Encrypted attachments
+
+- Bounded streaming authenticated encryption.
+- Up to 100 MiB plaintext per attachment.
+- Up to 25 attachments per item.
+- Up to 10,000 referenced attachments across the vault resource policy.
+- Opaque GUID-based `.cna` storage names bound to attachment IDs.
+- Rune-aware metadata validation rejects malformed UTF-16 and Unicode Control/Format runes.
+- Collision-resistant `CreateNew` staging and no final overwrite on collision.
+- Small valid UTF-8 text-family files can be previewed in bounded memory.
+- Explicit plaintext attachment export with warning, unique temp staging, OS share flow, and best-effort cleanup.
+
+## Encrypted backup and restore
+
+- Preferred transfer/recovery path uses `.cnbak` authenticated encrypted backup.
+- Separate backup passphrase.
+- Vault locks before consistent snapshot creation.
+- Database snapshot plus encrypted attachment containers.
+- Strict bounded version-2 backup-header JSON before Argon2.
+- Up to 10,001 ZIP entries and 1 GiB aggregate plaintext archive content.
+- Duplicate normalized ZIP paths rejected.
+- Encrypted attachment size envelope validated.
+- Actual extracted bytes must exactly match each declared uncompressed entry length.
+- Staged SQLite replacement must pass integrity/schema/header/item/resource checks before active mutation.
+- Recovery rollback uses an uncancelled token after active mutation begins.
+- Successful restore clears local biometric pairing so it must be configured deliberately again.
+
+## CSV interoperability
+
+- Bounded generic CSV parser/import.
+- Explicit source-column mapping.
+- Strict header metadata rules including 256-character header limit and Unicode Control/Format rejection.
+- Guarded plaintext CSV export requiring `EXPORT PLAINTEXT`, current-master re-authentication, and explicit warning/confirmation.
+- Attachments are not silently included in CSV export.
+- CSV export is a plaintext boundary; OS/destination copies can persist outside CipherNest.
+
+## Clipboard and sensitive-state handling
+
+- Explicit copy actions for usernames, primary secrets, secret custom fields, and TOTP codes.
+- Delayed clipboard state retains a SHA-256 fingerprint, not the copied plaintext.
+- Fixed-time fingerprint matching.
+- Newer unrelated clipboard content is preserved.
+- Lock-triggered cleanup uses the same conditional policy where supported.
+- Sensitive ViewModel credential/decrypted fields are cleared on page disappearance where owned by the current page and before several longer operations where practical.
+- .NET managed strings and OS/application copies cannot be deterministically erased.
+
+## Trash and deletion
+
+- Configurable trash retention.
+- Routine encrypted trash cleanup.
+- Restore from Trash.
+- Manual permanent delete and Empty Trash require current-master re-authentication plus destructive confirmation.
+- Database record deletion precedes best-effort encrypted attachment cleanup.
+- Full-vault deletion requires `DELETE MY VAULT`, current-master authentication, final confirmation, and live-session authorization.
+- Logical deletion does not claim guaranteed physical sanitization.
+
+## Settings and local preferences
+
+Current settings cover:
+
+- System/Light/Dark theme;
+- System/English/Hindi language preference;
+- lock timeout;
+- lock on background;
+- clipboard-clear delay;
+- screenshot-protection preference;
+- biometric convenience unlock;
+- periodic master-passphrase interval;
+- reduced motion;
+- larger interface;
+- trash retention;
+- backup reminder;
+- review reminders;
+- generator defaults;
+- local storage/cache inspection and cleanup;
+- encrypted backup/restore;
+- CSV import/export;
+- security/privacy information;
+- About/legal/acknowledgements;
+- master-passphrase change;
+- full local-vault deletion.
+
+Settings JSON is non-secret and bounded to 64 KiB with a 64 KiB + 1 actual-read sentinel and maximum depth 16. Invalid/malformed/oversized non-secret settings fall back to normalized defaults; cancellation continues to propagate.
+
+## Accessibility and localization
+
+- Semantic metadata and selected status/live-region behavior.
+- Larger Interface typography support.
+- Reduced Motion preference state.
+- Responsive phone/desktop/resizable layouts.
+- Neutral English fallback resources.
+- Persisted System/English/Hindi preference.
+- Reviewed `hi-IN` resource-backed catalog.
+- Complete translation of every remaining literal is not claimed.
+
+Assistive-technology and representative device/layout validation remain release gates.
+
+## Privacy-safe diagnostics
+
+- No third-party analytics or crash-reporting provider is enabled by current source.
+- Central privacy-safe exception reporting intentionally omits raw exception messages/stacks and vault contents.
+- Sensitive file/picker/share/storage/backup/restore/settings/item/platform failures use fixed user-facing text plus redacted diagnostics where applicable.
+
+# Resource and format highlights
+
+| Resource | Current ceiling/rule |
+|---|---|
+| Vault-header UTF-8 | 64 KiB; JSON depth 16 |
+| Decrypted/serialized item JSON | 16 MiB |
+| Stored encrypted envelope | 24 MiB/row |
+| Item rows | 100,000 |
+| Aggregate encrypted envelopes | 256 MiB |
+| Combined item text/metadata | 2,000,000 chars |
+| Attachments | 25/item; 10,000 referenced total |
+| Attachment plaintext | 100 MiB/file |
+| Secure Note | 200,000 chars / 5,000 lines |
+| Search query | 4,096 trimmed chars |
+| Settings JSON | 64 KiB; depth 16 |
+| Backup archive | 1 GiB plaintext aggregate / 10,001 entries |
+| Crypto-bound passphrase input | 12–4,096 chars |
+| TOTP normalized seed | 16–1,024 Base32 chars |
+
+See [Limits & Defaults](docs/LIMITS_AND_DEFAULTS.md) for the authoritative complete table.
+
+# Architecture
+
+```text
+Shared       Domain
+   \         /
+    Application
+         ^
+         |
+   Infrastructure
+         ^
+         |
+        App
+```
+
+- `CipherNest.Shared` — product/version/storage constants and small cross-layer primitives.
+- `CipherNest.Domain` — framework-independent domain records/enums.
+- `CipherNest.Application` — use-case abstractions, policies, validators, application exceptions/DTOs.
+- `CipherNest.Infrastructure` — cryptography, SQLite, migrations, encrypted attachments/backups, CSV, generators, TOTP, audit implementations.
+- `CipherNest.App` — MAUI UI, DI, navigation, lifecycle, biometrics, secure storage, clipboard, screenshot controls, localization, accessibility, picker/share, diagnostics.
+- `tests/CipherNest.UnitTests` — deterministic pure-service/policy/crypto/parser tests.
+- `tests/CipherNest.IntegrationTests` — real persistence/vault/backup/attachment/migration/session tests.
+- `tests/CipherNest.UiTests` — source/UI/documentation/workflow regression guards that do not require booting a MAUI target.
+
+# Build and verification
+
+Prerequisites depend on the desired target. Start with:
+
+```bash
+dotnet --info
+dotnet workload list
+```
+
+Canonical verification entry points:
+
+```text
+scripts/verify-core.ps1
+scripts/verify-core.sh
+scripts/verify-windows.ps1
+scripts/verify-android.sh
+scripts/verify-apple.sh
+```
+
+See [Build & Run](docs/setup/BUILD.md) for direct target commands and toolchain details.
+
+## Current immutable pre-documentation implementation baseline
+
+The complete documentation expansion is grounded in exact implementation commit:
+
+`8566980ff981b8b4072f9010ec7b7ba54aba051e`
+
+For that exact SHA:
 
 - **346 UnitTests passed**;
 - **98 IntegrationTests passed**;
-- **110 UiTests/source tests passed**;
-- **554 total passed, 0 failed, 0 skipped**;
-- all three analyzer-enabled test-project builds completed with 0 warnings and 0 errors;
+- **111 UI/source tests passed**;
+- **555 total passed, 0 failed, 0 skipped**;
+- analyzer-enabled core test builds completed with zero build warnings/errors;
 - configured core formatting passed;
 - Windows default Release passed;
-- Windows funding-disabled Release passed;
+- Windows `CipherNestEnableFundingLink=false` Release passed;
 - Android Release passed;
 - iOS simulator Release passed;
 - Mac Catalyst Release passed;
-- CodeQL v4 passed after analyzable core and MAUI Android application builds.
+- CodeQL v4 passed after analyzable core and MAUI application builds.
 
-Exact run identifiers and limitations are recorded in [`docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md`](docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md). Any later commit is a new candidate and must rerun the configured gates before inheriting exact-head verification status.
+Exact runs:
 
-Compile/static-analysis evidence does not replace physical-device biometric/lifecycle/clipboard/screenshot/accessibility tests, signing/notarization/store validation, pull-request dependency review, or an independent professional security audit.
+```text
+CipherNest CI: 31937127961
+CodeQL:       31937127900
+```
+
+This is exact evidence for that immutable implementation commit only. Documentation commits made afterward must run their own configured gates before the later head is called an exact-head verified release candidate. See [`docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`](docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md).
+
+Historical verification records remain preserved in `docs/verification/` with their original commit/run context, including the earlier 240-test and 554-test baselines.
+
+# What CI does not prove
+
+Hosted compile/tests/static analysis do not replace:
+
+- physical-device Android biometric enrollment/denial/cancellation/lockout tests;
+- iOS/Mac Catalyst Face ID/Touch ID and secure-storage runtime tests;
+- Windows/iOS/macOS/Android clipboard history/cleanup behavior;
+- real lifecycle/background/sleep/resume timing;
+- screenshot/app-switcher privacy behavior;
+- OS share-sheet plaintext-retention/cleanup behavior;
+- TalkBack/VoiceOver/Narrator/keyboard/focus/large-text accessibility validation;
+- representative responsive layouts;
+- stress/interleaving/filesystem-recovery validation;
+- signing/provisioning/notarization;
+- store privacy/policy/submission review;
+- exact release dependency/license/advisory review;
+- independent professional cryptographic/security review.
+
+# Funding-link build switch
 
 The optional in-app Buy Me a Coffee surface is enabled by default. A distribution build that must omit the external funding CTA can use:
 
@@ -121,11 +370,27 @@ The optional in-app Buy Me a Coffee surface is enabled by default. A distributio
 dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestEnableFundingLink=false
 ```
 
-Verify the current policy for the exact target store/region before choosing that setting. The build switch affects the app UI only; repository funding metadata remains available separately.
+This affects guarded in-app funding UI only; `.github/FUNDING.yml` remains separate. Verify the exact store/region policy before choosing the release setting and record it in release provenance.
 
-Platform packaging and signing require target SDKs/identities that are deliberately kept outside this repository. See `docs/setup/BUILD.md`, `docs/verification/CI_GATES.md`, `docs/TROUBLESHOOTING.md`, `docs/TEST_PLAN.md`, `docs/RELEASE_CHECKLIST.md`, `docs/NEXT_STEPS.md`, `docs/security/THREAT_MODEL.md`, `docs/security/BIOMETRIC_UNLOCK.md`, `docs/security/SECURE_NOTES.md`, and `docs/security/PASSPHRASE_GENERATOR.md`.
+# Deferred future-version work
 
-## Repository
+The current source does not claim complete support for:
+
+- cloud synchronization/accounts/collaboration/server storage;
+- multi-device conflict resolution;
+- browser/app autofill;
+- Windows Hello convenience unlock;
+- TOTP QR scanning/rendering and `otpauth://` import/export;
+- TOTP provider/autofill enrollment;
+- rich binary/PDF preview and document scanning;
+- pronounceable-password mode;
+- destructive wipe after failed unlock attempts;
+- complete translation of every remaining literal into Hindi;
+- additional complete language catalogs.
+
+See [Next Steps](docs/NEXT_STEPS.md) and [Feature Matrix](docs/FEATURE_MATRIX.md).
+
+# Repository and support
 
 Source: https://github.com/sanskarIN/CipherNest  
 Creator: https://www.github.com/sanskarIN  
@@ -133,8 +398,8 @@ Business: sanskarin@outlook.in
 Support: supportramsandesh@gmail.com  
 Support development: [☕ Buy Me a Coffee](https://buymeacoffee.com/sanskarIN)
 
-Made by the Sanskar
+**Made by the Sanskar**
 
-## License
+# License
 
-CipherNest is licensed under GPL-3.0-or-later. See `LICENSE`. Third-party dependencies retain their own licenses; see `THIRD_PARTY_NOTICES.md`.
+CipherNest is licensed under **GPL-3.0-or-later**. See `LICENSE`. Third-party dependencies retain their own licenses; see `THIRD_PARTY_NOTICES.md` and perform exact restored dependency/license review for each distribution candidate.
