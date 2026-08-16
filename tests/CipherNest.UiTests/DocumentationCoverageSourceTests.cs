@@ -51,6 +51,8 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "VAULT_HEADER_HARDENING_2026_08_15.md"],
         ["docs", "verification", "ATTACHMENT_METADATA_HARDENING_2026_08_15.md"],
         ["docs", "verification", "FINAL_REPOSITORY_HARDENING_2026_08_15.md"],
+        ["docs", "verification", "VERIFIED_MAIN_BASELINE_2026_08_15.md"],
+        ["docs", "verification", "REPOSITORY_AUDIT_2026_08_16.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -100,6 +102,7 @@ public sealed class DocumentationCoverageSourceTests
         Assert.Contains("docs/security/TOTP.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/formats/ENCRYPTED_BACKUP.md", readme, StringComparison.Ordinal);
         Assert.Contains("docs/releases/RELEASE_PROCESS.md", readme, StringComparison.Ordinal);
+        Assert.Contains("docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -140,6 +143,7 @@ public sealed class DocumentationCoverageSourceTests
                      "verification/VAULT_HEADER_HARDENING_2026_08_15.md",
                      "verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md",
                      "verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md",
+                     "verification/VERIFIED_MAIN_BASELINE_2026_08_15.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
@@ -176,6 +180,8 @@ public sealed class DocumentationCoverageSourceTests
         var vaultHeaderVerification = File.ReadAllText(PathAt("docs", "verification", "VAULT_HEADER_HARDENING_2026_08_15.md"));
         var attachmentVerification = File.ReadAllText(PathAt("docs", "verification", "ATTACHMENT_METADATA_HARDENING_2026_08_15.md"));
         var finalVerification = File.ReadAllText(PathAt("docs", "verification", "FINAL_REPOSITORY_HARDENING_2026_08_15.md"));
+        var verifiedBaseline = File.ReadAllText(PathAt("docs", "verification", "VERIFIED_MAIN_BASELINE_2026_08_15.md"));
+        var repositoryAudit = File.ReadAllText(PathAt("docs", "verification", "REPOSITORY_AUDIT_2026_08_16.md"));
 
         Assert.Contains("not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cannot be deterministically erased", complete, StringComparison.OrdinalIgnoreCase);
@@ -205,6 +211,12 @@ public sealed class DocumentationCoverageSourceTests
         Assert.Contains("exactly 128 deterministic hostile inputs", finalVerification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("554 passed", finalVerification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("independent security audit", finalVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("554 passed", verifiedBaseline, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CodeQL", verifiedBaseline, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("later commit becomes a new candidate", verifiedBaseline, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("BMC/support coverage after this pass", repositoryAudit, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("remaining validation work", repositoryAudit, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("intentionally deferred or unclaimed features", repositoryAudit, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string PathAt(params string[] segments)
