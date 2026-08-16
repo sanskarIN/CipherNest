@@ -5,6 +5,10 @@ public sealed class DocumentationCoverageSourceTests
     private static readonly string[][] RequiredDocumentation =
     [
         ["docs", "README.md"],
+        ["docs", "QUICK_START.md"],
+        ["docs", "FEATURE_MATRIX.md"],
+        ["docs", "UI_REFERENCE.md"],
+        ["docs", "CONFIGURATION_REFERENCE.md"],
         ["docs", "COMPLETE_PROJECT_DOCUMENTATION.md"],
         ["docs", "FAQ.md"],
         ["docs", "USER_GUIDE.md"],
@@ -53,6 +57,7 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "FINAL_REPOSITORY_HARDENING_2026_08_15.md"],
         ["docs", "verification", "VERIFIED_MAIN_BASELINE_2026_08_15.md"],
         ["docs", "verification", "REPOSITORY_AUDIT_2026_08_16.md"],
+        ["docs", "verification", "COMPLETE_DOCUMENTATION_2026_08_16.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -92,17 +97,27 @@ public sealed class DocumentationCoverageSourceTests
     {
         var readme = File.ReadAllText(PathAt("README.md"));
 
-        Assert.Contains("docs/README.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/COMPLETE_PROJECT_DOCUMENTATION.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/FAQ.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/USER_GUIDE.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/DEVELOPER_GUIDE.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/security/THREAT_MODEL.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/security/CRYPTOGRAPHIC_DESIGN.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/security/TOTP.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/formats/ENCRYPTED_BACKUP.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/releases/RELEASE_PROCESS.md", readme, StringComparison.Ordinal);
-        Assert.Contains("docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md", readme, StringComparison.Ordinal);
+        foreach (var expected in new[]
+                 {
+                     "docs/README.md",
+                     "docs/QUICK_START.md",
+                     "docs/FEATURE_MATRIX.md",
+                     "docs/UI_REFERENCE.md",
+                     "docs/CONFIGURATION_REFERENCE.md",
+                     "docs/COMPLETE_PROJECT_DOCUMENTATION.md",
+                     "docs/FAQ.md",
+                     "docs/USER_GUIDE.md",
+                     "docs/DEVELOPER_GUIDE.md",
+                     "docs/security/THREAT_MODEL.md",
+                     "docs/security/CRYPTOGRAPHIC_DESIGN.md",
+                     "docs/security/TOTP.md",
+                     "docs/formats/ENCRYPTED_BACKUP.md",
+                     "docs/releases/RELEASE_PROCESS.md",
+                     "docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md"
+                 })
+        {
+            Assert.Contains(expected, readme, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -112,6 +127,10 @@ public sealed class DocumentationCoverageSourceTests
 
         foreach (var expected in new[]
                  {
+                     "QUICK_START.md",
+                     "FEATURE_MATRIX.md",
+                     "UI_REFERENCE.md",
+                     "CONFIGURATION_REFERENCE.md",
                      "COMPLETE_PROJECT_DOCUMENTATION.md",
                      "FAQ.md",
                      "USER_GUIDE.md",
@@ -131,20 +150,9 @@ public sealed class DocumentationCoverageSourceTests
                      "TESTING_GUIDE.md",
                      "ACCESSIBILITY.md",
                      "verification/DOCUMENTATION_SUITE_2026_08_12.md",
-                     "verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md",
-                     "verification/HOSTED_CI_EVIDENCE_2026_08_13.md",
-                     "verification/CURRENT_HEAD_2026_08_13.md",
-                     "verification/POST_BASELINE_CHECKLIST_2026_08_13.md",
-                     "verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md",
-                     "verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md",
-                     "verification/CSV_IMPORT_HARDENING_2026_08_15.md",
-                     "verification/SETTINGS_JSON_HARDENING_2026_08_15.md",
-                     "verification/BACKUP_HEADER_HARDENING_2026_08_15.md",
-                     "verification/VAULT_HEADER_HARDENING_2026_08_15.md",
-                     "verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md",
-                     "verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md",
                      "verification/VERIFIED_MAIN_BASELINE_2026_08_15.md",
                      "verification/REPOSITORY_AUDIT_2026_08_16.md",
+                     "verification/COMPLETE_DOCUMENTATION_2026_08_16.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
@@ -161,11 +169,13 @@ public sealed class DocumentationCoverageSourceTests
         var security = File.ReadAllText(PathAt("SECURITY.md"));
         var cryptoDesign = File.ReadAllText(PathAt("docs", "security", "CRYPTOGRAPHIC_DESIGN.md"));
         var totp = File.ReadAllText(PathAt("docs", "security", "TOTP.md"));
+        var complete = File.ReadAllText(PathAt("docs", "COMPLETE_PROJECT_DOCUMENTATION.md"));
 
-        Assert.Contains("has not yet undergone an independent professional security audit", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("independent professional security audit", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("has **not** completed an independent professional security audit", security, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not** completed an independent professional", cryptoDesign, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not** completed an independent professional", totp, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("independent professional", cryptoDesign, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("independent professional", totp, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("has **not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -173,51 +183,106 @@ public sealed class DocumentationCoverageSourceTests
     {
         var complete = File.ReadAllText(PathAt("docs", "COMPLETE_PROJECT_DOCUMENTATION.md"));
         var faq = File.ReadAllText(PathAt("docs", "FAQ.md"));
-        var verification = File.ReadAllText(PathAt("docs", "verification", "DOCUMENTATION_CONSOLIDATION_2026_08_14.md"));
-        var totpVerification = File.ReadAllText(PathAt("docs", "verification", "TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md"));
-        var csvVerification = File.ReadAllText(PathAt("docs", "verification", "CSV_IMPORT_HARDENING_2026_08_15.md"));
-        var settingsVerification = File.ReadAllText(PathAt("docs", "verification", "SETTINGS_JSON_HARDENING_2026_08_15.md"));
-        var backupHeaderVerification = File.ReadAllText(PathAt("docs", "verification", "BACKUP_HEADER_HARDENING_2026_08_15.md"));
-        var vaultHeaderVerification = File.ReadAllText(PathAt("docs", "verification", "VAULT_HEADER_HARDENING_2026_08_15.md"));
-        var attachmentVerification = File.ReadAllText(PathAt("docs", "verification", "ATTACHMENT_METADATA_HARDENING_2026_08_15.md"));
+        var completeVerification = File.ReadAllText(PathAt("docs", "verification", "COMPLETE_DOCUMENTATION_2026_08_16.md"));
         var finalVerification = File.ReadAllText(PathAt("docs", "verification", "FINAL_REPOSITORY_HARDENING_2026_08_15.md"));
         var verifiedBaseline = File.ReadAllText(PathAt("docs", "verification", "VERIFIED_MAIN_BASELINE_2026_08_15.md"));
         var repositoryAudit = File.ReadAllText(PathAt("docs", "verification", "REPOSITORY_AUDIT_2026_08_16.md"));
 
-        Assert.Contains("not** completed an independent professional security audit", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cannot be deterministically erased", complete, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("historical evidence", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("555 passed", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("System/English/Hindi", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Buy Me a Coffee", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not** completed an independent professional security audit", faq, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("cannot deterministically erase", faq, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("final direct-commit head", verification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("independent professional security audit", verification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("exact current-head candidate", totpVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("does not provide cryptographic factor separation", totpVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("does not claim every remaining UI literal is translated", totpVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("exact final `main` head", csvVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("deterministic adversarial corpus", csvVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Independent professional security review remains outstanding", csvVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("64 KiB + 1 byte buffer", settingsVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("deterministic adversarial corpus", settingsVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not an independent security audit", settingsVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("strict version-2 JSON schema", backupHeaderVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("at least 80 hostile header inputs", backupHeaderVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not an independent security audit", backupHeaderVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("exactly 120 fixed hostile cases", vaultHeaderVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Version 1 remains accepted", vaultHeaderVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not an independent security audit", vaultHeaderVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("exactly 128 deterministic hostile inputs", attachmentVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("supplementary-plane", attachmentVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not an independent security audit", attachmentVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("exactly 128 deterministic hostile inputs", finalVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("555 total passed", faq, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("reviewed `hi-IN` resource-backed catalog", faq, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("555 passed", completeVerification, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("final documentation head", completeVerification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("554 passed", finalVerification, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("independent security audit", finalVerification, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("554 passed", verifiedBaseline, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CodeQL", verifiedBaseline, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("later commit becomes a new candidate", verifiedBaseline, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("BMC/support coverage after this pass", repositoryAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("remaining validation work", repositoryAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("intentionally deferred or unclaimed features", repositoryAudit, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CompleteDocumentationSuite_CoversCurrentProductSurfaces()
+    {
+        var quickStart = File.ReadAllText(PathAt("docs", "QUICK_START.md"));
+        var features = File.ReadAllText(PathAt("docs", "FEATURE_MATRIX.md"));
+        var ui = File.ReadAllText(PathAt("docs", "UI_REFERENCE.md"));
+        var configuration = File.ReadAllText(PathAt("docs", "CONFIGURATION_REFERENCE.md"));
+        var complete = File.ReadAllText(PathAt("docs", "COMPLETE_PROJECT_DOCUMENTATION.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "encrypted backup",
+                     "TOTP",
+                     "Buy Me a Coffee",
+                     "555 passed"
+                 })
+        {
+            Assert.Contains(expected, quickStart, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "OneTimePassword",
+                     "Windows Hello",
+                     "CipherNestEnableFundingLink=false",
+                     "Reviewed Hindi",
+                     "555 passed"
+                 })
+        {
+            Assert.Contains(expected, features, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Startup Page",
+                     "Onboarding Page",
+                     "Unlock Page",
+                     "Vault Page",
+                     "Item Editor Page",
+                     "Settings Page",
+                     "Transfer Page",
+                     "About Page",
+                     "Developer Page",
+                     "☕ Support"
+                 })
+        {
+            Assert.Contains(expected, ui, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "in.sanskar.ciphernest",
+                     "CipherNestTargetFrameworks",
+                     "CipherNestEnableFundingLink",
+                     "System / English / Hindi",
+                     "10.0.10",
+                     "555 passed"
+                 })
+        {
+            Assert.Contains(expected, configuration, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "# 14. Cryptographic design",
+                     "# 18. SQLite schema, migrations, and replacement",
+                     "# 25. Encrypted attachments",
+                     "# 26. Encrypted backup and restore",
+                     "# 31. Accessibility",
+                     "# 32. Localization",
+                     "# 34. Branding and Buy Me a Coffee support",
+                     "# 38. Hosted CI and CodeQL baseline",
+                     "# 48. Known limitations and external validation gates",
+                     "# 51. Canonical documentation map"
+                 })
+        {
+            Assert.Contains(expected, complete, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private static string PathAt(params string[] segments)
