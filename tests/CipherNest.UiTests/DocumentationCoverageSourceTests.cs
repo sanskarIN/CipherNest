@@ -144,6 +144,7 @@ public sealed class DocumentationCoverageSourceTests
                      "verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md",
                      "verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md",
                      "verification/VERIFIED_MAIN_BASELINE_2026_08_15.md",
+                     "verification/REPOSITORY_AUDIT_2026_08_16.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
