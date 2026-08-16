@@ -2,6 +2,16 @@
 
 This directory is the canonical navigation point for CipherNest project documentation. CipherNest is a local-first .NET MAUI vault. Documentation must describe only behavior supported by the current source and must preserve the project's explicit security limitations: the project has not completed an independent professional security audit, managed strings cannot be deterministically erased, plaintext export leaves the protected vault boundary, and platform controls such as screenshots, biometrics, clipboard access, file sharing, secure storage, packaging, and lifecycle behavior require target-platform validation.
 
+## ☕ Support CipherNest development
+
+<p align="center">
+  <a href="https://buymeacoffee.com/sanskarIN" title="Support CipherNest on Buy Me a Coffee">
+    <img src="../src/CipherNest.App/Resources/Images/bmc_support.svg" alt="BMC — Support CipherNest" width="520" />
+  </a>
+</p>
+
+Financial support is voluntary. It does not change feature access, security/privacy treatment, support priority, licensing, recovery behavior, or open-source rights. Distribution builds can disable the in-app funding surface independently of repository funding metadata.
+
 ## Start here
 
 - [`COMPLETE_PROJECT_DOCUMENTATION.md`](COMPLETE_PROJECT_DOCUMENTATION.md) — consolidated end-to-end reference covering project identity, architecture, security model, storage, features, limits, build/test/release flow, support, and external validation gates.
@@ -66,6 +76,7 @@ These format documents are implementation documentation, not promises of permane
 - [`verification/VAULT_HEADER_HARDENING_2026_08_15.md`](verification/VAULT_HEADER_HARDENING_2026_08_15.md) — source/test/current-head verification contract for strict v1/v2 local vault-header JSON, pre-unwrap/replacement rejection, legacy compatibility, and the deterministic hostile-header corpus.
 - [`verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md`](verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md) — source/test/current-head contract for rune-aware attachment display/media metadata, exact opaque `.cna` storage-name bounds, validator reuse, and the deterministic 128-input hostile corpus.
 - [`verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md`](verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md) — final repository-side defect-sweep contract covering TOTP Base32/lifetime/timestamp fixes, bounded CSV tag materialization, exact backup ZIP extraction accounting, checkpoint-discovered defects, and the remaining external release gates.
+- [`verification/VERIFIED_MAIN_BASELINE_2026_08_15.md`](verification/VERIFIED_MAIN_BASELINE_2026_08_15.md) — exact `d405bb3ae0a88f4abfcdcb574227c372683dd790` evidence for 554 passing tests, analyzer/format gates, Windows/Android/iOS/Mac Catalyst builds, and CodeQL; later commits require a new exact-head run.
 - [`TEST_PLAN.md`](TEST_PLAN.md) — complete automated/manual release test matrix.
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized, how to add tests, what source tests prove, and what still requires devices.
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
