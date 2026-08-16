@@ -83,6 +83,7 @@
 - In-app security/privacy/audit-status surface, runtime version/build About information, GPL/privacy/terms references, third-party dependency notices, acknowledgements, repository/support contacts, and hidden developer diagnostics.
 - Centralized project metadata includes the optional development-support URL `https://buymeacoffee.com/sanskarIN`; About exposes explicit user-initiated repository/creator/support links and GitHub `.github/FUNDING.yml` points to the same support URL.
 - Optional development support is documented as voluntary and does not change feature access, privacy/security treatment, support priority, licensing, or recovery behavior. `CipherNestEnableFundingLink=false` builds hide the in-app CTA without source edits.
+- The BMC support surface is now prominent in About, Settings, and main Vault navigation, while the root README, documentation hub, `SUPPORT.md`, and GitHub funding metadata use the same project support destination. Settings and repository documentation also render the original `bmc_support.svg` asset, and the root README now includes the original CipherNest logo for a stronger visual presentation.
 - Original SVG branding with splash wordmark and `Made by the Sanskar`, primary/adaptive icon sources, monochrome system-mark source, dark-surface logo variant, editable asset guidance, packaging/reproducibility documentation, and store-listing/feature-graphic guidance.
 - Unit/integration/UI-source tests cover the current crypto, backup, database, session, migration, CSV, attachment, settings, startup, transfer, item-editor, onboarding, privacy, lifecycle, generator, branding, support metadata, and CI source invariants. The 2026-08-11 hardening gates are recorded in `docs/verification/SECURITY_HARDENING_2026_08_11.md`.
 - A canonical complete documentation suite now covers user workflows, developer/maintainer guidance, public application contracts, limits/defaults/glossary, dependency/data-flow/session architecture, sensitive-data lifecycle/session security, vault/attachment/backup/CSV formats, testing/accessibility, backup/recovery and security-response operations, and full release governance. `DocumentationCoverageSourceTests` guards required files/entry-point links/audit disclaimers, and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` records the documentation evidence gate.
@@ -90,7 +91,6 @@
 - CodeQL is configured to build/analyze the MAUI Android application path in addition to core/integration code; dependency review retains a high-severity failure threshold with bounded/cancelable execution.
 - Committed local verification scripts cover core PowerShell/POSIX, Windows, Android, and Apple-host compile gates; `docs/verification/CI_GATES.md` documents release evidence requirements.
 - Repository templates, contribution/security/support/privacy/terms files, architecture records, implemented cryptographic design, release/setup/packaging/reproducibility/troubleshooting/test documentation, third-party notices, release checklist, and executable `docs/NEXT_STEPS.md` roadmap are present.
-
 
 ### Current TOTP/localization release validation
 - RFC 6238 known-answer tests cover SHA-1, SHA-256, and SHA-512 at the published test timestamps.
@@ -100,24 +100,26 @@
 - Physical-device clipboard/history, clock correctness, accessibility, language layout, and lifecycle behavior remain release gates.
 
 ### Hosted verification evidence
-- Exact hosted candidate `2327abba1646082a4d94a689d452b1116701cc0b` completed `CipherNest CI` run `31697433940` successfully.
+- The last fully observed immutable baseline before the 2026-08-16 BMC/presentation audit pass is `d405bb3ae0a88f4abfcdcb574227c372683dd790`.
+- Exact GitHub Actions `CipherNest CI` run `31879581456` completed successfully for that baseline.
 - Core analyzer builds completed with 0 warnings / 0 errors for UnitTests, IntegrationTests, and UiTests.
-- Runtime tests completed with **106 Unit + 60 Integration + 74 UI/source = 240 passed, 0 failed, 0 skipped**.
+- Runtime tests completed with **346 Unit + 98 Integration + 110 UI/source = 554 passed, 0 failed, 0 skipped**.
 - Core `dotnet format --verify-no-changes` checks completed successfully.
 - Windows Release builds completed successfully for both the default funding-enabled configuration and `CipherNestEnableFundingLink=false`.
-- Android Release compilation completed successfully for `android-arm64`.
-- iOS simulator Release compilation completed successfully for `iossimulator-arm64`.
-- Mac Catalyst Release compilation completed successfully for `maccatalyst-arm64`.
-- Apple hosted verification used `macos-26`, .NET SDK `10.0.302`, Xcode `26.5`, and the Xcode-26.5-compatible .NET workload set `10.0.300.3`.
-- CodeQL v4 run `31697433730` completed successfully after building analyzable core and the Android MAUI application path.
-- Detailed exact-run evidence is recorded in `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`.
+- Android Release compilation completed successfully.
+- iOS simulator Release compilation completed successfully.
+- Mac Catalyst Release compilation completed successfully.
+- Exact GitHub Actions CodeQL run `31879581401` completed successfully after analyzable core and MAUI Android application builds.
+- GitHub Actions recorded the exact baseline author and committer identity as `Sanskar <sanskarin@outlook.in>`.
+- Detailed exact-run evidence is recorded in `docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md`.
+- The 2026-08-16 repository audit is recorded in `docs/verification/REPOSITORY_AUDIT_2026_08_16.md`; because that pass modifies `main`, every later head must complete its own configured gates before inheriting exact-head verification status.
 
 ### Quality gate requiring external execution or hardware
-- The repository has exact hosted compile/test/format/CodeQL evidence for candidate `2327abba1646082a4d94a689d452b1116701cc0b`; later release candidates must rerun these gates rather than inheriting the result automatically.
+- The repository has exact hosted compile/test/format/CodeQL evidence for baseline `d405bb3ae0a88f4abfcdcb574227c372683dd790`; later release candidates must rerun these gates rather than inheriting the result automatically.
 - The connected editing environment does not itself provide interactive target emulators/simulators, physical devices, store signing/notarization, store review, or an independent professional security audit.
 - Concurrency behavior around lock/unlock/delete transition ordering, attachment mutations, restore cancellation, and filesystem rollback timing has automated policy/integration coverage, but broader stress/interleaving validation remains required on the exact release candidate.
 - Android biometric bindings and runtime behavior must be exercised with the selected .NET Android workload on API-28+ devices/emulators covering enrollment, absence, cancellation, lockout, hardware availability, and secure-storage loss.
-- iOS and Mac Catalyst biometric behavior, Face ID/Touch ID enrollment changes, cancellation, secure-storage behavior, and packaging require interactive Apple simulator/device validation even though hosted compilation now passes.
+- iOS and Mac Catalyst biometric behavior, Face ID/Touch ID enrollment changes, cancellation, secure-storage behavior, and packaging require interactive Apple simulator/device validation even when hosted compilation passes.
 - Windows packaging needs its normal signing identity for store distribution; Windows biometric unlock is intentionally not enabled in this release.
 - Android/iOS/MacCatalyst/Windows store signing keys and credentials are intentionally absent from the repository and must be supplied through protected CI/store configuration.
 - Screenshot blocking, real clipboard/history behavior, background/sleep lifecycle callbacks, session-cancellation timing, attachment-mutation cancellation timing, share-sheet plaintext cleanup, in-memory preview behavior, accessibility behavior, language fallback, responsive layouts, incremental large-vault UX, large-file attachment behavior, and filesystem replacement/recovery behavior require final platform-by-platform validation.
@@ -129,7 +131,7 @@
 
 ### Next steps
 
-The ordered release/development plan is maintained in `docs/NEXT_STEPS.md`; verification details are in `docs/verification/CI_GATES.md`, `docs/verification/SECURITY_HARDENING_2026_08_11.md`, `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md`, `docs/verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md`, and `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md`. The immediate sequence is preserve the green hosted source baseline while executing platform smoke/real-device security validation, stress session-transition/attachment-mutation/restore-cancellation/filesystem-recovery behavior, test backup/restore/database-replacement and transfer compatibility on target environments, complete accessibility/localization/responsive checks, measure performance/large-vault behavior against the current resource budgets, review dependencies/licenses/security, package signed candidates, obtain independent security review, and only then create an evidence-backed tagged release.
+The ordered release/development plan is maintained in `docs/NEXT_STEPS.md`; current verification details are in `docs/verification/CI_GATES.md`, `docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md`, and `docs/verification/REPOSITORY_AUDIT_2026_08_16.md`. The immediate sequence is preserve a green exact-head source baseline while executing platform smoke/real-device security validation, stress session-transition/attachment-mutation/restore-cancellation/filesystem-recovery behavior, test backup/restore/database-replacement and transfer compatibility on target environments, complete accessibility/localization/responsive checks, measure performance/large-vault behavior against the current resource budgets, review dependencies/licenses/security, package signed candidates, obtain independent security review, and only then create an evidence-backed tagged release.
 
 ### Deliberately deferred pending dedicated security/platform review
 - Cloud synchronization, accounts, collaboration, server storage, and multi-device conflict resolution.
@@ -154,6 +156,15 @@ Completed in source/tests:
 - fixed the checkpoint-discovered missing final newline and duplicate xUnit theory-ID condition;
 - reviewed the vault-record/envelope validation chain and preserved the existing compatibility-safe authenticated/bounded validation design.
 
-Corrected pre-documentation checkpoint `483428a0146e5e086a03c9356217139712d1ea1c`: **346 Unit + 98 Integration + 110 UI/source = 554/554 passed**, with zero failed/skipped, clean analyzer builds, and successful configured core formatting verification. This checkpoint becomes historical after documentation commits; exact final-head CI/CodeQL evidence is required before release-candidate claims.
+Corrected pre-documentation checkpoint `483428a0146e5e086a03c9356217139712d1ea1c`: **346 Unit + 98 Integration + 110 UI/source = 554/554 passed**, with zero failed/skipped, clean analyzer builds, and successful configured core formatting verification. This checkpoint became historical after documentation commits. The later immutable baseline `d405bb3ae0a88f4abfcdcb574227c372683dd790` then completed the configured CI and CodeQL workflows successfully; see `docs/verification/VERIFIED_MAIN_BASELINE_2026_08_15.md`.
+
+## Repository audit and support presentation pass — 2026-08-16
+
+- corrected stale root README verification counts and linked the exact 554-test baseline;
+- added the original CipherNest logo to the README and reused the existing original BMC badge in Settings/documentation presentation;
+- added a funding-flag-aware BMC support card to Settings and a funding-flag-aware `☕ Support` action to the main Vault surface;
+- extended BMC source tests so the new surfaces cannot silently lose the funding flag or support path;
+- added exact baseline and audit verification records, indexed them from the documentation hub, and added documentation source-regression coverage;
+- refreshed this project status so the old 240-test August 13 candidate remains historical rather than being presented as the current hosted verification baseline.
 
 Still external/not proven by repository automation: physical-device security/lifecycle/biometric/clipboard/screenshot behavior, complete accessibility/localization/performance observation, historical release migration/backup compatibility, independent professional security review, signing/package provenance, and store privacy/policy/submission validation.
