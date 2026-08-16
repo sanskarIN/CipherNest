@@ -34,6 +34,22 @@ public sealed class BmcSupportSourceTests
     }
 
     [Fact]
+    public void PrimarySurfaces_HighlightBmcAndRespectFundingFlag()
+    {
+        var settings = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "SettingsPage.xaml"));
+        var vault = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "VaultPage.xaml"));
+
+        Assert.Contains("Source=\"bmc_support.svg\"", settings, StringComparison.Ordinal);
+        Assert.Contains("Text=\"☕ Support CipherNest development\"", settings, StringComparison.Ordinal);
+        Assert.Contains("Text=\"☕ View Buy Me a Coffee support\"", settings, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{x:Static services:BuildFeatureFlags.IsFundingLinkEnabled}\"", settings, StringComparison.Ordinal);
+
+        Assert.Contains("Text=\"☕ Support\"", vault, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{x:Static services:BuildFeatureFlags.IsFundingLinkEnabled}\"", vault, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding AboutCommand}\"", vault, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SupportDocs_KeepFundingVoluntaryAndLinked()
     {
         var support = File.ReadAllText(PathAt("SUPPORT.md"));
