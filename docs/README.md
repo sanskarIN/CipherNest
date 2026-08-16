@@ -1,6 +1,8 @@
 # CipherNest Documentation Hub
 
-This directory is the canonical navigation point for CipherNest project documentation. CipherNest is a local-first .NET MAUI vault. Documentation must describe only behavior supported by the current source and must preserve the project's explicit security limitations: the project has not completed an independent professional security audit, managed strings cannot be deterministically erased, plaintext export leaves the protected vault boundary, and platform controls such as screenshots, biometrics, clipboard access, file sharing, secure storage, packaging, and lifecycle behavior require target-platform validation.
+This directory is the canonical navigation point for CipherNest documentation. The suite describes current source behavior, separates implementation from external validation and deferred work, and preserves explicit security limitations.
+
+> **Security status:** CipherNest has **not** completed an independent professional security audit. Managed strings cannot be deterministically erased, explicit plaintext export leaves the protected vault boundary, and platform controls such as screenshots, biometrics, clipboard access, secure storage, lifecycle behavior, file sharing, signing, packaging, and store behavior require target-specific validation.
 
 ## ☕ Support CipherNest development
 
@@ -12,110 +14,171 @@ This directory is the canonical navigation point for CipherNest project document
 
 Financial support is voluntary. It does not change feature access, security/privacy treatment, support priority, licensing, recovery behavior, or open-source rights. Distribution builds can disable the in-app funding surface independently of repository funding metadata.
 
-## Start here
+# Start here
 
-- [`COMPLETE_PROJECT_DOCUMENTATION.md`](COMPLETE_PROJECT_DOCUMENTATION.md) — consolidated end-to-end reference covering project identity, architecture, security model, storage, features, limits, build/test/release flow, support, and external validation gates.
-- [`../README.md`](../README.md) — product overview, current capabilities, build entry points, repository/contact information, license, and high-level security status.
-- [`USER_GUIDE.md`](USER_GUIDE.md) — end-user workflow from first launch through daily use, backup, restore, import/export, lock, trash, settings, and recovery.
-- [`FAQ.md`](FAQ.md) — common user, security, platform, backup, build, CI, release, and support questions.
-- [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) — repository layout, dependency direction, local development workflow, extension rules, review boundaries, and contributor workflow.
-- [`MAINTAINER_GUIDE.md`](MAINTAINER_GUIDE.md) — day-to-day repository/security/release/support ownership rules.
-- [`DOCUMENTATION_MAINTENANCE.md`](DOCUMENTATION_MAINTENANCE.md) — documentation governance, source-of-truth, synchronization, wording, and historical-preservation rules.
-- [`API_REFERENCE.md`](API_REFERENCE.md) — application-layer public contracts and domain model reference.
-- [`LIMITS_AND_DEFAULTS.md`](LIMITS_AND_DEFAULTS.md) — implemented safety ceilings, defaults, format versions, identifiers, and operational bounds.
-- [`PROJECT_GLOSSARY.md`](PROJECT_GLOSSARY.md) — project-specific terminology used across code, UI, tests, and security documents.
+For the fastest orientation, use these documents in order:
 
-## Architecture
+1. [`QUICK_START.md`](QUICK_START.md) — safe end-user setup plus contributor bootstrap.
+2. [`FEATURE_MATRIX.md`](FEATURE_MATRIX.md) — exhaustive implemented/platform-dependent/external/deferred feature status.
+3. [`UI_REFERENCE.md`](UI_REFERENCE.md) — page-by-page routes, controls, security gates, and navigation behavior.
+4. [`CONFIGURATION_REFERENCE.md`](CONFIGURATION_REFERENCE.md) — product/build/settings/toolchain/resource configuration.
+5. [`COMPLETE_PROJECT_DOCUMENTATION.md`](COMPLETE_PROJECT_DOCUMENTATION.md) — 52-section end-to-end reference for the entire project.
+6. [`USER_GUIDE.md`](USER_GUIDE.md) — detailed everyday user workflows.
+7. [`FAQ.md`](FAQ.md) — common product/security/build/release questions.
 
-- [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — project/layer boundaries and dependency direction.
-- [`architecture/DATABASE.md`](architecture/DATABASE.md) — SQLite schema, migration, replacement, snapshot, validation, and recovery boundaries.
-- [`architecture/LOCALIZATION.md`](architecture/LOCALIZATION.md) — staged neutral-English/Hindi resource-backed localization architecture and extension rules.
-- [`architecture/DATA_FLOW.md`](architecture/DATA_FLOW.md) — lifecycle of vault records, keys, attachments, backups, CSV data, clipboard data, and platform shares.
-- [`architecture/SESSION_AND_CONCURRENCY.md`](architecture/SESSION_AND_CONCURRENCY.md) — session transition gate, key leases, cancellation, attachment mutation serialization, and destructive authorization.
-- [`architecture/DEPENDENCY_MAP.md`](architecture/DEPENDENCY_MAP.md) — solution/project dependency map and ownership of major services.
+The public project overview is [`../README.md`](../README.md).
 
-## Security and privacy
+# Complete reference set
 
-- [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md) — protected assets, attacker capabilities, partial mitigations, explicit non-goals, and platform limitations.
-- [`security/CRYPTOGRAPHIC_DESIGN.md`](security/CRYPTOGRAPHIC_DESIGN.md) — implemented key hierarchy, Argon2id/AES-GCM design, record/attachment/backup formats, storage bounds, and audit status.
-- [`security/TOTP.md`](security/TOTP.md) — local RFC-compatible time-based one-time-password seed storage, generation, bounds, clipboard behavior, tests, and threat considerations.
-- [`security/BIOMETRIC_UNLOCK.md`](security/BIOMETRIC_UNLOCK.md) — secondary convenience-unlock design and platform behavior.
-- [`security/SECURE_NOTES.md`](security/SECURE_NOTES.md) — safe note rendering subset and bounds.
-- [`security/PASSPHRASE_GENERATOR.md`](security/PASSPHRASE_GENERATOR.md) — generator design and entropy guidance.
-- [`security/SESSION_SECURITY.md`](security/SESSION_SECURITY.md) — master/recovery/secondary authorization roles, lock lifecycle, re-authentication, clipboard relationship, and sensitive-memory limits.
-- [`security/DATA_LIFECYCLE.md`](security/DATA_LIFECYCLE.md) — where protected/plaintext data can exist and what CipherNest can or cannot erase.
-- [`privacy/DIAGNOSTICS.md`](privacy/DIAGNOSTICS.md) — privacy-safe diagnostic policy.
-- [`../PRIVACY.md`](../PRIVACY.md) — user-facing privacy notice.
-- [`../SECURITY.md`](../SECURITY.md) — responsible disclosure/security contact policy.
+## User and product documentation
 
-## Formats and interoperability
+- [`QUICK_START.md`](QUICK_START.md) — first launch, vault creation, items, TOTP, attachments, backups, settings, contributor bootstrap.
+- [`FEATURE_MATRIX.md`](FEATURE_MATRIX.md) — current feature state and deliberately deferred functionality.
+- [`UI_REFERENCE.md`](UI_REFERENCE.md) — Startup, Onboarding, Unlock, Vault, Item Editor, Generator, Audit, Trash, Settings, Security Info, Transfer, About, Developer, and route behavior.
+- [`CONFIGURATION_REFERENCE.md`](CONFIGURATION_REFERENCE.md) — application ID, target frameworks, build flags, packages, preferences, defaults, limits, toolchain, and verification scripts.
+- [`COMPLETE_PROJECT_DOCUMENTATION.md`](COMPLETE_PROJECT_DOCUMENTATION.md) — consolidated project architecture/security/storage/UI/build/test/release/operations reference.
+- [`USER_GUIDE.md`](USER_GUIDE.md) — end-user workflows from first launch through recovery/deletion.
+- [`FAQ.md`](FAQ.md) — user, contributor, security, platform, backup, CI, and release FAQ.
+- [`PROJECT_GLOSSARY.md`](PROJECT_GLOSSARY.md) — project-specific terminology.
 
-- [`formats/VAULT_RECORDS.md`](formats/VAULT_RECORDS.md) — logical vault item model, encrypted record identity binding, validation, TOTP record parameters, and storage limits.
-- [`formats/VAULT_HEADER.md`](formats/VAULT_HEADER.md) — strict version-aware local vault-header JSON schema, wrapped-key/KDF metadata contract, parser bounds, compatibility, and pre-unwrap validation order.
-- [`formats/ATTACHMENTS.md`](formats/ATTACHMENTS.md) — encrypted attachment naming/framing, chunk processing, rune-aware metadata policy, preview, and export boundary.
-- [`formats/ENCRYPTED_BACKUP.md`](formats/ENCRYPTED_BACKUP.md) — `.cnbak` container framing, KDF/header validation, encrypted chunks, bounded archive contents, restore validation, and rollback.
-- [`formats/CSV_TRANSFER.md`](formats/CSV_TRANSFER.md) — explicit CSV mapping/import behavior and guarded plaintext export.
+## Developer and maintainer documentation
 
-These format documents are implementation documentation, not promises of permanent compatibility beyond versions explicitly supported by the current code. Cryptographic or schema changes require versioning, migration/compatibility tests, threat-model updates, and review.
-
-## Development, build, testing, and troubleshooting
-
-- [`setup/BUILD.md`](setup/BUILD.md) — prerequisites, target-specific build commands, verification scripts, CI coverage, and funding-CTA build property.
-- [`verification/CI_GATES.md`](verification/CI_GATES.md) — configured CI/local verification gates and evidence requirements.
-- [`verification/SECURITY_HARDENING_2026_08_11.md`](verification/SECURITY_HARDENING_2026_08_11.md) — framing/resource/session/platform hardening verification addendum.
-- [`verification/DOCUMENTATION_SUITE_2026_08_12.md`](verification/DOCUMENTATION_SUITE_2026_08_12.md) — required documentation/source-link/audit-wording completeness gates.
-- [`verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md`](verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md) — highlighted BMC support surface plus authenticated-record, session-race, hostile-backup-header, malformed-framing, Windows WinRT/AOT, SQLite dependency, and platform-toolchain gates.
-- [`verification/HOSTED_CI_EVIDENCE_2026_08_13.md`](verification/HOSTED_CI_EVIDENCE_2026_08_13.md) — exact candidate/run evidence for 240 passing tests, formatting, Windows default/funding-disabled, Android, iOS simulator, Mac Catalyst, and CodeQL, with remaining device/store/audit limitations.
-- [`verification/CURRENT_HEAD_2026_08_13.md`](verification/CURRENT_HEAD_2026_08_13.md) — explicitly marks the hosted baseline as historical after later source/test commits.
-- [`verification/POST_BASELINE_CHECKLIST_2026_08_13.md`](verification/POST_BASELINE_CHECKLIST_2026_08_13.md) — rerun checklist for every post-baseline release candidate.
-- [`verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md`](verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md) — repository-side scope and gate for the complete-documentation consolidation, including the required current-head rerun and external validation limits.
-- [`verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md`](verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md) — exact current-head source/test/platform/CodeQL contract for local TOTP plus the reviewed Hindi resource-backed catalog.
-- [`verification/CSV_IMPORT_HARDENING_2026_08_15.md`](verification/CSV_IMPORT_HARDENING_2026_08_15.md) — source/test/current-head verification contract for bounded, control-safe CSV header metadata and deterministic adversarial parser coverage.
-- [`verification/SETTINGS_JSON_HARDENING_2026_08_15.md`](verification/SETTINGS_JSON_HARDENING_2026_08_15.md) — source/test/current-head verification contract for bounded settings reads, explicit JSON depth, invalid UTF-8 fallback, normalization, and deterministic adversarial settings coverage.
-- [`verification/BACKUP_HEADER_HARDENING_2026_08_15.md`](verification/BACKUP_HEADER_HARDENING_2026_08_15.md) — source/test/current-head verification contract for strict bounded version-2 backup-header JSON, pre-Argon2 rejection, and deterministic adversarial header coverage.
-- [`verification/VAULT_HEADER_HARDENING_2026_08_15.md`](verification/VAULT_HEADER_HARDENING_2026_08_15.md) — source/test/current-head verification contract for strict v1/v2 local vault-header JSON, pre-unwrap/replacement rejection, legacy compatibility, and the deterministic hostile-header corpus.
-- [`verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md`](verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md) — source/test/current-head contract for rune-aware attachment display/media metadata, exact opaque `.cna` storage-name bounds, validator reuse, and the deterministic 128-input hostile corpus.
-- [`verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md`](verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md) — final repository-side defect-sweep contract covering TOTP Base32/lifetime/timestamp fixes, bounded CSV tag materialization, exact backup ZIP extraction accounting, checkpoint-discovered defects, and the remaining external release gates.
-- [`verification/VERIFIED_MAIN_BASELINE_2026_08_15.md`](verification/VERIFIED_MAIN_BASELINE_2026_08_15.md) — exact `d405bb3ae0a88f4abfcdcb574227c372683dd790` evidence for 554 passing tests, analyzer/format gates, Windows/Android/iOS/Mac Catalyst builds, and CodeQL; later commits require a new exact-head run.
-- [`verification/REPOSITORY_AUDIT_2026_08_16.md`](verification/REPOSITORY_AUDIT_2026_08_16.md) — bug/error/unfinished-feature sweep, BMC coverage review, corrected stale public evidence, and remaining external/deferred work.
-- [`TEST_PLAN.md`](TEST_PLAN.md) — complete automated/manual release test matrix.
-- [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized, how to add tests, what source tests prove, and what still requires devices.
-- [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
+- [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) — repository layout, dependency direction, DI, extension rules, tests, and review boundaries.
+- [`MAINTAINER_GUIDE.md`](MAINTAINER_GUIDE.md) — repository/security/release/support ownership.
+- [`API_REFERENCE.md`](API_REFERENCE.md) — Application contracts and Domain model reference; this is an internal source API, not a network API.
+- [`LIMITS_AND_DEFAULTS.md`](LIMITS_AND_DEFAULTS.md) — authoritative current resource ceilings, defaults, versions, and timing bounds.
+- [`DOCUMENTATION_MAINTENANCE.md`](DOCUMENTATION_MAINTENANCE.md) — documentation source-of-truth, synchronization, historical-evidence, and wording rules.
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — contribution requirements.
 
-## User experience, accessibility, and branding
+# Architecture
 
-- [`ACCESSIBILITY.md`](ACCESSIBILITY.md) — accessibility expectations, semantic metadata, larger-interface/reduced-motion behavior, and target-device checks.
-- [`branding/ASSETS.md`](branding/ASSETS.md) — original vector source assets, generation rules, safe usage, and creator-credit guidance.
-- [`releases/STORE_LISTING_GUIDE.md`](releases/STORE_LISTING_GUIDE.md) — accurate positioning, store disclosures, and synthetic-data screenshot rules.
+- [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — project/layer boundaries and dependency direction.
+- [`architecture/DEPENDENCY_MAP.md`](architecture/DEPENDENCY_MAP.md) — solution/project/package/service ownership.
+- [`architecture/DATA_FLOW.md`](architecture/DATA_FLOW.md) — sensitive data/key/attachment/backup/CSV/clipboard/share flows.
+- [`architecture/SESSION_AND_CONCURRENCY.md`](architecture/SESSION_AND_CONCURRENCY.md) — session transition gate, key leases, cancellation, attachment serialization, destructive authorization, recovery ordering.
+- [`architecture/DATABASE.md`](architecture/DATABASE.md) — SQLite schema, migrations, replacement, snapshot, validation, recovery.
+- [`architecture/LOCALIZATION.md`](architecture/LOCALIZATION.md) — neutral-English/Hindi resource-backed localization architecture and extension rules.
 
-## Release and operations
+# Security and privacy
+
+- [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md) — assets, attacker capabilities, mitigations, partial mitigations, non-goals, scenarios, and platform limitations.
+- [`security/CRYPTOGRAPHIC_DESIGN.md`](security/CRYPTOGRAPHIC_DESIGN.md) — key hierarchy, Argon2id/AES-GCM design, KDF bounds, formats, nonce/AAD assumptions, audit status.
+- [`security/SESSION_SECURITY.md`](security/SESSION_SECURITY.md) — master/recovery/secondary authorization, lock lifecycle, re-authentication, clipboard relationship, sensitive-memory limits.
+- [`security/DATA_LIFECYCLE.md`](security/DATA_LIFECYCLE.md) — where plaintext/protected data can exist and what CipherNest can/cannot erase.
+- [`security/BIOMETRIC_UNLOCK.md`](security/BIOMETRIC_UNLOCK.md) — secondary convenience-unlock design and platform limitations.
+- [`security/TOTP.md`](security/TOTP.md) — encrypted Base32 seed/settings, RFC-compatible code generation, input bounds, clipboard behavior, factor-separation limitations.
+- [`security/SECURE_NOTES.md`](security/SECURE_NOTES.md) — bounded Markdown-like safe subset and HTML-neutralization policy.
+- [`security/PASSPHRASE_GENERATOR.md`](security/PASSPHRASE_GENERATOR.md) — password/passphrase generation and entropy guidance.
+- [`privacy/DIAGNOSTICS.md`](privacy/DIAGNOSTICS.md) — privacy-safe diagnostic policy.
+- [`../SECURITY.md`](../SECURITY.md) — responsible disclosure/security contact policy.
+- [`../PRIVACY.md`](../PRIVACY.md) — user-facing privacy notice.
+
+# Formats and interoperability
+
+- [`formats/VAULT_HEADER.md`](formats/VAULT_HEADER.md) — exact supported local vault-header schemas, parser bounds, compatibility, pre-unwrap/pre-replacement validation.
+- [`formats/VAULT_RECORDS.md`](formats/VAULT_RECORDS.md) — logical encrypted item model, identity binding, TOTP parameters, validation/resource rules.
+- [`formats/ATTACHMENTS.md`](formats/ATTACHMENTS.md) — `.cna` naming/framing, chunk processing, metadata validation, preview/export boundary.
+- [`formats/ENCRYPTED_BACKUP.md`](formats/ENCRYPTED_BACKUP.md) — `.cnbak` framing, KDF/header checks, chunks, bounded ZIP/archive, restore validation/rollback.
+- [`formats/CSV_TRANSFER.md`](formats/CSV_TRANSFER.md) — explicit CSV mapping/import and guarded plaintext export.
+
+These are implementation documents, not promises of permanent compatibility beyond versions explicitly supported by current source. Incompatible schema/format changes require explicit versioning, migration/compatibility tests, threat-model review, and release documentation.
+
+# Build, test, verification, and troubleshooting
+
+- [`setup/BUILD.md`](setup/BUILD.md) — prerequisites and platform-specific build commands.
+- [`TEST_PLAN.md`](TEST_PLAN.md) — automated/manual release test matrix.
+- [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized and when source/device testing is required.
+- [`verification/CI_GATES.md`](verification/CI_GATES.md) — configured CI/local gates and evidence rules.
+- [`verification/COMPLETE_DOCUMENTATION_2026_08_16.md`](verification/COMPLETE_DOCUMENTATION_2026_08_16.md) — source-to-document scope and gate for this full documentation expansion.
+- [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
+
+## Current immutable pre-documentation implementation baseline
+
+The complete-documentation expansion is grounded in exact source baseline:
+
+`8566980ff981b8b4072f9010ec7b7ba54aba051e`
+
+For that exact commit:
+
+- **346 UnitTests passed**;
+- **98 IntegrationTests passed**;
+- **111 UI/source tests passed**;
+- **555 total passed, 0 failed, 0 skipped**;
+- analyzer-enabled core test builds completed without build warnings/errors;
+- core formatting passed;
+- Windows default Release passed;
+- Windows `CipherNestEnableFundingLink=false` Release passed;
+- Android Release passed;
+- iOS simulator Release passed;
+- Mac Catalyst Release passed;
+- CodeQL v4 passed after analyzable core and MAUI application builds.
+
+Recorded run IDs:
+
+- CipherNest CI: `31937127961`
+- CodeQL: `31937127900`
+
+This evidence belongs only to that immutable implementation SHA. Documentation commits after it require their own exact-head run before being described as release-candidate verified.
+
+## Historical verification records
+
+Historical records remain intentionally preserved with their original commit/run context:
+
+- [`verification/SECURITY_HARDENING_2026_08_11.md`](verification/SECURITY_HARDENING_2026_08_11.md)
+- [`verification/DOCUMENTATION_SUITE_2026_08_12.md`](verification/DOCUMENTATION_SUITE_2026_08_12.md)
+- [`verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md`](verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md)
+- [`verification/HOSTED_CI_EVIDENCE_2026_08_13.md`](verification/HOSTED_CI_EVIDENCE_2026_08_13.md) — historical 240-test exact candidate.
+- [`verification/CURRENT_HEAD_2026_08_13.md`](verification/CURRENT_HEAD_2026_08_13.md)
+- [`verification/POST_BASELINE_CHECKLIST_2026_08_13.md`](verification/POST_BASELINE_CHECKLIST_2026_08_13.md)
+- [`verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md`](verification/DOCUMENTATION_CONSOLIDATION_2026_08_14.md)
+- [`verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md`](verification/TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md)
+- [`verification/CSV_IMPORT_HARDENING_2026_08_15.md`](verification/CSV_IMPORT_HARDENING_2026_08_15.md)
+- [`verification/SETTINGS_JSON_HARDENING_2026_08_15.md`](verification/SETTINGS_JSON_HARDENING_2026_08_15.md)
+- [`verification/BACKUP_HEADER_HARDENING_2026_08_15.md`](verification/BACKUP_HEADER_HARDENING_2026_08_15.md)
+- [`verification/VAULT_HEADER_HARDENING_2026_08_15.md`](verification/VAULT_HEADER_HARDENING_2026_08_15.md)
+- [`verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md`](verification/ATTACHMENT_METADATA_HARDENING_2026_08_15.md)
+- [`verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md`](verification/FINAL_REPOSITORY_HARDENING_2026_08_15.md)
+- [`verification/VERIFIED_MAIN_BASELINE_2026_08_15.md`](verification/VERIFIED_MAIN_BASELINE_2026_08_15.md) — historical 554-test exact baseline.
+- [`verification/REPOSITORY_AUDIT_2026_08_16.md`](verification/REPOSITORY_AUDIT_2026_08_16.md)
+
+# User experience, accessibility, localization, and branding
+
+- [`ACCESSIBILITY.md`](ACCESSIBILITY.md) — semantic metadata, dynamic typography, reduced motion, responsive UI, assistive-technology release checks.
+- [`UI_REFERENCE.md`](UI_REFERENCE.md) — current page-by-page UI reference.
+- [`architecture/LOCALIZATION.md`](architecture/LOCALIZATION.md) — System/English/Hindi preference and fallback architecture.
+- [`branding/ASSETS.md`](branding/ASSETS.md) — original vector branding, BMC badge, generation/usage/creator-credit rules.
+- [`releases/STORE_LISTING_GUIDE.md`](releases/STORE_LISTING_GUIDE.md) — accurate positioning, disclosures, screenshots, feature graphic, funding-policy guidance.
+
+# Release and operations
 
 - [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) — release-blocking checklist.
-- [`releases/PACKAGING.md`](releases/PACKAGING.md) — target-specific packaging/signing guidance.
-- [`releases/REPRODUCIBLE_BUILDS.md`](releases/REPRODUCIBLE_BUILDS.md) — reproducibility expectations and environment capture.
-- [`releases/RELEASE_PROCESS.md`](releases/RELEASE_PROCESS.md) — end-to-end candidate, evidence, signing, provenance, store-policy, and publication process.
+- [`releases/RELEASE_PROCESS.md`](releases/RELEASE_PROCESS.md) — candidate freeze, evidence, signing, provenance, policy, publication.
+- [`releases/PACKAGING.md`](releases/PACKAGING.md) — target-specific packaging/signing.
+- [`releases/REPRODUCIBLE_BUILDS.md`](releases/REPRODUCIBLE_BUILDS.md) — environment capture/reproducibility expectations.
+- [`releases/STORE_LISTING_GUIDE.md`](releases/STORE_LISTING_GUIDE.md) — store positioning/policy/disclosure guidance.
 - [`operations/BACKUP_RECOVERY_RUNBOOK.md`](operations/BACKUP_RECOVERY_RUNBOOK.md) — safe backup/restore verification and failure handling.
-- [`operations/SECURITY_RESPONSE.md`](operations/SECURITY_RESPONSE.md) — maintainer response procedure for reported security issues without requesting user secrets.
-- [`NEXT_STEPS.md`](NEXT_STEPS.md) — ordered post-source verification and future-version roadmap.
-- [`../PROJECT_STATUS.md`](../PROJECT_STATUS.md) — implemented source scope, observed hosted verification, remaining external/hardware gates, and deferred features.
-- [`../CHANGELOG.md`](../CHANGELOG.md) — release/unreleased change history.
-- [`../what_changed.md`](../what_changed.md) — chronological implementation ledger.
+- [`operations/SECURITY_RESPONSE.md`](operations/SECURITY_RESPONSE.md) — maintainer security-report handling without requesting user secrets.
+- [`NEXT_STEPS.md`](NEXT_STEPS.md) — ordered external release gates and future-version roadmap.
+- [`../PROJECT_STATUS.md`](../PROJECT_STATUS.md) — current source/evidence/deferred status.
+- [`../CHANGELOG.md`](../CHANGELOG.md) — release/unreleased history.
+- [`../what_changed.md`](../what_changed.md) — chronological implementation/documentation ledger.
 
-## Legal, support, and third-party material
+# Legal, support, and third-party material
 
-- [`../LICENSE`](../LICENSE) — GPL-3.0-or-later project license.
-- [`../TERMS.md`](../TERMS.md) — current project terms/disclaimers.
-- [`../SUPPORT.md`](../SUPPORT.md) — support channels and optional development-support link.
-- [`../THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) — dependency notice families/current central pins; exact resolved dependency/license review remains a release gate.
+- [`../LICENSE`](../LICENSE) — GPL-3.0-or-later.
+- [`../TERMS.md`](../TERMS.md) — project terms/disclaimers.
+- [`../SUPPORT.md`](../SUPPORT.md) — support contacts and optional BMC link.
+- [`../THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) — dependency notice families; exact release graph/license review remains a release gate.
 
-## Documentation maintenance rules
+# Documentation maintenance rules
 
-1. Documentation must track the current source rather than desired future features.
-2. Never describe configured CI as passing until the exact commit has executed successfully; preserve the commit/run identifier with any hosted evidence.
-3. Never describe CipherNest as independently audited, unhackable, military-grade, 100% secure, physically erasable, or able to recover a lost master passphrase from a server.
-4. Mark cloud sync, accounts, collaboration, autofill, Windows Hello, rich binary/PDF preview/scanning, pronounceable passwords, destructive wipe-on-failure, and complete-unmigrated language surfaces as deferred until implemented and reviewed. TOTP code generation and the reviewed Hindi resource-backed catalog are implemented, but QR enrollment/import, autofill integration, full UI translation, and related expanded platform surfaces are not.
-5. Update `THREAT_MODEL.md`, `CRYPTOGRAPHIC_DESIGN.md`, TOTP/format docs, tests, release gates, changelog, project status, and this index whenever a security-sensitive persistence/format/session behavior changes.
-6. Use synthetic/demo data only in documentation examples and screenshots.
-7. Keep credentials, passphrases, recovery keys, TOTP seeds/codes, signing files, store tokens, private keys, crash-service tokens, and real vault contents out of documentation and Git history.
-8. Keep public contact/project metadata centralized with `CipherNest.Shared.AppConstants` where application code needs it.
+1. Documentation tracks current source, not desired features.
+2. Never describe configured CI as passing without exact immutable candidate/run evidence.
+3. Never describe CipherNest as independently audited, unhackable, military-grade, 100% secure, physically erasable, or capable of server-reset recovery when source does not provide it.
+4. Keep cloud sync/accounts/collaboration/autofill/Windows Hello/rich binary-PDF preview/scanning/pronounceable passwords/wipe-on-failure and complete-unmigrated language surfaces deferred until implemented and reviewed. TOTP local generation and the reviewed Hindi resource-backed catalog are implemented; TOTP QR/`otpauth://` interoperability, autofill/provider integration, and complete UI translation remain deferred.
+5. Update affected threat/crypto/session/format/API/limits/tests/release/status/docs when security-sensitive behavior changes.
+6. Use synthetic/demo data only in examples/screenshots.
+7. Never place credentials, passphrases, recovery keys, TOTP seeds/codes, signing files, store tokens, private keys, crash-service tokens, or real vault contents in documentation/Git history.
+8. Keep application-consumed public project/contact metadata centralized with `CipherNest.Shared.AppConstants`.
+9. Preserve historical verification records as historical records rather than rewriting them for later commits.
+10. Add/update documentation regression tests when canonical files or entry points change.
