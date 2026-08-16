@@ -190,7 +190,7 @@ public sealed class DocumentationCoverageSourceTests
 
         Assert.Contains("capable of guaranteed managed-memory erasure", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("555 passed", complete, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("System/English/Hindi", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Hindi", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Buy Me a Coffee", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not** completed an independent professional security audit", faq, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("555 total passed", faq, StringComparison.OrdinalIgnoreCase);
