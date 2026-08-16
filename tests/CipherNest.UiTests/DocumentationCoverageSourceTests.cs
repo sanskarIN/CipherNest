@@ -214,20 +214,12 @@ public sealed class DocumentationCoverageSourceTests
         var configuration = File.ReadAllText(PathAt("docs", "CONFIGURATION_REFERENCE.md"));
         var complete = File.ReadAllText(PathAt("docs", "COMPLETE_PROJECT_DOCUMENTATION.md"));
 
-        foreach (var expected in new[]
-                 {
-                     "encrypted backup",
-                     "TOTP",
-                     "Buy Me a Coffee",
-                     "555 passed"
-                 })
-        {
+        foreach (var expected in new[] { "encrypted backup", "TOTP", "Buy Me a Coffee", "555 passed" })
             Assert.Contains(expected, quickStart, StringComparison.OrdinalIgnoreCase);
-        }
 
         foreach (var expected in new[]
                  {
-                     "OneTimePassword",
+                     "Time-Based One-Time Password",
                      "Windows Hello",
                      "CipherNestEnableFundingLink=false",
                      "Reviewed Hindi",
