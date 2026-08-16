@@ -1,10 +1,44 @@
 # CipherNest Verification Gates
 
-This document records the source and build gates that are configured in the repository. A configured gate is not the same as a passing gate: release evidence must come from the exact candidate commit and the target environment that executed it.
+This document records the executable/source/build gates configured in the repository and the evidence rules for using them. A configured gate is not the same as a passing gate: release evidence must come from the exact immutable candidate and environment that executed it.
 
-The first complete hosted cross-platform evidence captured for the current hardening line is recorded in `HOSTED_CI_EVIDENCE_2026_08_13.md`. Candidate `2327abba1646082a4d94a689d452b1116701cc0b` passed the configured core, Windows default/funding-disabled, Android, iOS simulator, Mac Catalyst, and CodeQL gates. Later candidates must rerun the gates rather than inheriting that result automatically.
+## 1. Current immutable pre-documentation implementation baseline
 
-## Core gate
+The complete-documentation expansion is grounded in exact source commit:
+
+`8566980ff981b8b4072f9010ec7b7ba54aba051e`
+
+Observed exact-candidate hosted evidence:
+
+- CipherNest CI run `31937127961`: **success**;
+- CodeQL run `31937127900`: **success**;
+- UnitTests: **346 passed**;
+- IntegrationTests: **98 passed**;
+- UI/source tests: **111 passed**;
+- total: **555 passed, 0 failed, 0 skipped**;
+- analyzer-enabled core test builds: zero build warnings/errors;
+- configured core formatting: passed;
+- Windows default Release: passed;
+- Windows `CipherNestEnableFundingLink=false` Release: passed;
+- Android Release: passed;
+- iOS simulator Release: passed;
+- Mac Catalyst Release: passed;
+- CodeQL v4 analysis: passed after analyzable core and MAUI application builds.
+
+This is exact evidence for `8566980f...` only. Documentation or source commits after that SHA require a new exact-head run before they can be described as verified release candidates.
+
+## 2. Historical evidence preservation
+
+Earlier records remain intentionally preserved:
+
+- `HOSTED_CI_EVIDENCE_2026_08_13.md` records the first complete hosted cross-platform line for its historical 240-test exact candidate.
+- `VERIFIED_MAIN_BASELINE_2026_08_15.md` records the later historical 554-test exact candidate.
+- `REPOSITORY_AUDIT_2026_08_16.md` records the bug/error/feature/BMC audit pass.
+- `COMPLETE_DOCUMENTATION_2026_08_16.md` defines the current complete-documentation source-to-doc and post-documentation verification gate.
+
+Do not rewrite historical files to pretend an older run describes a newer commit.
+
+# 3. Core gate
 
 The `test-core` job on Ubuntu restores, builds, and runs:
 
@@ -12,122 +46,259 @@ The `test-core` job on Ubuntu restores, builds, and runs:
 - `CipherNest.IntegrationTests`
 - `CipherNest.UiTests`
 
-It also runs `dotnet format --verify-no-changes` against the Domain, Application, Infrastructure, Shared, and test projects. Repository build properties keep nullable analysis, analyzers, deterministic compilation, and warnings-as-errors enabled.
+It also executes `dotnet format --verify-no-changes` against Domain, Application, Infrastructure, Shared, and test projects.
 
-`CipherNest.UiTests` includes `DocumentationCoverageSourceTests` and `ViewModelAotSourceTests`. Documentation coverage guards required canonical documentation files, root/documentation-hub entry points, and explicit independent-audit disclaimers. The WinRT/AOT source guard rejects field-based CommunityToolkit observable-property generation in the MAUI ViewModels and requires the app-level preview language setting used by the partial-property implementation.
+Shared build policy keeps enabled:
 
-Semantic documentation accuracy still requires review against the exact source candidate; see `DOCUMENTATION_SUITE_2026_08_12.md`.
+- nullable analysis;
+- warnings as errors;
+- analyzers/latest analysis level;
+- code-style enforcement;
+- deterministic compilation.
 
 Local equivalents:
 
-- PowerShell: `scripts/verify-core.ps1`
-- POSIX shell: `scripts/verify-core.sh`
+```text
+scripts/verify-core.ps1
+scripts/verify-core.sh
+```
 
-## Windows MAUI compile gate
+## What core tests include
 
-The Windows job installs the MAUI workload, selects only `net10.0-windows10.0.19041.0` through the app-specific `CipherNestTargetFrameworks` property, uses `win-x64`, and compiles the Release app without producing a signed store package. It compiles both:
+Current suites cover security/resource policies such as:
 
-1. the normal default build; and
-2. the store-policy variant with `CipherNestEnableFundingLink=false`.
+- cryptographic known-answer/tamper/wrong-key behavior;
+- vault-header parsing/version compatibility;
+- TOTP RFC compatibility and hostile Base32 input;
+- settings JSON bounds/fallback;
+- CSV parser/header bounds;
+- attachment metadata/storage-name policies;
+- vault validation/resource budgets;
+- migration/database replacement;
+- encrypted backup/restore/corruption/resource behavior;
+- session transition/cancellation behavior;
+- attachment streaming/cancellation;
+- generator/audit/note policies;
+- lifecycle/privacy/source invariants;
+- documentation presence/links/disclaimers;
+- WinRT/AOT-safe MAUI ViewModel source patterns;
+- BMC/funding source surfaces.
 
-The Windows build intentionally leaves CommunityToolkit WinRT/AOT diagnostics enabled. A prior hosted build surfaced `MVVMTK0045`; CipherNest fixed the affected ViewModels by migrating to partial observable properties instead of suppressing the analyzer.
+`UiTests` source guards do not prove runtime device behavior.
 
-Local equivalent: `scripts/verify-windows.ps1`.
+# 4. Documentation source gate
 
-## Android MAUI compile gate
+`DocumentationCoverageSourceTests` guards canonical documentation files and selected cross-links/security wording.
 
-The Android job installs `maui-android`, selects only `net10.0-android`, uses `android-arm64`, and compiles a Release app. The explicit app target/RID prevents the Linux host runtime identifier or unrelated Apple target frameworks from entering the Android restore graph.
+The complete documentation expansion additionally requires:
 
-This catches target-specific API/binding/compiler issues but does not prove behavior on a device.
+- `docs/QUICK_START.md`;
+- `docs/FEATURE_MATRIX.md`;
+- `docs/UI_REFERENCE.md`;
+- `docs/CONFIGURATION_REFERENCE.md`;
+- `docs/COMPLETE_PROJECT_DOCUMENTATION.md`;
+- `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`.
 
-Local equivalent: `scripts/verify-android.sh`.
+Automated presence/wording checks complement manual semantic source-to-document review. A source test cannot prove every sentence of a long document matches runtime behavior.
 
-## Apple MAUI compile gate
+See `COMPLETE_DOCUMENTATION_2026_08_16.md`.
 
-The hosted Apple gate uses an explicitly compatible toolchain instead of relying on whichever default workload manifest happens to be selected by a future runner image:
+# 5. Windows MAUI compile gate
 
-- runner label: `macos-26`;
-- .NET SDK: `10.0.302`;
-- Xcode: `26.5`;
-- .NET workload set: `10.0.300.3`;
-- iOS RID: `iossimulator-arm64`;
-- Mac Catalyst RID: `maccatalyst-arm64`.
+The Windows job:
 
-The job selects only the requested app target framework for each build:
+1. installs the MAUI workload;
+2. selects only `net10.0-windows10.0.19041.0` using `CipherNestTargetFrameworks`;
+3. uses `win-x64`;
+4. compiles the Release app without store signing;
+5. compiles both the normal build and the funding-disabled build.
 
-- `net10.0-ios`
-- `net10.0-maccatalyst`
+Funding-disabled variant:
 
-The workload-set pin is deliberate. Earlier hosted evidence showed that allowing the default Apple workload resolution could install an older .NET iOS SDK pack that rejected Xcode 26.5. Compatibility validation remains enabled; the fix aligns the SDK/workload/Xcode versions instead of suppressing the check.
+```text
+CipherNestEnableFundingLink=false
+```
 
-This is a source/toolchain compile gate, not a substitute for provisioning, signing, simulator interaction, physical-device smoke tests, Face ID/Touch ID behavior, notarization, or App Store validation.
+The Windows target intentionally leaves CommunityToolkit WinRT/AOT diagnostics enabled. The repository migrated affected ViewModels to partial observable properties instead of suppressing `MVVMTK0045`.
 
-Local equivalent: `scripts/verify-apple.sh`. Local Apple verification must use a mutually compatible .NET SDK/workload/Xcode combination; the hosted versions above describe the recorded CI pairing rather than a promise that every developer machine must remain on those exact versions forever.
+Local equivalent:
 
-## CodeQL
+```text
+scripts/verify-windows.ps1
+```
 
-CodeQL uses `github/codeql-action` v4 and analyzes C# source after building the analyzable core path and the Android MAUI application target. This broadens analysis beyond the non-MAUI libraries. CodeQL results must still be reviewed for the exact release candidate.
+# 6. Android MAUI compile gate
 
-Candidate `2327abba1646082a4d94a689d452b1116701cc0b` completed the configured CodeQL v4 run successfully; details are in `HOSTED_CI_EVIDENCE_2026_08_13.md`.
+The Android job:
 
-## Dependency review
+- installs `maui-android`;
+- selects only `net10.0-android`;
+- uses `android-arm64`;
+- compiles a Release application.
 
-Pull requests run GitHub dependency review with `fail-on-severity: high`. Release review must also inspect the exact restored direct/transitive package graph, license obligations, and any accepted vulnerability exception.
+The explicit target/RID prevents unrelated target graphs from entering restore/build on the Linux host.
 
-A prior hosted restore surfaced a high-severity `NU1903` finding in the older SQLitePCLRaw native dependency. The repository now pins `Microsoft.Data.Sqlite` 10.0.10 and `SQLitePCLRaw.bundle_e_sqlite3` 2.1.12. Successful later hosted restore/build evidence confirms the earlier blocker is no longer present in that candidate, but pull-request dependency review and release-time advisory review remain separate gates.
+Local equivalent:
 
-## Documentation verification
+```text
+scripts/verify-android.sh
+```
 
-Committed verification references complement the executable core gate:
+This catches compiler/binding/toolchain issues but does not prove physical-device behavior.
 
-- `SECURITY_HARDENING_2026_08_11.md` — framing/resource/session/platform source hardening gates.
-- `DOCUMENTATION_SUITE_2026_08_12.md` — complete documentation-suite presence, link, disclaimer, semantic source-to-document, synthetic-data, and historical-preservation gates.
-- `SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md` — BMC support presentation plus runtime record/session/backup hardening gates.
-- `HOSTED_CI_EVIDENCE_2026_08_13.md` — exact observed hosted test/format/platform/CodeQL evidence and the remaining external limitations.
+# 7. Apple MAUI compile gate
+
+The hosted Apple line uses an explicitly compatible toolchain:
+
+```text
+runner: macos-26
+.NET SDK: 10.0.302
+Xcode: 26.5
+.NET workload set: 10.0.300.3
+iOS RID: iossimulator-arm64
+Mac Catalyst RID: maccatalyst-arm64
+```
+
+It compiles:
+
+```text
+net10.0-ios
+net10.0-maccatalyst
+```
+
+The workload-set pin is deliberate. An earlier default workload resolution installed an Apple SDK pack incompatible with the selected Xcode. Compatibility validation remains enabled; align the .NET SDK/workload/Xcode combination instead of suppressing the check.
+
+Local equivalent:
+
+```text
+scripts/verify-apple.sh
+```
+
+This remains a compile/toolchain gate, not a substitute for provisioning, signing, simulator interaction, physical-device biometric testing, secure storage, notarization, or App Store validation.
+
+# 8. CodeQL
+
+CodeQL uses `github/codeql-action` v4 for C#.
+
+The workflow builds:
+
+- analyzable core code;
+- the Android MAUI application path;
+
+before analysis, so coverage is not limited to non-MAUI libraries.
+
+The pre-documentation baseline `8566980f...` completed CodeQL run `31937127900` successfully.
+
+CodeQL is a static-analysis gate, not proof of complete runtime security or an independent professional security audit.
+
+# 9. Dependency review
+
+Pull requests run GitHub dependency review with a high-severity failure threshold.
+
+Release review must also inspect:
+
+- exact direct/transitive restored packages;
+- current advisories;
+- license obligations;
+- accepted exceptions with owner/expiry.
+
+A prior hosted restore exposed a high-severity `NU1903` issue in an older SQLite native dependency. Current central pins include:
+
+```text
+Microsoft.Data.Sqlite 10.0.10
+SQLitePCLRaw.bundle_e_sqlite3 2.1.12
+```
+
+Later successful hosted restore/build evidence no longer shows that original blocker, but dependency review remains a separate release gate.
+
+# 10. BMC/funding build gate
+
+Windows CI compiles both funding states so BMC support additions cannot silently break the store-policy-disabled variant.
+
+In-app funding UI is guarded by the build feature flag associated with:
+
+```text
+CipherNestEnableFundingLink
+```
+
+Default: enabled.
+
+A store/distribution build may set it to false. `.github/FUNDING.yml` is repository metadata and remains separate.
+
+The exact target store/region policy still must be checked before packaging.
+
+# 11. Documentation verification records
+
+Key records include:
+
+- `SECURITY_HARDENING_2026_08_11.md`
+- `DOCUMENTATION_SUITE_2026_08_12.md`
+- `SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md`
+- `HOSTED_CI_EVIDENCE_2026_08_13.md`
+- `DOCUMENTATION_CONSOLIDATION_2026_08_14.md`
+- `TOTP_AND_HINDI_LOCALIZATION_2026_08_14.md`
+- `CSV_IMPORT_HARDENING_2026_08_15.md`
+- `SETTINGS_JSON_HARDENING_2026_08_15.md`
+- `BACKUP_HEADER_HARDENING_2026_08_15.md`
+- `VAULT_HEADER_HARDENING_2026_08_15.md`
+- `ATTACHMENT_METADATA_HARDENING_2026_08_15.md`
+- `FINAL_REPOSITORY_HARDENING_2026_08_15.md`
+- `VERIFIED_MAIN_BASELINE_2026_08_15.md`
+- `REPOSITORY_AUDIT_2026_08_16.md`
+- `COMPLETE_DOCUMENTATION_2026_08_16.md`
 
 For a release candidate:
 
-1. `CipherNest.UiTests`, including documentation and WinRT/AOT source regressions, must execute successfully.
-2. Reviewers must manually compare any changed public interfaces, models, format framing, limits/defaults, session/destructive authorization, platform support, recovery/deletion semantics, dependencies, CI toolchain pins, and deferred features against the canonical documentation.
-3. Root `README.md`, `docs/README.md`, security/privacy/support/contribution entry points, changelog, project status, release checklist, and affected format/security docs must all remain synchronized.
-4. Historical hosted evidence must identify the exact commit/run and must not be silently reused as evidence for a later untested candidate.
+1. documentation/source tests must pass;
+2. reviewers must compare changed public contracts/models/formats/limits/session/platform/recovery/deferred claims against current source;
+3. README, docs hub, security/privacy/support/contribution, changelog, status, release checklist, and affected specialist docs must remain synchronized;
+4. historical evidence must retain its exact original commit/run context.
 
-A documentation source test proves required files/strings are present; it does not prove the prose accurately describes runtime behavior unless reviewers perform the source-to-document comparison.
+# 12. Workflow resource controls
 
-## Workflow resource controls
+Primary CI, CodeQL, and dependency review use bounded job timeouts and concurrency groups that cancel superseded runs. This prevents stale commits from consuming unlimited hosted-runner time and exposes stuck workload/setup failures.
 
-Primary CI, CodeQL, and dependency review use concurrency groups that cancel superseded runs and explicit job timeouts. This prevents stale commits from consuming unlimited hosted-runner time and makes stuck workload/install failures visible.
+# 13. What configured gates do not prove
 
-## What these gates do not prove
+Hosted/source automation does not replace:
 
-The configured workflows do not replace:
-
-- Android/iOS/Mac Catalyst/Windows physical-device or interactive simulator smoke tests;
-- biometric enrollment, denial, cancellation, lockout, and secure-storage lifecycle testing;
+- Android physical-device biometric enrollment/denial/cancellation/lockout/secure-storage testing;
+- iOS/Mac Catalyst Face ID/Touch ID/secure-storage runtime validation;
+- Windows/iOS/macOS/Android real clipboard history/cleanup behavior;
 - screenshot/app-switcher privacy behavior;
-- real clipboard history and clearing behavior;
-- sleep/background/resume lifecycle validation;
-- accessibility testing with TalkBack, VoiceOver, Narrator, keyboard-only navigation, and OS large text;
-- file picker/share-provider plaintext-retention behavior;
-- semantic review that documentation exactly matches the current candidate beyond the automated presence/link/disclaimer checks;
-- signing, notarization, store package validation, or store policy review;
-- pull-request dependency review for a candidate that has not gone through the PR gate;
-- an independent cryptographic/security audit.
+- sleep/background/resume lifecycle timing;
+- picker/share-provider plaintext-retention behavior;
+- TalkBack/VoiceOver/Narrator/keyboard/focus/large-text accessibility testing;
+- representative responsive layout/contrast/touch-target review;
+- session/attachment/restore/filesystem stress/interleaving beyond automated cases;
+- signing/provisioning/notarization/package validation;
+- store privacy/policy/submission review;
+- pull-request dependency review for a commit that bypassed the PR gate;
+- exact release package graph/license/advisory review;
+- independent professional cryptographic/security audit.
 
-## Release evidence
+# 14. Release evidence checklist
 
-For every candidate, record:
+For every immutable release candidate record:
 
-- immutable commit/tag;
+- commit/tag;
+- product/package version;
 - .NET SDK version;
 - installed workload/workload-set versions;
-- runner/host OS, platform SDK versions, selected Xcode, and target RID where applicable;
-- exact CI run and CodeQL run identifiers/conclusions;
-- dependency-review and advisory-review results;
-- documentation-completeness test result and semantic documentation-review record;
-- selected `CipherNestEnableFundingLink` value for each distributed package;
-- device/simulator matrix and smoke-test results;
+- runner/host OS;
+- platform SDK/Xcode versions;
+- target framework/RID;
+- exact CI run/result;
+- exact CodeQL run/result;
+- dependency/advisory review result;
+- exact test counts;
+- documentation-source-test result;
+- semantic documentation review record;
+- `CipherNestEnableFundingLink` value per distributed package;
+- device/simulator validation matrix;
+- accessibility/localization/responsive results;
+- backup/restore/recovery compatibility results;
 - signing/store pipeline identity outside the repository;
-- known accepted exceptions with owner and expiry.
+- accepted exceptions with owner/expiry.
 
 Do not mark a release gate complete from source inspection alone.
