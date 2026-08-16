@@ -251,7 +251,7 @@ public sealed class DocumentationCoverageSourceTests
                      "in.sanskar.ciphernest",
                      "CipherNestTargetFrameworks",
                      "CipherNestEnableFundingLink",
-                     "System / English / Hindi",
+                     "Neutral English is the fallback",
                      "10.0.10",
                      "555 passed"
                  })
