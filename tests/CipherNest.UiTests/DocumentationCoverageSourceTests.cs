@@ -188,7 +188,7 @@ public sealed class DocumentationCoverageSourceTests
         var verifiedBaseline = File.ReadAllText(PathAt("docs", "verification", "VERIFIED_MAIN_BASELINE_2026_08_15.md"));
         var repositoryAudit = File.ReadAllText(PathAt("docs", "verification", "REPOSITORY_AUDIT_2026_08_16.md"));
 
-        Assert.Contains("cannot be deterministically erased", complete, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("capable of guaranteed managed-memory erasure", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("555 passed", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("System/English/Hindi", complete, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Buy Me a Coffee", complete, StringComparison.OrdinalIgnoreCase);
