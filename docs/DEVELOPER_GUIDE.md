@@ -1,6 +1,10 @@
 # CipherNest Developer Guide
 
-This guide describes how the current source is organized and how to extend it without accidentally weakening the local-first security boundaries. It complements `architecture/ARCHITECTURE.md`, `security/THREAT_MODEL.md`, `security/CRYPTOGRAPHIC_DESIGN.md`, `TEST_PLAN.md`, and `setup/BUILD.md`.
+This guide explains how the current CipherNest source is organized and how to extend it without bypassing its local-first security boundaries. Read it together with [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md), [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md), [`security/CRYPTOGRAPHIC_DESIGN.md`](security/CRYPTOGRAPHIC_DESIGN.md), [`TEST_PLAN.md`](TEST_PLAN.md), and [`setup/BUILD.md`](setup/BUILD.md).
+
+For a faster orientation, also use [`QUICK_START.md`](QUICK_START.md), [`FEATURE_MATRIX.md`](FEATURE_MATRIX.md), [`UI_REFERENCE.md`](UI_REFERENCE.md), and [`CONFIGURATION_REFERENCE.md`](CONFIGURATION_REFERENCE.md).
+
+> CipherNest has **not** completed an independent professional security audit. Developer documentation must not turn passing tests or familiar primitives into unsupported absolute security claims.
 
 ## 1. Repository layout
 
@@ -8,47 +12,24 @@ This guide describes how the current source is organized and how to extend it wi
 
 ### Source projects
 
-- `src/CipherNest.Shared` — product/version/storage constants and small primitives shared across layers.
-- `src/CipherNest.Domain` — framework-independent vault/domain records and enums.
-- `src/CipherNest.Application` — public use-case abstractions, policy/services that do not require MAUI/SQLite, validation, and application exceptions.
-- `src/CipherNest.Infrastructure` — cryptography, SQLite, migrations, encrypted attachment storage, encrypted backups, CSV parsing/transfer, password/passphrase generation, local RFC-compatible TOTP generation, and local audit implementations.
-- `src/CipherNest.App` — .NET MAUI composition, Views/ViewModels, navigation, lifecycle, platform biometric/clipboard/screenshot/secure-storage/file-picker/share surfaces, localization, accessibility state, storage maintenance, About/legal UI, and privacy-safe diagnostics.
+- `src/CipherNest.Shared` — product/version/storage constants and small cross-layer primitives.
+- `src/CipherNest.Domain` — framework-independent domain records and enums.
+- `src/CipherNest.Application` — use-case abstractions, policies, validation, DTOs, safe-note contracts, session/security policy, and application exceptions; no MAUI/SQLite dependency.
+- `src/CipherNest.Infrastructure` — Argon2id/AES-GCM cryptography, SQLite, migrations, encrypted attachments, encrypted backup/restore, CSV parsing/transfer, password/passphrase generation, RFC-compatible TOTP generation, and local audit implementations.
+- `src/CipherNest.App` — .NET MAUI composition, Views/ViewModels, routes, lifecycle, biometrics, secure storage, clipboard, screenshot controls, file picker/share, localization/accessibility state, storage maintenance, About/legal/BMC UI, and privacy-safe diagnostics.
 
-### Tests
+### Test projects
 
-- `tests/CipherNest.UnitTests` — deterministic policy/cryptographic/service tests.
-- `tests/CipherNest.IntegrationTests` — real persistence/vault/backup/import/attachment/migration integration tests.
-- `tests/CipherNest.UiTests` — source/UI-structure regression tests that can run without booting a MAUI target.
+- `tests/CipherNest.UnitTests` — deterministic policy, validation, parser, generator, TOTP, and cryptographic tests.
+- `tests/CipherNest.IntegrationTests` — real SQLite/vault/backup/attachment/import/migration/session integration tests.
+- `tests/CipherNest.UiTests` — source/UI/documentation/workflow regression tests that do not require booting a MAUI target.
 
-## 2. Build quality defaults
+## 2. Dependency direction
 
-`Directory.Build.props` currently enables the shared solution policy:
-
-- latest shared C# language policy;
-- nullable reference analysis;
-- implicit usings;
-- warnings as errors;
-- latest analysis level;
-- code-style enforcement during build;
-- deterministic managed compilation;
-- CI build metadata when `CI=true`.
-
-The MAUI App project has one deliberate project-local language override:
-
-```xml
-<LangVersion>preview</LangVersion>
-```
-
-That override exists because the current CommunityToolkit MVVM WinRT/AOT-safe partial `[ObservableProperty]` syntax used by CipherNest requires the preview language feature in the verified toolchain. It must remain scoped to `CipherNest.App` unless another project has a separately justified requirement. `ViewModelAotSourceTests` protects this rule.
-
-Do not “fix” a build by globally disabling warnings-as-errors, nullable analysis, analyzers, deterministic builds, CommunityToolkit WinRT/AOT diagnostics, or security-sensitive tests. Resolve the underlying issue or document an explicit narrowly scoped reason.
-
-## 3. Dependency direction
-
-The intended direction is:
+Intended direction:
 
 ```text
-Shared      Domain
+Shared       Domain
    \         /
     Application
         ^
@@ -59,22 +40,45 @@ Shared      Domain
       App
 ```
 
-The exact project references may include Shared where constants are required, but application behavior should remain dependency-inverted around Application abstractions.
+Rules:
 
-### Rules
-
-1. Domain records must not depend on MAUI, SQLite, platform APIs, or Infrastructure.
-2. Application abstractions must not expose SQLite connections, MAUI controls, raw DEK arrays, or platform objects.
+1. Domain must not depend on MAUI, SQLite, platform APIs, or Infrastructure.
+2. Application abstractions must not expose raw SQLite connections, MAUI controls, platform-native objects, or raw DEK arrays.
 3. Infrastructure implements Application abstractions and owns encrypted persistence/format logic.
-4. App owns platform interaction and dependency injection.
-5. Views should not directly open databases, derive keys, parse encrypted containers, or construct crypto implementations.
-6. New platform-specific capability must expose an honest unsupported/fallback state where the capability is unavailable.
+4. App owns platform integration and dependency injection.
+5. Views must not derive keys, parse encrypted containers, or open the database directly.
+6. Unsupported platform capabilities must have an honest fallback/unsupported state.
 
-## 4. Composition root
+## 3. Build-quality defaults
 
-`src/CipherNest.App/MauiProgram.cs` is the runtime composition root.
+`Directory.Build.props` currently enables:
 
-Current singleton service registrations include:
+```text
+LangVersion = latest
+Nullable = enable
+ImplicitUsings = enable
+TreatWarningsAsErrors = true
+AnalysisLevel = latest
+EnforceCodeStyleInBuild = true
+Deterministic = true
+ContinuousIntegrationBuild = true when CI=true
+```
+
+The MAUI App project deliberately overrides:
+
+```xml
+<LangVersion>preview</LangVersion>
+```
+
+This is currently required by the verified CommunityToolkit MVVM partial observable-property syntax used by MAUI ViewModels for the Windows/WinRT/AOT-safe source shape. `ViewModelAotSourceTests` guards against reintroducing field-based `[ObservableProperty]` declarations that trigger `MVVMTK0045` on the Windows target.
+
+Do not “fix” build failures by globally disabling warnings-as-errors, nullable analysis, analyzers, deterministic compilation, CommunityToolkit diagnostics, or security-sensitive tests.
+
+## 4. Runtime composition root
+
+`src/CipherNest.App/MauiProgram.cs` is the composition root.
+
+Current singleton registrations include:
 
 - `IClock -> SystemClock`
 - `ICryptoService -> CryptoService`
@@ -101,288 +105,360 @@ Views and ViewModels are registered transiently.
 
 When adding a service:
 
-1. define the stable abstraction in Application when it represents a use-case/cross-layer dependency;
-2. implement it in Infrastructure or App depending on whether it is platform independent or platform facing;
+1. define a stable Application abstraction when the dependency crosses layers;
+2. implement it in Infrastructure or App according to platform ownership;
 3. register it only in the composition root;
-4. add focused unit/integration/source coverage;
-5. update architecture/API docs when the public boundary changes.
+4. add focused unit/integration/source tests;
+5. update architecture/API/docs when the public boundary changes.
 
 ## 5. Navigation
 
-The current Shell top-level routes are:
+Top-level Shell routes:
 
-- `startup`
-- `onboarding`
-- `unlock`
-- `vault`
-- `generator`
-- `audit`
-- `trash`
-- `settings`
-- `security-info`
-- `transfer`
-- `about`
-- `developer`
+```text
+startup
+onboarding
+unlock
+vault
+generator
+audit
+trash
+settings
+security-info
+transfer
+about
+developer
+```
 
-Additional registered routes:
+Additional routes:
 
-- `ItemEditorPage`
-- `GeneratorDefaultsPage`
+```text
+ItemEditorPage
+GeneratorDefaultsPage
+```
 
-`AppShell` disables the flyout and navigation bar; ViewModels/Views provide the current explicit navigation actions.
+`AppShell` disables the flyout and default navigation bar. A route that can display decrypted data must preserve lock-state expectations and must not remain a hidden decrypted-data bypass after vault lock.
 
-New routes must preserve lock-state expectations. A route that displays decrypted data must not remain a hidden bypass after the vault has locked.
+See [`UI_REFERENCE.md`](UI_REFERENCE.md).
 
-## 6. Vault-service boundary
+## 6. Main application contract: `IVaultService`
 
-`IVaultService` is the main application-facing vault contract. It currently covers:
+`IVaultService` is the main application-facing vault boundary. It covers:
 
 - vault existence;
-- create/unlock/master re-authentication;
+- create/unlock/lock;
+- current-master re-authentication;
 - secondary unlock configuration;
 - master-passphrase change;
 - full local-vault deletion;
-- lock-state event/state;
-- item read/write/search/trash operations;
-- recent-access update;
+- lock state/event;
+- item read/write/search/trash/recent-access operations;
 - attachment add/remove/export.
 
-Do not bypass `VaultService` in new UI features to obtain direct persistence access. `VaultService` applies service-level resource checks, item validation, decrypted record validation, session/key-lease behavior, trash maintenance, mutation serialization, and authorization sequencing that an alternate UI path could otherwise skip.
+Do not bypass `VaultService` from new UI features to gain direct persistence access. `VaultService` applies service-level validation, resource checks, decrypted-record validation, session/key-lease behavior, maintenance, mutation serialization, and authorization sequencing.
 
-## 7. Session and key rules
+See [`API_REFERENCE.md`](API_REFERENCE.md).
 
-The random 256-bit DEK protects vault items/attachments. Master, recovery, and optional secondary credentials wrap that DEK.
+## 7. Session and vault-key rules
 
-Important current invariants:
+A random 256-bit DEK protects vault records/attachments. Master, recovery, and optional secondary credentials wrap that key independently.
+
+Current invariants:
 
 - shared session key state is synchronized;
-- key-using operations receive private `VaultKeyLease` copies;
-- a lease links caller cancellation with the active unlock-session token;
-- lease buffers zero on disposal;
-- locking removes/zeroes shared key state and cancels the session token;
-- creation/master/recovery unlock/secondary unlock/lock/full-vault deletion share a serialized transition gate;
-- destructive full-vault deletion holds live session authorization while waiting for that gate;
-- attachment mutations use their own cancellable serialization path instead of blocking security lock behind long file work.
+- key-using operations receive private 32-byte `VaultKeyLease` copies;
+- a lease links caller cancellation with current unlock-session cancellation;
+- lease buffers zero on disposal where practical;
+- lock removes/zeroes shared key state and cancels the current session token;
+- create/master-recovery unlock/secondary unlock/lock/full-vault deletion use a serialized transition gate;
+- full-vault deletion carries live-session authorization while waiting for that gate;
+- attachment mutations use a separate cancellable serialization path so long file work does not block security lock.
 
-Any change to these rules requires focused concurrency tests and review of `architecture/SESSION_AND_CONCURRENCY.md`, `security/SESSION_SECURITY.md`, the threat model, cryptographic design, test plan, and release checklist.
+Any change to these rules requires focused concurrency/integration coverage and review of `architecture/SESSION_AND_CONCURRENCY.md`, `security/SESSION_SECURITY.md`, threat model, crypto design, test plan, and release checklist.
 
 ## 8. Cryptography rules
 
-The current implemented primitives are Argon2id for passphrase KDF and AES-256-GCM for authenticated encryption.
+Current primitives:
+
+- Argon2id for passphrase-based key derivation/wrapping;
+- AES-256-GCM for authenticated encryption.
 
 Never:
 
-- add a custom cipher, MAC, password hash, or PRNG;
-- reuse GCM nonces intentionally;
-- remove associated-data binding for item/chunk identity/context;
-- accept unbounded KDF metadata from unauthenticated containers;
-- silently change cryptographic framing under an existing version;
+- invent a custom cipher/MAC/password hash/PRNG;
+- intentionally reuse GCM nonces;
+- remove associated-data identity/context binding;
+- accept unbounded unauthenticated KDF metadata before expensive work;
+- silently change framing under an existing format version;
 - store the master passphrase for convenience unlock;
-- claim security properties that have not been independently verified.
+- claim independent audit/security properties that do not exist.
 
-A cryptographic format change requires an explicit version/compatibility plan, known-answer/round-trip/tamper/wrong-key tests, backup/recovery implications, migration/release notes, and security-document updates.
+A crypto/format change requires explicit compatibility/version design, known-answer/round-trip/tamper/wrong-key tests, backup/recovery implications, migration/release documentation, and threat-model review.
 
-## 9. Persistence and migrations
+## 9. Vault header rules
 
-SQLite persists encrypted vault records and small structural metadata. Current database schema version is defined by `AppConstants.DatabaseSchemaVersion`.
+Current source accepts exact supported vault-header structures only:
+
+- historical v1 remains readable with its historical schema;
+- v2 is the current write format;
+- future/unknown/hybrid/duplicate/unknown/case-variant/wrong-kind metadata is rejected;
+- header UTF-8 is capped at 64 KiB;
+- JSON depth is capped at 16;
+- strict schema validation occurs before typed deserialization/wrapped-key unwrap;
+- replacement database candidates pass the same policy before active DB/WAL/SHM mutation.
+
+Do not add a parallel permissive parser.
+
+See `formats/VAULT_HEADER.md`.
+
+## 10. Persistence and migrations
+
+SQLite stores encrypted record envelopes and small required structural metadata.
 
 Migration rules:
 
-1. Released migration versions are append-only compatibility history.
-2. Future schema versions are rejected rather than guessed.
-3. Reaching a version is not sufficient; required table/column shape is validated.
-4. Migration history itself is validated rather than trusted blindly.
-5. Rollback failure must not mask the primary migration failure.
-6. Database replacement candidates are validated before active DB/WAL/SHM mutation.
-7. Snapshot/backup destinations must not clobber the active SQLite file set.
+1. released migration versions are append-only compatibility history;
+2. future schema versions are rejected;
+3. version number alone is insufficient—required table/column shape is validated;
+4. migration history is bounded/validated rather than trusted blindly;
+5. rollback failure must not mask the primary migration failure;
+6. replacement databases are validated before active file mutation;
+7. snapshot/backup destinations must not clobber the active SQLite file set.
 
-See `architecture/DATABASE.md`.
+Current schema version is `1`. See `architecture/DATABASE.md`.
 
-## 10. Vault item validation
+## 11. Vault item validation
 
-All item-save paths must preserve `VaultItemValidator` as the shared validation boundary.
+Preserve `VaultItemValidator` as the shared item validation boundary.
 
-Current important limits include:
+Key limits include:
 
-- non-empty `Guid` item ID;
+- non-empty item GUID;
 - defined `VaultItemType`;
 - title required/max 256;
 - username max 2,048;
-- secret max 100,000;
-- TOTP item seeds additionally use bounded Base32 validation (4,096 formatted / 1,024 normalized characters, minimum 16) with SHA-1/SHA-256/SHA-512, 6/8 digits, and 15–120-second periods;
+- general secret max 100,000;
 - URL max 4,096;
-- secure-note max 200,000 chars/5,000 lines;
+- secure note max 200,000 chars / 5,000 lines;
 - collection max 128;
-- max 100 tags/custom fields;
+- max 100 tags, each max 128;
+- max 100 custom fields;
 - max 25 attachments/item;
 - max 2,000,000 aggregate item text/metadata;
-- canonical attachment ID/storage-name binding;
-- per-item attachment-ID/storage-name uniqueness.
+- attachment metadata/storage-name/ID/uniqueness validation.
 
-When adding a new field, update aggregate resource accounting and tests. Do not add a field to `VaultItem` that escapes encrypted-at-rest storage without a documented privacy/security reason.
+When adding a field, update aggregate resource accounting, serialization/compatibility assumptions, tests, API docs, format docs, and limits.
 
+## 12. Persisted item-type compatibility
 
-### TOTP extension rules
+Current numeric values are compatibility-sensitive:
 
-TOTP generation is an Application abstraction (`ITotpService`) with a platform-independent Infrastructure implementation (`TotpService`). Keep provider/network/UI concerns out of that implementation. RFC 6238 known-answer vectors are release-blocking compatibility tests.
+```text
+Login = 0
+SecureNote = 1
+Identity = 2
+PaymentCardReference = 3
+WifiCredential = 4
+SoftwareLicense = 5
+ServerSshReference = 6
+Document = 7
+Custom = 8
+OneTimePassword = 9
+```
 
-The current encrypted JSON writes enums numerically. `VaultItemType.Custom = 8` is existing persisted compatibility and `OneTimePassword = 9` was intentionally appended rather than inserted. `VaultItemTypeCompatibilityTests` must stay green whenever item-type enums change. TOTP algorithm numeric values are also pinned.
+Do not insert/reorder existing persisted values without an explicit compatibility migration/version boundary.
 
-Do not add QR parsing, `otpauth://` URI parsing, automatic refresh timers, autofill, or provider enrollment as incidental changes: each needs bounded parsing, lifecycle/accessibility review, source/device tests, threat-model updates, and honest interoperability documentation.
+## 13. TOTP extension rules
 
-## 11. Attachments
+TOTP seed storage and local code generation are **implemented** current features, not deferred work.
 
-Attachment implementation rules:
+`ITotpService` is an Application abstraction with a platform-independent Infrastructure implementation.
 
-- validate import metadata before encryption;
-- use bounded streaming rather than whole-file plaintext materialization;
+Current supported behavior:
+
+- encrypted Base32 seed in `VaultItem.Secret` for TOTP items;
+- SHA-1/SHA-256/SHA-512;
+- 6/8 digits;
+- 15–120-second period;
+- explicit refresh/copy;
+- generated codes are not persisted;
+- RFC 6238 known-answer tests;
+- bounded parser/HMAC inputs.
+
+Do not add QR parsing/rendering, `otpauth://` URI parsing/export, automatic background refresh timers, autofill, or provider enrollment as incidental changes. Those **remain deferred** and require bounded parsing, lifecycle/accessibility/privacy/security review, source/device tests, threat-model updates, and interoperability docs.
+
+TOTP algorithm numeric values are also persisted compatibility. Keep TOTP/`VaultItemType` compatibility tests green.
+
+## 14. Attachments
+
+Attachment rules:
+
+- validate metadata before encryption;
+- use bounded streaming instead of whole-file plaintext materialization;
 - zero owned plaintext chunk buffers where practical;
-- authenticate chunk context using item/attachment/chunk identity;
+- authenticate item/attachment/chunk identity through associated data;
 - use collision-resistant `CreateNew` staging;
-- never overwrite an existing final encrypted container on collision;
-- keep opaque storage names canonical and path-free;
-- maintain per-item/global attachment budgets;
-- keep plaintext preview/export explicitly bounded and documented.
+- refuse final overwrite on collision;
+- enforce per-item/global attachment budgets;
+- keep opaque storage names canonical/path-free/ID-bound;
+- keep text preview/export deliberately bounded and documented.
 
-Any new preview type must be reviewed as a plaintext rendering attack surface.
+Metadata validation must reuse the canonical `AttachmentImportPolicy`; do not create a second divergent display/media validator. Opaque encrypted storage names must pass `AttachmentStorageNamePolicy` before `Path.Combine`/file access.
 
-## 12. Backup/restore
+Any new preview type is a plaintext rendering attack surface and requires dedicated review.
 
-Encrypted backup is a separate authenticated format with its own backup passphrase and format version.
+## 15. Encrypted backup/restore
 
 Development rules:
 
-- validate unauthenticated header resource metadata before Argon2 work;
-- keep chunk framing bounded;
+- validate unauthenticated header schema/resource metadata before Argon2;
+- keep framing/chunk loops bounded;
 - enforce archive count/aggregate/path limits symmetrically on export/restore;
-- reject duplicate normalized archive paths;
-- validate attachment container size envelopes;
-- validate the staged SQLite candidate before active replacement;
-- once active mutation begins, recovery/rollback must not be cancellable by the already-cancelled caller token;
-- preserve the original failure if cleanup/rollback has a secondary failure;
+- reject duplicate normalized paths;
+- validate attachment container-size envelopes;
+- require actual extracted bytes to exactly match declared uncompressed entry lengths;
+- validate staged SQLite before active replacement;
+- once active mutation begins, required rollback/recovery must not be cancelled by the original cancelled request;
+- preserve the primary failure when cleanup/rollback also fails;
 - clear local biometric pairing after successful restore.
 
 See `formats/ENCRYPTED_BACKUP.md` and `operations/BACKUP_RECOVERY_RUNBOOK.md`.
 
-## 13. CSV transfer
+## 16. CSV transfer
 
-CSV import/export is deliberately plaintext interoperability.
+CSV is plaintext interoperability.
 
-- Import requires explicit mapping.
-- Parser bounds must apply to every field/row termination path, including final fields at newline/EOF.
-- User-facing warnings must not embed raw invalid row/field content that could contain secrets.
-- Export requires current-master re-authentication and the exact confirmation phrase used by the UI.
-- Attachments are not silently included in CSV export.
-- Temporary plaintext staging must be cleaned best-effort and cleanup failures must not leak filesystem paths.
+Rules:
 
-## 14. Error handling and diagnostics
+- import requires explicit mapping;
+- bounds must apply to all field/row termination paths including final fields at newline/EOF;
+- header metadata has a stricter 256-character, uniqueness, Control/Format safety policy;
+- user-facing errors/warnings must not echo secret-bearing raw rows;
+- mapped Tags must enforce the canonical 100-tag/128-character item policy before item construction;
+- export requires current-master re-authentication plus the exact UI acknowledgement phrase;
+- attachments are not silently included;
+- temporary plaintext staging is cleaned best-effort without leaking sensitive paths.
 
-Sensitive UI must not display raw exception messages from filesystem, database, crypto, secure-storage, picker/share, or platform calls because exception text can expose paths/context.
+## 17. Error handling and diagnostics
 
-Use `IPrivacySafeExceptionReporter` with a stable operation identifier and show fixed user-facing text.
+Sensitive UI must not display raw exception messages from filesystem/database/crypto/secure-storage/picker/share/platform calls because those strings can reveal paths/context.
+
+Use `IPrivacySafeExceptionReporter` with a stable operation ID and fixed user-facing messages.
 
 Do not log:
 
-- passphrases/recovery keys/secondary secrets;
-- DEKs/KEKs/nonces paired with plaintext;
+- master/backup passphrases;
+- recovery material;
+- secondary secrets;
+- DEKs/KEKs;
 - decrypted items/notes/attachments;
-- raw CSV rows containing secrets;
-- full exception messages/stacks in the privacy-safe reporter;
-- filesystem paths that may identify user content;
+- raw secret-bearing CSV rows;
+- raw exception messages/stacks through the privacy-safe path;
+- identifying filesystem paths;
 - clipboard plaintext;
-- TOTP seeds or generated one-time codes.
+- TOTP seeds/codes.
 
 See `privacy/DIAGNOSTICS.md`.
 
-## 15. MAUI/platform calls
+## 18. Platform-boundary rules
 
-File picker, share sheet, launcher, secure storage, biometrics, clipboard, screenshot protection, lifecycle callbacks, and platform directories are failure-prone platform boundaries.
+File picker, share sheet, launcher, secure storage, biometrics, clipboard, screenshot controls, lifecycle callbacks, and platform directories are failure-prone boundaries.
 
 - keep them inside protected async flows;
-- report fixed user-safe messages;
-- clear bound credentials before long platform work when practical;
-- delete plaintext staging in `finally`/best-effort cleanup paths;
-- treat unsupported behavior honestly;
-- cover source shape with tests where runtime automation is unavailable;
-- still perform emulator/physical-device validation before release.
+- display fixed safe messages;
+- clear bound credentials before long platform operations where practical;
+- delete plaintext staging in `finally`/best-effort paths;
+- report unsupported behavior honestly;
+- use source tests where runtime automation is impossible;
+- still execute simulator/physical-device validation before release claims.
 
-## 16. UI/ViewModel conventions
+## 19. UI/ViewModel conventions
 
-- Keep decrypted state out of static/global UI state.
+- Keep decrypted state out of global/static UI state.
 - Clear sensitive ViewModel fields when sensitive pages disappear.
-- Do not reveal secret custom-field values merely to build a quick-action list.
-- Ensure protected items require re-authentication before revealing/changing protected content.
-- Keep navigation responsive and accessible on narrow and desktop windows.
-- Preserve supported semantic descriptions/state announcements for important state changes without reintroducing unsupported MAUI XAML properties.
-- For CommunityToolkit observable state in MAUI ViewModels, use partial `[ObservableProperty]` properties rather than field-based generation. The Windows/WinRT build treats the field-based pattern as `MVVMTK0045` and release builds keep that analyzer active.
-- Preserve the App project's narrowly scoped preview-language setting while that partial-property syntax requires it; do not suppress `MVVMTK0045` as a shortcut.
-- Do not weaken security warnings for localization brevity.
+- Do not reveal secret custom-field values merely to populate quick-action lists.
+- Preserve per-item re-authentication behavior.
+- Keep layouts responsive on narrow/resizable windows.
+- Preserve semantic metadata and important state announcements where supported.
+- Use partial `[ObservableProperty]` properties rather than field-based generation in MAUI ViewModels.
+- Keep the App project's narrowly scoped preview-language requirement while needed by that syntax.
+- Do not suppress `MVVMTK0045` as a shortcut.
+- Do not weaken security warnings for localization or visual brevity.
+- Guard BMC/funding UI with `BuildFeatureFlags.IsFundingLinkEnabled` so `CipherNestEnableFundingLink=false` remains a valid store build.
 
-## 17. Settings
+## 20. Settings
 
-`AppPreferences` is non-secret local configuration. `AppPreferencesPolicy` is the normalization boundary. Do not trust deserialized preference values directly when new settings are added.
+`AppPreferences` is non-secret configuration. `AppPreferencesPolicy` is the normalization boundary.
 
 When adding a preference:
 
-1. add a safe default to `AppPreferences`;
-2. define normalization/bounds in `AppPreferencesPolicy` where applicable;
-3. persist via `ISettingsStore`/`JsonSettingsStore`;
+1. add a safe default;
+2. define normalization/bounds;
+3. persist through `ISettingsStore`/`JsonSettingsStore`;
 4. update Settings UI/ViewModel;
 5. add round-trip/corruption/out-of-range tests;
-6. document the new preference in `USER_GUIDE.md` and `LIMITS_AND_DEFAULTS.md`.
+6. update `CONFIGURATION_REFERENCE.md`, `USER_GUIDE.md`, and `LIMITS_AND_DEFAULTS.md`.
 
-## 18. Localization
+Current settings JSON itself is capped at 64 KiB, bounded by a 64 KiB + 1 actual-read sentinel, and capped at depth 16.
 
-Neutral English remains the fallback, with System/English/Hindi preferences for the reviewed resource-backed surface. Do not claim a fully translated interface until every remaining user/security/error literal in that surface has been migrated to resources and reviewed.
+## 21. Localization
+
+The current preference model supports:
+
+```text
+System
+English
+Hindi
+```
+
+Neutral English is the fallback. A reviewed `hi-IN` resource-backed catalog is **implemented** for migrated strings. Some remaining UI literals may still appear in English, so a fully translated application is not claimed.
 
 Security warnings must preserve meaning across translations. See `architecture/LOCALIZATION.md`.
 
-## 19. Accessibility
+## 22. Accessibility
 
 New UI must preserve:
 
 - semantic names/descriptions where needed;
 - readable dynamic typography;
 - keyboard/focus behavior on desktop;
-- narrow-window responsiveness;
+- narrow/resizable responsiveness;
 - adequate touch targets;
-- light/dark/system readability;
+- System/Light/Dark readability;
 - reduced-motion expectations.
 
-See `ACCESSIBILITY.md` and the test/release checklists.
+Source support does not replace TalkBack/VoiceOver/Narrator/keyboard/focus/large-text/contrast testing on release targets.
 
-## 20. Tests: choosing the right layer
+## 23. Tests: choose the right layer
 
 ### Unit tests
 
-Use for pure policies, validators, cryptographic vectors, deterministic parser/resource rules, and services that can be isolated cleanly.
+Use for pure policies, validators, cryptographic vectors, bounded parsers, generator/TOTP behavior, and deterministic services.
 
 ### Integration tests
 
-Use when the behavior depends on real SQLite, encrypted record round trips, backup/restore, attachment streaming, migrations, session cancellation, or interactions among infrastructure services.
+Use when behavior depends on real SQLite, encrypted record round trips, backup/restore, attachment streaming, migrations, session cancellation, or infrastructure interactions.
 
 ### UI/source tests
 
-Use to prevent structural regressions when a MAUI device is not required, for example:
+Use for source/documentation/workflow invariants that do not require a device, such as:
 
-- route presence;
-- semantic metadata;
-- source ordering/invariant checks;
+- routes;
+- semantic/source structure;
 - redacted error handling;
-- forbidden legacy API patterns;
-- CI/workflow/script presence;
-- canonical documentation presence/link/audit wording;
-- WinRT/AOT-safe CommunityToolkit ViewModel source patterns.
-
-`DocumentationCoverageSourceTests` and `ViewModelAotSourceTests` are current examples. Source tests are regression signals, not proof of runtime platform behavior.
+- forbidden legacy patterns;
+- BMC/funding build guards;
+- CI/script presence;
+- documentation presence/links/disclaimers;
+- WinRT/AOT-safe ViewModel patterns.
 
 ### Device/manual tests
 
-Required for biometrics, screenshot protection, clipboard APIs/history behavior, secure storage, lifecycle callbacks, file picker/share sheet, accessibility readers, signing/packaging, and store behavior.
+Required for biometrics, screenshot protection, clipboard history/API behavior, secure storage, lifecycle callbacks, picker/share behavior, assistive technologies, signing/packaging, and store behavior.
 
-## 21. Local and hosted verification
+## 24. Local and hosted verification
 
-Prefer committed scripts:
+Canonical scripts:
 
 ```text
 scripts/verify-core.ps1
@@ -392,69 +468,103 @@ scripts/verify-android.sh
 scripts/verify-apple.sh
 ```
 
-Platform-specific MAUI builds use the App project's `CipherNestTargetFrameworks` property plus an appropriate target RID so a host does not evaluate unrelated MAUI target graphs.
+The immutable implementation baseline immediately before the 2026-08-16 complete-documentation expansion is:
 
-The hosted baseline for candidate `2327abba1646082a4d94a689d452b1116701cc0b` is recorded in `verification/HOSTED_CI_EVIDENCE_2026_08_13.md`: 240 tests passed, formatting passed, both Windows variants passed, Android passed, iOS simulator passed, Mac Catalyst passed, and CodeQL v4 passed. The Apple hosted pairing was `macos-26`, .NET SDK `10.0.302`, Xcode `26.5`, and workload set `10.0.300.3`.
+`8566980ff981b8b4072f9010ec7b7ba54aba051e`
 
-Do not report a pass unless the script/workflow actually ran successfully for the exact candidate commit. A later commit must rerun the relevant gates rather than inheriting historical evidence automatically.
+Observed exact-candidate evidence:
 
-## 22. Source-control and commit practice
+- 346 UnitTests passed;
+- 98 IntegrationTests passed;
+- 111 UI/source tests passed;
+- **555 total passed, 0 failed, 0 skipped**;
+- core analyzer builds passed without build warnings/errors;
+- core formatting passed;
+- Windows default and funding-disabled Release builds passed;
+- Android Release passed;
+- iOS simulator Release passed;
+- Mac Catalyst Release passed;
+- CodeQL v4 passed after analyzable core and MAUI application builds.
 
-Prefer small commits scoped to one logical change. A normal security-sensitive change sequence is:
+Run IDs:
+
+```text
+CipherNest CI: 31937127961
+CodeQL:       31937127900
+```
+
+The recorded Apple hosted pairing remains `macos-26`, .NET SDK `10.0.302`, Xcode `26.5`, workload set `10.0.300.3`, iOS RID `iossimulator-arm64`, and Mac Catalyst RID `maccatalyst-arm64`.
+
+Do not report a later SHA as verified until its own configured gates finish successfully. Historical 240-test and 554-test evidence files remain valid historical records for their original SHAs.
+
+## 25. Source-control practice
+
+Prefer small logical commits, especially for security-sensitive changes:
 
 1. policy/contract;
 2. implementation;
-3. unit/integration/source tests;
-4. documentation/release gates;
+3. tests;
+4. documentation/release gate;
 5. progress ledger.
 
-Do not commit secrets, local vault files, decrypted backups, signing material, real screenshots with credentials, or developer diagnostic exports containing private environment data.
+Never commit real vault files, decrypted backups, secret-bearing screenshots, passphrases, recovery material, signing keys, certificates, private keys, or store credentials.
 
-Connector-created project commits in this work use:
+Recent repository workflow metadata records the active commit identity as `Sanskar <sanskarin@outlook.in>`.
 
-```text
-Signed-off-by: Sanskar <sanskarin@outlook.in>
-```
+## 26. Pull-request/review checklist
 
-The sign-off records the requested identity in the commit message; the connected GitHub API determines actual Git author/committer metadata.
-
-## 23. Pull-request/review checklist
-
-Before merging a change, confirm:
+Before merging, confirm:
 
 - dependency direction remains intact;
-- tests exist at the right layers;
-- malformed/untrusted input is bounded before expensive allocation/work;
-- cancellation cannot corrupt committed state or cancel required rollback after a destructive commit point;
+- tests exist at the correct layer;
+- malformed/untrusted input is bounded before expensive work;
+- cancellation cannot corrupt committed state;
+- rollback/recovery remains uncancellable after destructive commit points where required;
 - cleanup cannot mask the primary failure;
-- no raw secret/path exception surface was introduced;
-- no plaintext persistent index/cache was introduced accidentally;
+- raw secret/path exception surfaces were not introduced;
+- no accidental plaintext persistent index/cache was introduced;
 - versioned format/schema compatibility is explicit;
-- MAUI ViewModel observable properties remain WinRT/AOT-safe and the Windows analyzer has not been suppressed;
-- platform build selection/toolchain changes are represented in verification/build docs and exercised on the exact candidate;
-- security/privacy docs are updated if the attack surface changed;
-- user docs are updated if behavior changed;
-- release checklist/test plan include the new gate;
-- no deferred feature is accidentally advertised as complete.
+- ViewModel observable properties remain WinRT/AOT-safe;
+- build/toolchain changes are documented and executed on the exact candidate;
+- security/privacy docs reflect attack-surface changes;
+- user docs reflect behavior changes;
+- release/test gates include the new behavior;
+- BMC/store behavior obeys the funding switch and current distribution policy;
+- deferred features are not accidentally advertised as complete.
 
-## 24. Areas requiring dedicated design before implementation
+## 27. Areas requiring dedicated design before implementation
 
-Do not bolt the following onto the current local-only architecture without separate threat/privacy/protocol design:
+Do not bolt these onto the current local-only architecture without separate security/privacy/protocol/platform design:
 
 - account/cloud synchronization;
 - collaboration/shared vaults;
-- autofill/browser integration;
-- TOTP seed storage/generation;
+- browser/app autofill;
 - Windows Hello convenience unlock;
-- rich binary/PDF preview/scanning;
+- TOTP QR scanning/rendering and bounded `otpauth://` import/export;
+- TOTP provider/autofill enrollment;
+- rich binary/PDF preview and scanning;
 - pronounceable-password generation;
 - destructive wipe after failed attempts;
-- complete additional localization catalogs.
+- complete migration/review of remaining UI literals and additional full localization catalogs.
 
-See `NEXT_STEPS.md` for the ordered future-work process.
+Local TOTP seed storage/generation itself and the reviewed Hindi resource-backed catalog are already implemented current features and must not be listed as deferred.
 
-## Attachment metadata policy rule — 2026-08-15
+See `NEXT_STEPS.md` and `FEATURE_MATRIX.md`.
 
-Do not add a second attachment display/media metadata validator. Import normalization and decrypted/programmatic item validation must reuse `AttachmentImportPolicy` so rune-aware malformed-UTF-16 and Unicode Control/Format behavior cannot drift. Opaque encrypted storage names remain an Infrastructure filesystem boundary and must pass `AttachmentStorageNamePolicy` before `Path.Combine`/file access.
+## 28. Related documentation
 
-If the metadata acceptance contract changes, update the attachment/vault-record format docs, limits, deterministic hostile corpus, source-regression tests, threat model, test plan, changelog/status, and verification record in the same candidate.
+- [`COMPLETE_PROJECT_DOCUMENTATION.md`](COMPLETE_PROJECT_DOCUMENTATION.md)
+- [`QUICK_START.md`](QUICK_START.md)
+- [`FEATURE_MATRIX.md`](FEATURE_MATRIX.md)
+- [`UI_REFERENCE.md`](UI_REFERENCE.md)
+- [`CONFIGURATION_REFERENCE.md`](CONFIGURATION_REFERENCE.md)
+- [`API_REFERENCE.md`](API_REFERENCE.md)
+- [`LIMITS_AND_DEFAULTS.md`](LIMITS_AND_DEFAULTS.md)
+- [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md)
+- [`architecture/DATABASE.md`](architecture/DATABASE.md)
+- [`architecture/SESSION_AND_CONCURRENCY.md`](architecture/SESSION_AND_CONCURRENCY.md)
+- [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md)
+- [`security/CRYPTOGRAPHIC_DESIGN.md`](security/CRYPTOGRAPHIC_DESIGN.md)
+- [`TESTING_GUIDE.md`](TESTING_GUIDE.md)
+- [`verification/CI_GATES.md`](verification/CI_GATES.md)
+- [`verification/COMPLETE_DOCUMENTATION_2026_08_16.md`](verification/COMPLETE_DOCUMENTATION_2026_08_16.md)
