@@ -32,7 +32,7 @@ The public project overview is [`../README.md`](../README.md).
 
 ## User and product documentation
 
-- [`QUICK_START.md`](QUICK_START.md) — first launch, vault creation, items, TOTP, attachments, backups, settings, contributor bootstrap.
+- [`QUICK_START.md`](QUICK_START.md) — first launch, vault creation, items, TOTP including bounded setup-URI import/copy, attachments, backups, settings, contributor bootstrap.
 - [`FEATURE_MATRIX.md`](FEATURE_MATRIX.md) — current feature state and deliberately deferred functionality.
 - [`UI_REFERENCE.md`](UI_REFERENCE.md) — Startup, Onboarding, Unlock, Vault, Item Editor, Generator, Audit, Trash, Settings, Security Info, Transfer, About, Developer, and route behavior.
 - [`CONFIGURATION_REFERENCE.md`](CONFIGURATION_REFERENCE.md) — application ID, target frameworks, build flags, packages, preferences, defaults, limits, toolchain, and verification scripts.
@@ -54,7 +54,7 @@ The public project overview is [`../README.md`](../README.md).
 
 - [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — project/layer boundaries and dependency direction.
 - [`architecture/DEPENDENCY_MAP.md`](architecture/DEPENDENCY_MAP.md) — solution/project/package/service ownership.
-- [`architecture/DATA_FLOW.md`](architecture/DATA_FLOW.md) — sensitive data/key/attachment/backup/CSV/clipboard/share flows.
+- [`architecture/DATA_FLOW.md`](architecture/DATA_FLOW.md) — sensitive data/key/attachment/backup/CSV/TOTP setup-URI/clipboard/share flows.
 - [`architecture/SESSION_AND_CONCURRENCY.md`](architecture/SESSION_AND_CONCURRENCY.md) — session transition gate, key leases, cancellation, attachment serialization, destructive authorization, recovery ordering.
 - [`architecture/DATABASE.md`](architecture/DATABASE.md) — SQLite schema, migrations, replacement, snapshot, validation, recovery.
 - [`architecture/LOCALIZATION.md`](architecture/LOCALIZATION.md) — neutral-English/Hindi resource-backed localization architecture and extension rules.
@@ -66,7 +66,7 @@ The public project overview is [`../README.md`](../README.md).
 - [`security/SESSION_SECURITY.md`](security/SESSION_SECURITY.md) — master/recovery/secondary authorization, lock lifecycle, re-authentication, clipboard relationship, sensitive-memory limits.
 - [`security/DATA_LIFECYCLE.md`](security/DATA_LIFECYCLE.md) — where plaintext/protected data can exist and what CipherNest can/cannot erase.
 - [`security/BIOMETRIC_UNLOCK.md`](security/BIOMETRIC_UNLOCK.md) — secondary convenience-unlock design and platform limitations.
-- [`security/TOTP.md`](security/TOTP.md) — encrypted Base32 seed/settings, RFC-compatible code generation, input bounds, clipboard behavior, factor-separation limitations.
+- [`security/TOTP.md`](security/TOTP.md) — encrypted Base32 seed/settings, RFC-compatible code generation, bounded `otpauth://totp/...` text import/formatting, input bounds, clipboard behavior, and factor-separation limitations.
 - [`security/SECURE_NOTES.md`](security/SECURE_NOTES.md) — bounded Markdown-like safe subset and HTML-neutralization policy.
 - [`security/PASSPHRASE_GENERATOR.md`](security/PASSPHRASE_GENERATOR.md) — password/passphrase generation and entropy guidance.
 - [`privacy/DIAGNOSTICS.md`](privacy/DIAGNOSTICS.md) — privacy-safe diagnostic policy.
@@ -80,6 +80,7 @@ The public project overview is [`../README.md`](../README.md).
 - [`formats/ATTACHMENTS.md`](formats/ATTACHMENTS.md) — `.cna` naming/framing, chunk processing, metadata validation, preview/export boundary.
 - [`formats/ENCRYPTED_BACKUP.md`](formats/ENCRYPTED_BACKUP.md) — `.cnbak` framing, KDF/header checks, chunks, bounded ZIP/archive, restore validation/rollback.
 - [`formats/CSV_TRANSFER.md`](formats/CSV_TRANSFER.md) — explicit CSV mapping/import and guarded plaintext export.
+- [`security/TOTP.md`](security/TOTP.md) — dedicated bounded single-item TOTP `otpauth://totp/...` interoperability. This is intentionally separate from generic CSV transfer.
 
 These are implementation documents, not promises of permanent compatibility beyond versions explicitly supported by current source. Incompatible schema/format changes require explicit versioning, migration/compatibility tests, threat-model review, and release documentation.
 
@@ -89,7 +90,7 @@ These are implementation documents, not promises of permanent compatibility beyo
 - [`TEST_PLAN.md`](TEST_PLAN.md) — automated/manual release test matrix.
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized and when source/device testing is required.
 - [`verification/CI_GATES.md`](verification/CI_GATES.md) — configured CI/local gates and evidence rules.
-- [`verification/COMPLETE_DOCUMENTATION_2026_08_16.md`](verification/COMPLETE_DOCUMENTATION_2026_08_16.md) — source-to-document scope and gate for this full documentation expansion.
+- [`verification/COMPLETE_DOCUMENTATION_2026_08_16.md`](verification/COMPLETE_DOCUMENTATION_2026_08_16.md) — source-to-document scope and gate for the full documentation expansion.
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
 
 ## Current immutable pre-documentation implementation baseline
@@ -118,7 +119,7 @@ Recorded run IDs:
 - CipherNest CI: `31937127961`
 - CodeQL: `31937127900`
 
-This evidence belongs only to that immutable implementation SHA. Documentation commits after it require their own exact-head run before being described as release-candidate verified.
+This evidence belongs only to that immutable implementation SHA. The August 18 TOTP setup-URI implementation creates a newer exact head and requires its own configured CI/CodeQL evidence before being described as exact-head release-candidate verified.
 
 ## Historical verification records
 
@@ -175,10 +176,10 @@ Historical records remain intentionally preserved with their original commit/run
 1. Documentation tracks current source, not desired features.
 2. Never describe configured CI as passing without exact immutable candidate/run evidence.
 3. Never describe CipherNest as independently audited, unhackable, military-grade, 100% secure, physically erasable, or capable of server-reset recovery when source does not provide it.
-4. Keep cloud sync/accounts/collaboration/autofill/Windows Hello/rich binary-PDF preview/scanning/pronounceable passwords/wipe-on-failure and complete-unmigrated language surfaces deferred until implemented and reviewed. TOTP local generation and the reviewed Hindi resource-backed catalog are implemented; TOTP QR/`otpauth://` interoperability, autofill/provider integration, and complete UI translation remain deferred.
+4. Keep cloud sync/accounts/collaboration/autofill/Windows Hello/rich binary-PDF preview/scanning/pronounceable passwords/wipe-on-failure and complete-unmigrated language surfaces deferred until implemented and reviewed. TOTP local generation, bounded TOTP `otpauth://totp/...` text import/formatting, and the reviewed Hindi resource-backed catalog are implemented; TOTP QR/camera enrollment, HOTP interoperability, provider/autofill integration, and complete UI translation remain deferred.
 5. Update affected threat/crypto/session/format/API/limits/tests/release/status/docs when security-sensitive behavior changes.
 6. Use synthetic/demo data only in examples/screenshots.
-7. Never place credentials, passphrases, recovery keys, TOTP seeds/codes, signing files, store tokens, private keys, crash-service tokens, or real vault contents in documentation/Git history.
+7. Never place credentials, passphrases, recovery keys, TOTP seeds/codes/setup URIs, signing files, store tokens, private keys, crash-service tokens, or real vault contents in documentation/Git history.
 8. Keep application-consumed public project/contact metadata centralized with `CipherNest.Shared.AppConstants`.
 9. Preserve historical verification records as historical records rather than rewriting them for later commits.
 10. Add/update documentation regression tests when canonical files or entry points change.
