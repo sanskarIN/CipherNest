@@ -666,7 +666,24 @@ Final defect/consistency sweep:
 - `a6f5efc2f96c80b901330f792a80be959d65e36f` — `test(docs): guard current TOTP interoperability claims`
 - `e97f7b0a27355df6e356f70e5cd542807641e07b` — `docs(hub): link TOTP URI verification record`
 - `99a71d9db792d60b9adc5625a7d7ede8a26f3148` — `docs(verification): record final TOTP URI ambiguity fixes`
-- this ledger commit — `docs(ledger): record final TOTP URI continuation`
+- `d8f799f411be8ea27f1725e41404215aa6dc6314` — `docs(ledger): record final TOTP URI continuation`
+
+### Final sensitive-state command guard hardening
+
+A final ViewModel sanity review found that `ImportTotpUri()` originally checked `!IsTotpItem || IsReauthenticationRequired` before capturing/clearing the bound URI field. The UI normally hides the import controls while re-authentication is required, but a command can still be invoked programmatically or through stale command state. The command itself now fails closed:
+
+1. capture the current bound setup URI into the local operation variable;
+2. immediately clear `TotpUriImportText`;
+3. only then evaluate the item-type/re-authentication guard;
+4. return without parsing if the operation is not eligible.
+
+A source regression test validates that exact ordering so later refactors cannot move the early-return guard back ahead of the sensitive-state cleanup.
+
+Commits:
+
+- `ae5af40af3f80c23b7f66a2f7e7bdaa8f3f22491` — `security(totp): clear URI input on denied import`
+- `24fba5aaf31b184ee5679806245b29539325337a` — `test(ui): guard denied TOTP URI cleanup ordering`
+- this ledger commit — `docs(ledger): record denied TOTP URI cleanup fix`
 
 ### Final repository-side verification status before candidate freeze
 
