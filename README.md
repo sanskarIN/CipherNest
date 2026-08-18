@@ -124,7 +124,11 @@ This is not an independent professional audit of the CipherNest codebase.
 - RFC 6238-compatible known-answer coverage.
 - Explicit manual refresh and code copy.
 - Generated codes are transient and are not persisted.
-- QR scanning/rendering, `otpauth://` import/export, and autofill/provider integration are intentionally not claimed in the current source.
+- Bounded local `otpauth://totp/...` setup-URI import with duplicate-parameter, issuer-consistency, metadata, seed, and settings validation.
+- Canonical local setup-URI formatting/copy through the same timed secret-clipboard policy used for other secrets.
+- Sensitive setup-URI input is cleared from the item-editor field after import and on page disappearance.
+- HOTP/counter URIs are intentionally rejected rather than silently converted.
+- QR scanning/rendering and autofill/provider enrollment are intentionally not claimed in the current source.
 
 ## Password and passphrase generation
 
@@ -179,15 +183,17 @@ This is not an independent professional audit of the CipherNest codebase.
 - Guarded plaintext CSV export requiring `EXPORT PLAINTEXT`, current-master re-authentication, and explicit warning/confirmation.
 - Attachments are not silently included in CSV export.
 - CSV export is a plaintext boundary; OS/destination copies can persist outside CipherNest.
+- TOTP setup-URI interoperability is a separate single-item local path and does not turn generic CSV into an authenticator-migration format.
 
 ## Clipboard and sensitive-state handling
 
-- Explicit copy actions for usernames, primary secrets, secret custom fields, and TOTP codes.
+- Explicit copy actions for usernames, primary secrets, secret custom fields, TOTP codes, and TOTP setup URIs.
 - Delayed clipboard state retains a SHA-256 fingerprint, not the copied plaintext.
 - Fixed-time fingerprint matching.
 - Newer unrelated clipboard content is preserved.
 - Lock-triggered cleanup uses the same conditional policy where supported.
 - Sensitive ViewModel credential/decrypted fields are cleared on page disappearance where owned by the current page and before several longer operations where practical.
+- TOTP setup URIs contain the long-lived seed and therefore carry greater exposure risk than a short-lived generated code.
 - .NET managed strings and OS/application copies cannot be deterministically erased.
 
 ## Trash and deletion
@@ -265,6 +271,7 @@ Assistive-technology and representative device/layout validation remain release 
 | Backup archive | 1 GiB plaintext aggregate / 10,001 entries |
 | Crypto-bound passphrase input | 12–4,096 chars |
 | TOTP normalized seed | 16–1,024 Base32 chars |
+| TOTP setup URI | 8,192 chars; 16 query pairs; TOTP only |
 
 See [Limits & Defaults](docs/LIMITS_AND_DEFAULTS.md) for the authoritative complete table.
 
@@ -285,7 +292,7 @@ Shared       Domain
 - `CipherNest.Shared` — product/version/storage constants and small cross-layer primitives.
 - `CipherNest.Domain` — framework-independent domain records/enums.
 - `CipherNest.Application` — use-case abstractions, policies, validators, application exceptions/DTOs.
-- `CipherNest.Infrastructure` — cryptography, SQLite, migrations, encrypted attachments/backups, CSV, generators, TOTP, audit implementations.
+- `CipherNest.Infrastructure` — cryptography, SQLite, migrations, encrypted attachments/backups, CSV, generators, TOTP code generation/setup-URI interoperability, audit implementations.
 - `CipherNest.App` — MAUI UI, DI, navigation, lifecycle, biometrics, secure storage, clipboard, screenshot controls, localization, accessibility, picker/share, diagnostics.
 - `tests/CipherNest.UnitTests` — deterministic pure-service/policy/crypto/parser tests.
 - `tests/CipherNest.IntegrationTests` — real persistence/vault/backup/attachment/migration/session tests.
@@ -350,10 +357,11 @@ Hosted compile/tests/static analysis do not replace:
 
 - physical-device Android biometric enrollment/denial/cancellation/lockout tests;
 - iOS/Mac Catalyst Face ID/Touch ID and secure-storage runtime tests;
-- Windows/iOS/macOS/Android clipboard history/cleanup behavior;
+- Windows/iOS/macOS/Android clipboard history/cleanup behavior, including copied TOTP setup URIs;
 - real lifecycle/background/sleep/resume timing;
 - screenshot/app-switcher privacy behavior;
 - OS share-sheet plaintext-retention/cleanup behavior;
+- representative `otpauth://totp/...` compatibility checks with synthetic seeds and third-party authenticators;
 - TalkBack/VoiceOver/Narrator/keyboard/focus/large-text accessibility validation;
 - representative responsive layouts;
 - stress/interleaving/filesystem-recovery validation;
@@ -380,7 +388,8 @@ The current source does not claim complete support for:
 - multi-device conflict resolution;
 - browser/app autofill;
 - Windows Hello convenience unlock;
-- TOTP QR scanning/rendering and `otpauth://` import/export;
+- TOTP QR scanning/rendering and camera enrollment;
+- HOTP interoperability;
 - TOTP provider/autofill enrollment;
 - rich binary/PDF preview and document scanning;
 - pronounceable-password mode;
