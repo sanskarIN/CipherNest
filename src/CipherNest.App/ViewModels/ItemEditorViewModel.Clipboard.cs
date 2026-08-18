@@ -49,6 +49,7 @@ public partial class ItemEditorViewModel
         Title = string.Empty;
         Username = string.Empty;
         Secret = string.Empty;
+        TotpUriImportText = string.Empty;
         Url = string.Empty;
         Notes = string.Empty;
         Collection = string.Empty;
