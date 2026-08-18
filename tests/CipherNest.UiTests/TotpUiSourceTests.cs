@@ -11,9 +11,13 @@ public sealed class TotpUiSourceTests
         Assert.Contains("IsVisible=\"{Binding IsTotpItem}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("RefreshTotpCommand", xaml, StringComparison.Ordinal);
         Assert.Contains("CopyTotpCodeCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("ImportTotpUriCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("CopyTotpUriCommand", xaml, StringComparison.Ordinal);
         Assert.Contains("generated codes are computed locally while unlocked and are not persisted", xaml, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("value == VaultItemType.OneTimePassword", viewModel, StringComparison.Ordinal);
         Assert.Contains("CopySecretAsync(CurrentTotpCode", viewModel, StringComparison.Ordinal);
+        Assert.Contains("GetRequiredService<ITotpUriCodec>().Parse", viewModel, StringComparison.Ordinal);
+        Assert.Contains("GetRequiredService<ITotpUriCodec>().Format", viewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("PeriodicTimer", viewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("System.Threading.Timer", viewModel, StringComparison.Ordinal);
     }
@@ -28,6 +32,20 @@ public sealed class TotpUiSourceTests
         Assert.Contains("OnTotpDigitsChanged", viewModel, StringComparison.Ordinal);
         Assert.Contains("OnTotpPeriodSecondsChanged", viewModel, StringComparison.Ordinal);
         Assert.Contains("CurrentTotpCode = string.Empty", viewModel, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TotpUriImport_IsTreatedAsSensitiveTransientInput()
+    {
+        var xaml = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "ItemEditorPage.xaml"));
+        var totpViewModel = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "ItemEditorViewModel.Totp.cs"));
+        var clipboardViewModel = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "ItemEditorViewModel.Clipboard.cs"));
+
+        Assert.Contains("Text=\"{Binding TotpUriImportText}\" IsPassword=\"True\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("HOTP is intentionally rejected", xaml, StringComparison.Ordinal);
+        Assert.Contains("TotpUriImportText = string.Empty", totpViewModel, StringComparison.Ordinal);
+        Assert.Contains("CopySecretAsync(uriText", totpViewModel, StringComparison.Ordinal);
+        Assert.Contains("TotpUriImportText = string.Empty", clipboardViewModel, StringComparison.Ordinal);
     }
 
     private static string PathAt(params string[] segments)
