@@ -37,6 +37,10 @@ public sealed class TotpUriCodec : ITotpUriCodec
         var label = DecodeComponent(escapedPath, plusAsSpace: false, "label").Trim();
         ValidateDisplayText(label, MaximumIssuerCharacters + 1 + MaximumAccountNameCharacters, "label");
 
+        var firstSeparator = label.IndexOf(':');
+        if (firstSeparator >= 0 && label.IndexOf(':', firstSeparator + 1) >= 0)
+            throw new ArgumentException("TOTP URI label must contain at most one issuer/account separator.", nameof(uriText));
+
         var query = ParseQuery(uri.Query);
         if (!query.TryGetValue("secret", out var rawSecret) || string.IsNullOrWhiteSpace(rawSecret))
             throw new ArgumentException("TOTP URI must contain a secret query parameter.", nameof(uriText));
@@ -55,18 +59,19 @@ public sealed class TotpUriCodec : ITotpUriCodec
             throw new ArgumentException("The counter parameter belongs to HOTP and is not accepted for TOTP URIs.", nameof(uriText));
         TotpPolicy.ValidateSettings(algorithm, digits, period);
 
-        var separator = label.IndexOf(':');
-        var labelIssuer = separator >= 0 ? label[..separator].Trim() : string.Empty;
-        var accountName = separator >= 0 ? label[(separator + 1)..].Trim() : label;
-        ValidateDisplayText(accountName, MaximumAccountNameCharacters, "account name");
+        var labelIssuer = firstSeparator >= 0 ? label[..firstSeparator].Trim() : string.Empty;
+        var accountName = firstSeparator >= 0 ? label[(firstSeparator + 1)..].Trim() : label;
+        if (firstSeparator == 0)
+            throw new ArgumentException("TOTP URI label issuer must not be empty when an issuer/account separator is present.", nameof(uriText));
+        ValidateLabelComponent(accountName, MaximumAccountNameCharacters, "account name");
         if (string.IsNullOrWhiteSpace(accountName))
             throw new ArgumentException("TOTP URI account name must not be empty.", nameof(uriText));
 
         var queryIssuer = query.TryGetValue("issuer", out var rawIssuer)
             ? DecodeComponent(rawIssuer, plusAsSpace: true, "issuer").Trim()
             : string.Empty;
-        if (!string.IsNullOrEmpty(queryIssuer)) ValidateDisplayText(queryIssuer, MaximumIssuerCharacters, "issuer");
-        if (!string.IsNullOrEmpty(labelIssuer)) ValidateDisplayText(labelIssuer, MaximumIssuerCharacters, "issuer");
+        if (!string.IsNullOrEmpty(queryIssuer)) ValidateLabelComponent(queryIssuer, MaximumIssuerCharacters, "issuer");
+        if (!string.IsNullOrEmpty(labelIssuer)) ValidateLabelComponent(labelIssuer, MaximumIssuerCharacters, "issuer");
         if (!string.IsNullOrEmpty(labelIssuer) && !string.IsNullOrEmpty(queryIssuer) &&
             !string.Equals(labelIssuer, queryIssuer, StringComparison.Ordinal))
         {
@@ -82,10 +87,10 @@ public sealed class TotpUriCodec : ITotpUriCodec
         ArgumentNullException.ThrowIfNull(profile);
         var accountName = profile.AccountName?.Trim() ?? string.Empty;
         var issuer = profile.Issuer?.Trim() ?? string.Empty;
-        ValidateDisplayText(accountName, MaximumAccountNameCharacters, "account name");
+        ValidateLabelComponent(accountName, MaximumAccountNameCharacters, "account name");
         if (string.IsNullOrWhiteSpace(accountName))
             throw new ArgumentException("TOTP account name must not be empty.", nameof(profile));
-        if (!string.IsNullOrEmpty(issuer)) ValidateDisplayText(issuer, MaximumIssuerCharacters, "issuer");
+        if (!string.IsNullOrEmpty(issuer)) ValidateLabelComponent(issuer, MaximumIssuerCharacters, "issuer");
 
         var secret = TotpPolicy.NormalizeSecret(profile.Secret);
         TotpPolicy.ValidateSettings(profile.Algorithm, profile.Digits, profile.PeriodSeconds);
@@ -126,19 +131,24 @@ public sealed class TotpUriCodec : ITotpUriCodec
         if (string.IsNullOrEmpty(queryText)) return result;
 
         var query = queryText[0] == '?' ? queryText[1..] : queryText;
-        var pairs = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+        var pairs = query.Split('&');
         if (pairs.Length > MaximumQueryPairs)
             throw new ArgumentException($"TOTP URI exceeds the {MaximumQueryPairs}-parameter safety limit.", nameof(queryText));
 
         foreach (var pair in pairs)
         {
+            if (pair.Length == 0)
+                throw new ArgumentException("TOTP URI must not contain empty query parameters.", nameof(queryText));
             var separator = pair.IndexOf('=');
             if (separator <= 0)
                 throw new ArgumentException("Each TOTP URI query parameter must use name=value syntax.", nameof(queryText));
             var key = DecodeComponent(pair[..separator], plusAsSpace: true, "query parameter name");
             if (key.Length is 0 or > 64 || key.Any(static character => !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_')))
                 throw new ArgumentException("TOTP URI contains an invalid query parameter name.", nameof(queryText));
-            if (!result.TryAdd(key, pair[(separator + 1)..]))
+
+            var rawValue = pair[(separator + 1)..];
+            _ = DecodeComponent(rawValue, plusAsSpace: true, $"query parameter '{key}'");
+            if (!result.TryAdd(key, rawValue))
                 throw new ArgumentException($"TOTP URI contains duplicate '{key}' parameters.", nameof(queryText));
         }
 
@@ -195,6 +205,13 @@ public sealed class TotpUriCodec : ITotpUriCodec
 
     private static bool IsHex(char value) =>
         value is >= '0' and <= '9' or >= 'A' and <= 'F' or >= 'a' and <= 'f';
+
+    private static void ValidateLabelComponent(string value, int maximumCharacters, string fieldName)
+    {
+        ValidateDisplayText(value, maximumCharacters, fieldName);
+        if (value.Contains(':'))
+            throw new ArgumentException($"TOTP {fieldName} must not contain ':' because it is reserved as the issuer/account separator.", fieldName);
+    }
 
     private static void ValidateDisplayText(string value, int maximumCharacters, string fieldName)
     {
