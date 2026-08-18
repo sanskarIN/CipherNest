@@ -1,106 +1,287 @@
 # Release Checklist
 
-- [ ] Exact candidate commit/tag is recorded before evidence collection; historical green runs are not reused after source/project/package/workflow changes.
-- [ ] `docs/verification/HOSTED_CI_EVIDENCE_2026_08_13.md` is treated as historical evidence for its recorded commit only; later candidates have fresh CI/CodeQL evidence.
-- [ ] `scripts/verify-core.ps1` or `scripts/verify-core.sh` succeeds from a clean checkout with the intended .NET SDK.
-- [ ] Main GitHub CI passes on the exact candidate: core tests/formatting, Windows default/funding-disabled compilation, Android compilation, and iOS/Mac Catalyst compilation.
-- [ ] Platform verification scripts succeed on appropriate hosts where the release target is supported: `verify-windows.ps1`, `verify-android.sh`, and `verify-apple.sh`.
-- [ ] Unit, integration, and UI/source-structure tests pass with warnings-as-errors/analyzers enabled.
-- [ ] The additional 2026-08-11 framing/session/platform checks in `docs/verification/SECURITY_HARDENING_2026_08_11.md` pass on the exact candidate.
-- [ ] The 2026-08-13 support/runtime checks in `docs/verification/SUPPORT_AND_RUNTIME_HARDENING_2026_08_13.md` pass on the exact candidate, including BMC metadata/link gating, runtime record/session/backup tests, WinRT/AOT observable-property rules, dependency remediation, and platform target/toolchain selection.
-- [ ] The documentation-completeness source gate in `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` passes: required canonical documents remain non-empty, root/hub entry-point links remain present, and primary security entry points retain the independent-audit disclaimer.
-- [ ] Documentation is reviewed semantically against the exact candidate for changed contracts, formats, resource limits/defaults, session/destructive-authorization behavior, platform support, recovery/deletion limitations, dependencies/toolchains, and deferred features; source-file presence alone is not accepted as proof of documentation correctness.
-- [ ] MAUI ViewModels do not reintroduce field-based CommunityToolkit `[ObservableProperty]` generation on Windows; `ViewModelAotSourceTests` passes, the app retains its narrowly scoped `<LangVersion>preview</LangVersion>` requirement, and Windows builds complete with `MVVMTK0045` enabled rather than suppressed.
-- [ ] Apple hosted builds use a mutually compatible .NET SDK/workload/Xcode combination. If the recorded baseline is used, verify `macos-26`, .NET SDK `10.0.302`, Xcode `26.5`, workload set `10.0.300.3`, `iossimulator-arm64`, and `maccatalyst-arm64`; otherwise record and prove the replacement pairing.
-- [ ] Android/Windows/Apple platform builds select only the requested app target framework through `CipherNestTargetFrameworks` and use an appropriate target RID so host/unrelated-platform restore properties do not leak into the graph.
-- [ ] No legacy `.DisplayAlert(` call is present in MAUI C# source; current async alert APIs compile without warnings on each target workload.
-- [ ] Android and Windows smoke tests pass; iOS/MacCatalyst build and smoke tests pass on an appropriate Apple environment.
-- [ ] Manual lifecycle tests cover background, sleep/resume, timeout, manual lock, clock rollback, and fail-closed behavior, including a simulated cleanup failure that does not escape the native lifecycle callback.
-- [ ] Startup preference restoration contains both its primary failure and secondary fallback theme/localization/accessibility failures; the fire-and-forget startup task does not leak a fallback exception.
-- [ ] Locking an unlocked vault cancels current per-session key leases; an in-flight decrypted attachment export stops through cancellation and no key-using operation intentionally continues with a stale session after lock.
-- [ ] Vault key leases zero their private 32-byte copy on normal disposal and if linked cancellation-token construction fails.
-- [ ] Master/recovery unlock, secondary unlock, public lock, and full-vault deletion remain serialized through the service transition gate; stress a delayed unlock racing a lock and verify the final state follows the serialized transition order rather than a late derivation publishing an unexpected session.
-- [ ] Full-vault deletion requires a live authorization key lease while waiting for the transition gate; an intervening lock/unlock invalidates the destructive authorization and cancels deletion instead of allowing stale re-authentication to survive a new session.
-- [ ] Once full-vault deletion clears the session key, database and encrypted-attachment cleanup are both attempted with an uncancelled destructive transition and incomplete cleanup is reported generically.
-- [ ] Session cancellation callback failures do not mask or reverse an already-completed key-state transition, and the replaced/cancelled session cancellation source is disposed.
-- [ ] Owned DEK lease copies, backup/attachment plaintext chunk buffers, clipboard fingerprint buffers, and generator temporary arrays are zeroed where implemented; release notes/docs still state that managed strings cannot be deterministically erased.
-- [ ] Master-passphrase change is verified to clear bound credential fields, lock the vault, clear the remembered master-authentication session, and require the new passphrase before biometric convenience unlock returns.
-- [ ] Crypto-bound master/recovery/backup/secondary passphrase inputs remain inside the supported 12–4,096-character range. Oversized onboarding/settings input is rejected before expensive strength/KDF work; invalid-length unwrap guesses become normal authentication failures.
-- [ ] Failed interactive unlocks match the documented bounded backoff schedule and successful unlock resets client-side throttling.
-- [ ] Vault header tests retain exact historical-v1/current-v2 schema compatibility, 64 KiB UTF-8 and 16-level JSON-depth bounds, exact case-sensitive root/wrapped-key/KDF property sets, duplicate/unknown/missing/wrong-kind rejection before deserialization/unwrap, v1-to-v2 mutation upgrade, and the deterministic 120-case zero-unwrap corpus. Replacement candidates with a bounded but schema-invalid header are rejected before active DB/WAL/SHM mutation.
-- [ ] Local vault search rejects a trimmed query longer than 4,096 characters before matching decrypted fields.
-- [ ] Android biometric tests include API 28+, enrollment/no-enrollment, cancellation, lockout, hardware-unavailable, and secure-storage-loss behavior without depending on a newer preflight manager API.
-- [ ] iOS/Mac Catalyst biometric tests cover enrollment, cancellation/request-token invalidation, device changes, secure storage, and fallback.
-- [ ] Screenshot and clipboard controls are tested on each target and platform limitations remain visible in product/docs.
-- [ ] Username/password/custom-secret copy is always explicit; delayed cleanup retains only a fixed-size fingerprint, uses fixed-time comparison, preserves unrelated newer clipboard content, and still runs after the initiating caller token is no longer relevant.
-- [ ] Manual/background/timeout locks use conditional clipboard cleanup and do not erase unrelated content copied later.
-- [ ] Unlock, Settings, Transfer, Trash, Item Editor, and Onboarding credential/decrypted ViewModel fields are cleared when the sensitive page disappears.
-- [ ] Sensitive bound passphrase fields are cleared before longer authenticated/file/share work where practical, including unlock, onboarding, plaintext export, Trash/per-item re-authentication, biometric settings, backup/restore, passphrase rotation, and full-vault deletion.
-- [ ] Sensitive Settings/backup/restore/delete, transfer, item-open, and attachment file failures show fixed UI messages and route detailed failure classification through the privacy-safe reporter rather than rendering raw exception/path text.
-- [ ] Settings load/save/cache, biometric enable/disable, backup share/restore picker/confirmation, and delete-confirmation platform failures remain contained and privacy-safe.
-- [ ] Transfer CSV picker/import confirmation, plaintext re-authentication/export confirmation/share, and temporary plaintext cleanup remain contained and privacy-safe; the staging CSV is deleted in `finally` where permitted.
-- [ ] Item-editor re-authentication/copy, attachment picker/export/share/removal, and move-to-trash failures remain contained and privacy-safe.
-- [ ] Decrypted attachment export uses unique staging names and reports cleanup failure without leaking the temporary path.
-- [ ] Encrypted attachment import uses a collision-resistant `CreateNew` staging path and refuses final overwrite; plaintext chunk buffers are zeroed on all exits.
-- [ ] Encrypted attachment framing enforces its chunk-count ceiling in addition to the 100 MiB plaintext bound, and normal writer reads fill a chunk before encryption unless EOF is reached.
-- [ ] Attachment import metadata is normalized and validated before any encryption work: leaf filename only, 240-character display-name cap, 256-character media-type cap, no control characters, and `application/octet-stream` fallback for a missing media type.
-- [ ] Opaque encrypted attachment storage filenames are accepted only as non-empty GUID-based `.cna` names without separators and must correspond to the actual attachment ID before encryption/decryption filesystem access.
-- [ ] Attachment metadata validation covers non-empty/size-bounded names/media types, control-character rejection, 100 MB plaintext limit, non-empty IDs/storage names, attachment-ID/storage-name binding, and duplicate attachment ID/storage-name rejection.
-- [ ] Attachment add/remove/permanent-delete mutations are serialized through the cancellable attachment-mutation gate, preserve the 25-attachment per-item cap, and enforce the 10,000 total referenced-attachment cap used by encrypted backup accounting.
-- [ ] Locking remains able to cancel a long attachment mutation; the attachment-mutation gate is separate from the lock/unlock transition gate and is disposed with the vault service.
-- [ ] Permanent item deletion removes the database row before best-effort encrypted attachment cleanup, so a failed record delete cannot leave a surviving record whose files were already intentionally removed.
-- [ ] Trash retention runs during routine vault maintenance; manual delete and empty-trash require current-master re-authentication and a separate destructive confirmation.
-- [ ] Settings persistence round-trips the full current preference model, normalizes invalid enum/numeric values, restores a valid password character group when needed, falls back on malformed/unreadable files, uses unique sibling staging, and leaves no staging file after successful save.
-- [ ] Settings files larger than 64 KiB fall back before JSON deserialization; serialized settings are checked against the same 64 KiB ceiling before replacing the active settings file.
-- [ ] Storage/cache maintenance handles directory enumeration failures inside guarded blocks and skips reparse-point directories.
-- [ ] Large-vault local search/filter/sort is exercised with enough records to confirm 50-item incremental rendering, result counts, and load-more behavior remain responsive.
-- [ ] Decrypted record validation rejects row-ID/payload-ID mismatch, runtime-null/unknown metadata, invalid attachment metadata, excessive aggregate text, and over-limit serialized/stored sizes before objects reach application/search/UI code.
-- [ ] Stored encrypted-record budgets are verified: no more than 100,000 items, 24 MiB per stored envelope, 256 MiB aggregate envelope bytes, and 16 MiB serialized/decrypted item JSON. SQLite length/count checks occur before BLOB materialization where practical.
-- [ ] Stored item IDs remain canonical lower-case GUID `D` strings and empty/non-canonical IDs are rejected.
-- [ ] Secure-note storage/import/editor operations share the 200,000-character and 5,000-line limits; an imported/programmatic save cannot create a note that the bounded renderer rejects only because of size.
-- [ ] CSV malformed-input tests include excessive columns in data rows where the final field ends at newline/EOF, aggregate row character bounds, and the logical row ceiling before parsing an additional row; parser source retains the reusable character buffer rather than allocating one per character.
-- [ ] CodeQL v4 passes after analyzing both analyzable core code and the Android MAUI application target.
-- [ ] `Microsoft.Data.Sqlite` and the explicit SQLitePCLRaw bundle pin are reviewed against current advisories. The earlier `NU1903` blocker for SQLitePCLRaw 2.1.11 must not reappear; the current central pins are `Microsoft.Data.Sqlite` 10.0.10 and `SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 until deliberately upgraded/reviewed.
-- [ ] Pull-request dependency review, vulnerability review, and secret scanning pass or have documented, owned, expiring exceptions; workflow timeout/cancellation behavior remains configured.
-- [ ] No signing keys, certificates, passwords, API keys, crash tokens, store credentials, or other production secrets exist in repository/history/artifacts.
-- [ ] Restored package metadata and license texts are checked against `THIRD_PARTY_NOTICES.md` for the exact resolved versions.
-- [ ] Database migration tests pass, including future-schema rejection, forged-current-history rejection, positive/contiguous/timestamp-valid history, bounded validation work, extreme integer rejection, required table/column shape validation, and compatibility with every supported prior schema.
-- [ ] Consistent snapshot creation refuses the active DB/WAL/SHM and `.previous...` recovery naming family, refuses pre-existing destinations, preserves the active vault on rejection, and cleans a newly created partial snapshot best-effort after failure.
-- [ ] Candidate replacement databases pass SQLite `quick_check`, exact supported schema version, required schema shape, byte/depth-bounded strict supported vault-header schema, canonical item IDs, and encrypted-record count/per-record/aggregate budgets before active DB/WAL/SHM mutation. Invalid replacements preserve the active vault.
-- [ ] SQLite replacement stages DB/WAL/SHM into a unique recovery set; partial rollback restores only components that actually staged, preserving sidecars that never moved.
-- [ ] Full database deletion attempts DB, WAL, SHM, legacy recovery, and generated recovery artifacts before reporting aggregate cleanup failure.
-- [ ] Database migration/replacement rollback errors do not mask the original migration/copy failure.
-- [ ] Crypto known-answer, tamper, wrong-key, hostile-KDF-resource, null/malformed envelope, passphrase-bound, and format-version tests pass; every cryptographic-format change has focused review.
-- [ ] Backup header validation rejects unsupported version, invalid salt length, hostile KDF parameters, or chunk size outside supported bounds before Argon2 key derivation.
-- [ ] Backup encrypted framing enforces its chunk-count ceiling, normal export reads fill each chunk before encryption unless EOF is reached, and the reusable plaintext export span is zeroed in `finally` after every encrypted chunk.
-- [ ] Truncated/malformed backup framing maps to the invalid-backup boundary without reaching KDF work when the header is not valid/authenticated enough to proceed.
-- [ ] Backup export refuses destinations that collide with the active DB/WAL/SHM/recovery files or encrypted attachment directory and uses unique sibling encrypted staging.
-- [ ] Backup creation and restore share the same archive resource policy: at most 1 GiB aggregate plaintext archive content and at most `VaultStorageLimits.MaximumAttachmentCountTotal + 1` entries. The exporter must not intentionally produce a container this build refuses solely on those resource bounds.
-- [ ] Backup attachment enumeration is materialized under guarded filesystem access and deterministic path ordering is retained before ZIP entry creation.
-- [ ] Backup archive restore rejects duplicate normalized ZIP paths, invalid entry paths, excessive archive/count/entry sizes, and attachment entries outside the encrypted-container size envelope.
-- [ ] Backup rollback after active mutation uses an uncancelled recovery token; cancellation of the original restore request does not cancel the rollback database replacement.
-- [ ] Backup/restore is tested on real target devices with disposable data, including encrypted attachments, corrupted-container rejection, invalid staged-database rejection, cancellation during replacement, and preservation of the active vault after failure.
-- [ ] Large attachment streaming, plaintext-buffer zeroing, safe text preview, plaintext export warning, and temporary-cache cleanup are exercised.
-- [ ] Threat model, privacy notice, security design, session-security/data-lifecycle docs, exact format docs, diagnostics policy, third-party notices, changelog, project status, support instructions, roadmap, CI/documentation verification docs, and audit status are current.
-- [ ] `docs/NEXT_STEPS.md` has been reviewed against the candidate and any completed/obsolete action has been reconciled before release notes are cut.
-- [ ] `AppConstants.BuyMeACoffeeUrl`, About, README, SUPPORT, `.github/FUNDING.yml`, and the original `bmc_support.svg` badge still reference/present the intended `https://buymeacoffee.com/sanskarIN` project-support path without being represented as an official Buy Me a Coffee trademark asset.
-- [ ] Financial support remains clearly optional and does not change security/privacy treatment, support priority, GPL feature access, or recovery behavior.
-- [ ] The current policy for any external funding/payment CTA has been checked for each target store, distribution method, app category, and region; any disallowed in-app CTA is omitted/disabled with `CipherNestEnableFundingLink=false`, and the chosen value is recorded in release provenance.
-- [ ] Store permissions/descriptions match actual app behavior and the store copy makes no unverified security claim.
-- [ ] Primary/adaptive/monochrome/dark/BMC-support branding sources and generated store icons/splash/feature-graphic screenshots are checked for safe-zone clipping, contrast, scaling, creator-credit placement, and synthetic-only demo data.
-- [ ] Localization fallback and large-interface layout are smoke-tested; future translations must preserve the meaning of security warnings.
-- [ ] Reproducible-build guidance is checked where practical and build dependencies are pinned/reviewed.
-- [ ] Signed release artifacts are generated only from a protected release environment; signing material never enters the repository.
-- [ ] Independent professional security-audit status is stated exactly as it exists at release time.
+Use this checklist for every CipherNest release candidate. A successful build alone is not release evidence.
 
-A checklist item may be marked not applicable only with a written reason in the release notes. CipherNest must not be called bug-free or independently audited unless that statement is actually supported.
+## Candidate freeze and provenance
 
-## TOTP and staged Hindi release gate
+- [ ] Freeze one exact release-candidate commit/tag before collecting final evidence.
+- [ ] Stop moving the candidate while final CI/device/manual evidence is collected.
+- [ ] Record the exact candidate SHA/tag, UTC build time, source branch, SDK/workload/toolchain versions, package graph, and build flags.
+- [ ] Record whether `CipherNestEnableFundingLink` is `true` or `false` for every distributed package.
+- [ ] Confirm the candidate contains no real vaults, decrypted backups, passphrases, recovery material, secondary secrets, private keys, signing credentials, store tokens, TOTP seeds/setup URIs/current codes, or secret-bearing screenshots.
+- [ ] Verify actual Git author/committer metadata independently when release provenance requires it; do not infer author email from a commit-message trailer.
 
-- [ ] RFC 6238 SHA-1/SHA-256/SHA-512 known-answer tests pass on the exact candidate.
-- [ ] TOTP parser/settings bounds, malformed padding/alphabet/length tests, encrypted round-trip, audit semantics, and enum compatibility tests pass.
-- [ ] No real TOTP seed/code appears in tests, docs, screenshots, logs, diagnostics, issues, or release artifacts.
-- [ ] TOTP UI is verified on target platforms for manual refresh, protected-item re-authentication, 6/8-digit display, period controls, clipboard cleanup/history limitations, accessibility, and clock correctness.
-- [ ] Store/release wording states local TOTP generation accurately and does not claim QR/`otpauth://` import, autofill/provider enrollment, factor isolation from the unlocked vault, or independent security audit.
-- [ ] Neutral/Hindi resource key parity tests pass and security-critical translations retain equivalent meaning.
-- [ ] System/English/Hindi selection and fallback are tested on target platforms; release copy does not claim the entire UI is translated while unmigrated literals remain.
+## Exact-head automated verification
+
+- [ ] Run `scripts/verify-core.ps1` or `scripts/verify-core.sh` against the exact candidate.
+- [ ] Confirm UnitTests pass.
+- [ ] Confirm IntegrationTests pass.
+- [ ] Confirm UI/source tests pass.
+- [ ] Confirm analyzer-enabled builds pass with warnings treated as errors.
+- [ ] Confirm configured formatting checks pass.
+- [ ] Confirm no skipped tests are being silently treated as equivalent to executed coverage unless the skip is explicitly reviewed and documented.
+- [ ] Run/observe the exact-candidate Windows Release build.
+- [ ] Run/observe the exact-candidate Windows `CipherNestEnableFundingLink=false` Release build.
+- [ ] Run/observe the exact-candidate Android Release build.
+- [ ] Run/observe the exact-candidate iOS simulator Release build on a compatible Apple host.
+- [ ] Run/observe the exact-candidate Mac Catalyst Release build on a compatible Apple host.
+- [ ] Run/observe CodeQL for the exact candidate, including the MAUI application path.
+- [ ] Run/observe dependency review/vulnerability scanning for the exact restored package graph.
+- [ ] Record exact workflow/run identifiers and results; configured workflows or historical green runs are not evidence for a later SHA.
+
+## Cryptography and vault-header security
+
+- [ ] Run Argon2id known-answer tests and AES-GCM round-trip/tamper/wrong-key/AAD tests.
+- [ ] Confirm hostile KDF metadata is rejected before expensive Argon2 work.
+- [ ] Confirm accepted KDF compatibility bounds and current new-wrapper defaults match documentation.
+- [ ] Confirm historical supported vault-header versions remain readable.
+- [ ] Confirm current vault-header writes use the current documented version/schema.
+- [ ] Confirm duplicate/unknown/missing/case-variant/wrong-kind/deep/future/hybrid vault-header metadata is rejected before typed deserialization/wrapped-key unwrap.
+- [ ] Confirm the 64 KiB vault-header UTF-8 and depth-16 JSON ceilings remain enforced.
+- [ ] Confirm replacement-database validation applies the same strict vault-header policy before active DB/WAL/SHM mutation.
+- [ ] Confirm no cryptographic/framing/schema compatibility change was made without an explicit version/migration decision and tests.
+
+## Authentication, session, and destructive authorization
+
+- [ ] Verify master-passphrase unlock.
+- [ ] Verify independent recovery-material unlock.
+- [ ] Verify recovery material does not authorize current-master-only sensitive operations.
+- [ ] Verify invalid credentials map to authentication failure without raw crypto leakage.
+- [ ] Verify bounded interactive failed-attempt backoff and reset-after-success behavior.
+- [ ] Verify manual lock removes/zeroes shared key state where practical and cancels the current session token.
+- [ ] Verify key-using operations use private zeroing session-linked key leases.
+- [ ] Verify lock cancels blocked/cancellable key-using work.
+- [ ] Verify master/recovery unlock, secondary unlock, lock, and full-vault deletion remain serialized through the security transition gate.
+- [ ] Verify a late unlock cannot republish a session after an already-requested lock.
+- [ ] Verify full-vault deletion keeps live-session authorization while waiting for the transition gate and fails if an intervening lock/re-unlock invalidates it.
+- [ ] Verify caller cancellation cannot interrupt required destructive cleanup/rollback after the documented commit point.
+- [ ] Verify cancellation callback/cleanup errors cannot reverse or mask an already-completed security transition.
+- [ ] Verify master-passphrase rotation clears remembered master-auth state, locks the vault, and requires the new master before biometric convenience resumes.
+
+## Biometrics and platform secure storage
+
+Android:
+
+- [ ] Test supported/enrolled biometric state.
+- [ ] Test no enrollment.
+- [ ] Test hardware unavailable.
+- [ ] Test cancel/deny/failed match/lockout.
+- [ ] Confirm the current source remains compatible with the API-28 `BiometricPrompt` baseline rather than depending on a newer preflight API.
+- [ ] Test secure-storage loss/enrollment changes where feasible.
+
+Apple:
+
+- [ ] Test Face ID/Touch ID support on iOS/Mac Catalyst targets.
+- [ ] Test denial/cancellation/failure.
+- [ ] Verify request cancellation invalidates the native authentication context.
+- [ ] Test secure-storage lifecycle/enrollment changes where feasible.
+
+Across platforms:
+
+- [ ] Verify a fresh process requires master-auth state before biometric convenience can later be used.
+- [ ] Verify the configured periodic master requirement.
+- [ ] Verify restore clears local biometric pairing.
+- [ ] Verify master-passphrase change requires the new master before convenience unlock resumes.
+- [ ] Confirm Windows does not advertise Windows Hello convenience unlock unless separately implemented/reviewed/tested.
+- [ ] Do not claim hardware-backed cryptographic binding of every secure-storage retrieval unless separately proven for the exact implementation/platform.
+
+## TOTP code generation and seed storage
+
+- [ ] Run RFC 6238 known-answer vectors for SHA-1, SHA-256, and SHA-512.
+- [ ] Verify 6- and 8-digit output.
+- [ ] Verify 15–120-second periods and the documented default.
+- [ ] Verify formatted/lowercase/grouped Base32 normalization.
+- [ ] Verify malformed alphabet, impossible lengths/padding, non-zero residual bits, over-limit input, unsupported settings, and pre-epoch timestamps fail safely.
+- [ ] Verify the deterministic hostile Base32 corpus executes with unique case IDs.
+- [ ] Verify TOTP validity-window calculation does not overflow at `DateTimeOffset.MaxValue`.
+- [ ] Verify temporary owned normalization/decoded/hash/counter buffers are cleared where practical.
+- [ ] Verify `VaultItemValidator` applies TOTP seed/settings validation before save.
+- [ ] Verify a synthetic TOTP item survives encrypted SQLite save/reopen and the seed is not present as plaintext bytes in the stored encrypted envelope.
+- [ ] Verify generated codes remain transient presentation state and are not persisted.
+- [ ] Verify changing seed/algorithm/digits/period/item type clears the displayed code.
+- [ ] Verify protected TOTP items cannot generate/display/import/export sensitive material until required re-authentication succeeds.
+- [ ] Verify TOTP seeds are excluded from ordinary password weakness/reuse semantics while duplicate detection includes TOTP settings.
+
+## TOTP setup-URI interoperability
+
+The text-based bounded `otpauth://totp/...` surface is implemented current functionality. QR/camera enrollment, HOTP, and automatic provider/autofill enrollment remain separate deferred work.
+
+Automated/source gates:
+
+- [ ] Run all `TotpUriCodecTests` against the exact candidate.
+- [ ] Verify canonical TOTP URI parse and format/parse round trip.
+- [ ] Verify omitted algorithm/digits/period use the documented SHA-1/6-digit/30-second defaults.
+- [ ] Verify URI text is bounded to 8,192 characters and query processing to 16 pairs.
+- [ ] Verify query names are bounded/validated and duplicate keys are rejected case-insensitively.
+- [ ] Verify account and issuer metadata ceilings and Unicode Control/Format rejection.
+- [ ] Verify label/query issuer disagreement is rejected when both are present.
+- [ ] Verify wrong scheme, HOTP, `counter`, user-info, custom port, fragment, multi-segment label paths, malformed query syntax, invalid percent encoding, unsupported settings, malformed seed, and empty account are rejected.
+- [ ] Verify imported seed/settings pass through the authoritative `TotpPolicy` rather than a weaker parallel validator.
+- [ ] Verify `ITotpUriCodec -> TotpUriCodec` is registered once in the composition root.
+- [ ] Verify the Item Editor routes parsing/formatting through the Application abstraction and does not contain a second URI parser.
+- [ ] Verify the setup-URI input is masked and treated as transient sensitive state.
+- [ ] Verify the bound URI field clears after successful/failed import and when Item Editor sensitive state is cleared.
+- [ ] Verify setup URI is not stored as another `VaultItem` property/duplicate seed copy.
+- [ ] Verify **Copy setup URI** uses the existing secret clipboard service/timed conditional cleanup path.
+- [ ] Verify diagnostics/error text never includes the actual URI or seed.
+- [ ] Confirm the implementation adds no QR/camera/network/cloud/provider dependency for this text-only interoperability surface.
+
+Manual/interoperability gates using synthetic seeds only:
+
+- [ ] Import representative compatible `otpauth://totp/...` values with percent-encoded account/issuer labels.
+- [ ] Verify SHA-1/SHA-256/SHA-512 and 6-/8-digit settings with representative 30-/60-second periods where supported by the destination.
+- [ ] Export a setup URI and verify representative compatible authenticators accept the expected synthetic account/settings.
+- [ ] Verify the imported metadata is reviewed before save; local parsing does not prove issuer identity, provider enrollment, or account ownership.
+- [ ] Verify deliberate HOTP/`counter` rejection remains clear and fail-closed.
+- [ ] Verify the setup-URI field clears after success/failure and after leaving the Item Editor.
+- [ ] Verify the actual URI/seed is not exposed through accessibility semantic text, screenshots, diagnostics, test logs, or store media.
+- [ ] Verify platform clipboard history/synchronization behavior for copied setup URIs and document the limitation accurately.
+- [ ] Treat setup-URI clipboard exposure as long-lived seed exposure, not as equivalent to one short-lived generated code.
+
+## Vault items, storage bounds, and search
+
+- [ ] Verify every persisted `VaultItemType` numeric value remains compatibility-safe.
+- [ ] Verify null/empty/oversized/unknown item input is rejected through shared validation.
+- [ ] Verify the combined item text/metadata ceiling remains enforced.
+- [ ] Verify attachment metadata/ID/storage-name uniqueness validation remains enforced.
+- [ ] Verify decrypted payload item ID equals the authenticated SQLite row ID before returning it to application/UI code.
+- [ ] Verify serialized/decrypted item JSON, stored-envelope, item-count, aggregate-envelope, and global-attachment ceilings remain enforced.
+- [ ] Verify SQLite count/length checks happen before BLOB materialization where practical.
+- [ ] Verify search rejects over-limit queries before matching decrypted fields.
+- [ ] Verify no plaintext persistent full-text index/cache for decrypted vault fields has been introduced without explicit privacy/security review.
+- [ ] Verify filters/sorts/recent-access/reminders operate only on decrypted authenticated data while unlocked.
+- [ ] Verify large result sets render incrementally without changing the at-rest privacy model.
+
+## Attachments and plaintext preview/export
+
+- [ ] Run attachment round-trip/tamper/truncation/chunk/AAD tests.
+- [ ] Verify 100 MiB plaintext/file, 25 attachments/item, and 10,000 referenced attachments/global limits.
+- [ ] Verify metadata normalization/validation occurs before encryption.
+- [ ] Verify malformed UTF-16 and Unicode Control/Format metadata are rejected.
+- [ ] Verify opaque storage names remain exact GUID-N `.cna` names bound to attachment ID and are validated before filesystem access.
+- [ ] Verify encrypted attachment staging uses unique `CreateNew` behavior and no final overwrite.
+- [ ] Verify reusable owned plaintext buffers are cleared where practical.
+- [ ] Verify attachment mutation serialization does not block security lock from cancelling long work.
+- [ ] Verify safe text preview type/UTF-8/size/display limits and no intended plaintext preview file.
+- [ ] Verify attachment plaintext export requires explicit warning/confirmation.
+- [ ] Verify exported plaintext staging uses a unique cache path and best-effort cleanup.
+- [ ] Verify cleanup failure is reported without leaking sensitive paths.
+- [ ] Confirm documentation does not promise guaranteed deletion from destination apps, OS caches, snapshots, backups, or physical media.
+
+## Encrypted backup and restore
+
+- [ ] Run normal encrypted backup/restore round trips using synthetic vaults with and without attachments/TOTP items.
+- [ ] Verify the backup passphrase remains separate from the vault-master API contract.
+- [ ] Verify backup locks the vault before consistent snapshot creation.
+- [ ] Verify the destination cannot target the active DB/WAL/SHM/recovery/attachment paths.
+- [ ] Verify encrypted staging is collision resistant.
+- [ ] Verify backup header strict schema/depth/size/type/duplicate rules before Argon2.
+- [ ] Verify wrong backup passphrase/corrupt/truncated/unsupported framing fails without replacing the active vault.
+- [ ] Verify export and restore share the same 10,001-entry/1 GiB archive resource envelope.
+- [ ] Verify duplicate normalized ZIP paths and unexpected/nested paths are rejected.
+- [ ] Verify encrypted attachment entries fit the attachment-container size envelope.
+- [ ] Verify actual extracted bytes must exactly equal declared uncompressed length and cannot exceed the remaining aggregate budget.
+- [ ] Verify staged SQLite candidates pass integrity/schema/header/ID/resource validation before active replacement.
+- [ ] Verify failed replacement preserves/restores DB/WAL/SHM correctly.
+- [ ] Verify caller cancellation cannot cancel required rollback after the active-mutation commit point.
+- [ ] Verify restored biometric pairing is cleared.
+- [ ] Verify restored synthetic TOTP seed/settings still generate expected codes.
+- [ ] Verify setup-URI text itself is not expected as a second persisted backup field; only the encrypted TOTP item data is restored.
+
+## CSV import/export
+
+- [ ] Verify valid quoting, commas/newlines, Unicode, BOM handling, and explicit mapping.
+- [ ] Verify duplicate/empty/unsafe/oversized headers are rejected.
+- [ ] Verify 256-column enforcement includes the final field at newline/EOF.
+- [ ] Verify field/aggregate-row/data-row ceilings.
+- [ ] Verify mapped Tags enforce the canonical 100-tag/128-character limits before item construction without unbounded whole-field materialization.
+- [ ] Verify warnings do not echo secret-bearing raw rows.
+- [ ] Verify plaintext CSV export requires exact `EXPORT PLAINTEXT`, current-master re-authentication, warning, and confirmation.
+- [ ] Verify attachments are not silently included in plaintext CSV export.
+- [ ] Verify temporary plaintext staging cleanup is best effort and path-safe.
+- [ ] Confirm generic CSV is documented separately from dedicated single-item TOTP setup-URI interoperability.
+
+## Settings, lifecycle, clipboard, and privacy
+
+- [ ] Verify complete `AppPreferences` round trip and normalization.
+- [ ] Verify malformed/invalid UTF-8/over-depth/oversized settings use normalized fallback while cancellation propagates.
+- [ ] Verify the 64 KiB settings ceiling and 64 KiB + 1 actual-read sentinel behavior.
+- [ ] Verify lock timeout, background lock, screenshot preference, clipboard delay, biometric settings, master-auth interval, trash retention, reminders, generator defaults, theme/language/accessibility settings.
+- [ ] Verify manual/background/timeout lock behavior on target platforms.
+- [ ] Verify lifecycle fallback contains/reports secondary lock/clipboard failures instead of allowing cleanup exceptions to escape native callbacks.
+- [ ] Verify username/secret/custom-secret/TOTP-code/TOTP-setup-URI copy is always explicit.
+- [ ] Verify delayed clipboard state contains only a fixed-size fingerprint, comparison is fixed-time, initiating caller cancellation does not disable the security timer, and unrelated newer clipboard content is preserved.
+- [ ] Verify operating-system clipboard history/synchronization limitations are documented truthfully.
+- [ ] Verify sensitive credential/setup-URI fields are cleared when the owning page/workflow can shorten their lifetime.
+- [ ] Verify managed-memory erasure limitations remain explicit.
+
+## Diagnostics and support safety
+
+- [ ] Verify no third-party analytics/crash-reporting provider was enabled without a separate privacy/security review.
+- [ ] Verify privacy-safe diagnostic events use stable operation identifiers/fixed text and omit raw exception messages/stacks.
+- [ ] Verify diagnostic/support paths do not include master/backup passphrases, recovery material, secondary secrets, DEKs/KEKs, decrypted item/attachment content, raw secret-bearing CSV rows, identifying filesystem paths, TOTP seeds, generated codes, or setup URIs.
+- [ ] Verify support/security guidance instructs reporters to use synthetic reproduction data and never send a real setup URI/seed/current code.
+
+## Accessibility and localization
+
+- [ ] Validate TalkBack on Android.
+- [ ] Validate VoiceOver on iOS/Mac Catalyst where applicable.
+- [ ] Validate Narrator and keyboard/focus behavior on Windows.
+- [ ] Validate focus order/visibility, semantic names/descriptions/live regions, touch targets, large text, Larger Interface, Reduced Motion, and light/dark/system readability.
+- [ ] Validate narrow/landscape/tablet/resizable-desktop layouts.
+- [ ] Verify TOTP setup-URI semantic metadata describes the field/action without containing the actual URI/seed.
+- [ ] Verify System/English/Hindi preference, fallback, restart/resume, and reviewed `hi-IN` resource catalog behavior.
+- [ ] Verify new TOTP setup-URI UI strings remain usable at large text/narrow widths; migrate/review them before claiming complete Hindi coverage.
+- [ ] Do not claim every remaining literal is translated until the resource migration/review is complete.
+
+## Branding, funding, legal, and store material
+
+- [ ] Verify original CipherNest icon/splash/monochrome/dark-surface/BMC branding sources.
+- [ ] Verify `Made by the Sanskar` creator credit remains on appropriate branding/About surfaces rather than user content.
+- [ ] Verify BMC URL consistency across shared constants, README, SUPPORT, `.github/FUNDING.yml`, About, Settings, and Vault guarded surfaces.
+- [ ] Verify optional funding does not change feature access, security/privacy treatment, support priority, licensing, recovery behavior, or open-source rights.
+- [ ] Verify the target store/region currently permits the selected external funding CTA; use `CipherNestEnableFundingLink=false` where required and record that choice.
+- [ ] Verify GPL-3.0-or-later, Privacy, Terms, SECURITY, Support, and third-party notices match the exact release.
+- [ ] Verify store/listing copy accurately describes local TOTP generation and bounded text setup-URI interoperability without implying QR/camera enrollment, HOTP, provider enrollment, cloud sync, Windows Hello, full translation, or independent audit.
+- [ ] Verify store screenshots/video/demo data contain only synthetic TOTP values and never a real seed/setup URI/current code.
+- [ ] Verify no unsupported “unhackable”, “military-grade”, “100% secure”, guaranteed erasure, guaranteed biometric/hardware, or server-reset recovery claim appears.
+
+## Dependencies and supply chain
+
+- [ ] Review the exact restored direct/transitive package graph.
+- [ ] Review current vulnerability advisories.
+- [ ] Review dependency-review/CodeQL/secret-scanning results.
+- [ ] Reconcile exact licenses/notices with `THIRD_PARTY_NOTICES.md`.
+- [ ] Document owned exceptions with severity/owner/expiry rather than silently suppressing a finding.
+- [ ] Confirm the TOTP setup-URI continuation did not introduce a QR/camera/network/parser dependency that escaped license/advisory review.
+
+## Packaging, signing, and platform release
+
+- [ ] Build release packages from the immutable candidate in protected environments.
+- [ ] Keep signing private keys/certificates/passwords/store tokens outside Git history/logs/artifacts that expose them.
+- [ ] Verify application ID, version/build number, permissions/capabilities, icons, splash assets, privacy declarations, and package metadata.
+- [ ] Verify Android signing/package/install behavior.
+- [ ] Verify iOS signing/provisioning/package/install behavior.
+- [ ] Verify Mac Catalyst signing/notarization/package behavior.
+- [ ] Verify Windows packaging/signing behavior for the intended distribution channel.
+- [ ] Preserve package hashes/provenance where practical.
+
+## Independent security review and final release decision
+
+- [ ] Record the exact status/scope/date/version of any independent professional security review.
+- [ ] If no independent professional audit exists, keep that limitation visible in README/docs/store/security surfaces.
+- [ ] Review cryptographic key hierarchy, KDF/AAD/nonce assumptions, session/key-lease concurrency, vault-header/record/database replacement, attachments, backup/rollback, CSV, TOTP code generation, TOTP setup-URI parser/formatter, clipboard/plaintext lifecycle, resource ceilings, diagnostics, and dependency posture.
+- [ ] Resolve or explicitly own outstanding findings before release.
+- [ ] Verify `CHANGELOG.md`, `PROJECT_STATUS.md`, `docs/FEATURE_MATRIX.md`, `docs/NEXT_STEPS.md`, `what_changed.md`, and canonical documentation match the exact candidate.
+- [ ] Create the release tag only after the applicable gates above are complete.
+- [ ] Preserve exact run IDs/device matrix/interoperability results/dependency review/package provenance with the release record.
+
+## Current historical baseline note
+
+The immutable pre-documentation implementation baseline remains:
+
+`8566980ff981b8b4072f9010ec7b7ba54aba051e`
+
+Recorded historical evidence for that exact SHA is 346 Unit + 98 Integration + 111 UI/source = **555 passed, 0 failed, 0 skipped**, with Windows default/funding-disabled, Android, iOS simulator, Mac Catalyst, core formatting/analyzer gates, and CodeQL successful in the recorded runs.
+
+The August 18, 2026 TOTP setup-URI implementation/documentation is newer than that baseline. It must not inherit the old exact-head verification claim. Freeze the final August 18 continuation head and record that head's completed configured runs separately before treating it as release-candidate verified.
