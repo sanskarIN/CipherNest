@@ -12,6 +12,13 @@
       <Frame IsVisible="{Binding IsTotpItem}"><VerticalStackLayout Spacing="10">
         <Label Text="Time-based one-time password (TOTP)" FontAttributes="Bold" FontSize="18"/>
         <Label Text="For this item type, Secret is the Base32 TOTP seed. The seed is stored only inside the encrypted vault record. Generated codes are computed locally while unlocked and are not persisted." Style="{StaticResource SubtitleLabel}"/>
+        <Label Text="Import a TOTP setup URI" FontAttributes="Bold"/>
+        <Label Text="Paste a bounded otpauth://totp/... URI. The URI contains the seed, is processed locally, is cleared from this editor after import, and must be protected like the seed itself. HOTP is intentionally rejected." Style="{StaticResource SubtitleLabel}"/>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <Entry Text="{Binding TotpUriImportText}" IsPassword="True" Placeholder="otpauth://totp/..." SemanticProperties.Description="Sensitive TOTP setup URI to import locally"/>
+          <Button Grid.Column="1" Text="Import URI" Command="{Binding ImportTotpUriCommand}" Style="{StaticResource SecondaryButton}"/>
+        </Grid>
+        <Button Text="Copy setup URI" Command="{Binding CopyTotpUriCommand}" Style="{StaticResource SecondaryButton}" HorizontalOptions="Start" SemanticProperties.Description="Copy a TOTP setup URI containing this encrypted seed using timed clipboard cleanup"/>
         <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
           <VerticalStackLayout><Label Text="Algorithm" FontAttributes="Bold"/><Picker ItemsSource="{Binding TotpAlgorithms}" SelectedItem="{Binding SelectedTotpAlgorithm}"/></VerticalStackLayout>
           <VerticalStackLayout Grid.Column="1"><Label Text="Digits" FontAttributes="Bold"/><Picker ItemsSource="{Binding TotpDigitOptions}" SelectedItem="{Binding TotpDigits}"/></VerticalStackLayout>
@@ -24,7 +31,7 @@
           <Button Grid.Column="2" Text="Copy code" Command="{Binding CopyTotpCodeCommand}" Style="{StaticResource SecondaryButton}" SemanticProperties.Description="Copy the current one-time password temporarily"/>
         </Grid>
         <Label Text="{Binding TotpSecondsRemaining, StringFormat='Valid for about {0} more seconds after refresh.'}" Style="{StaticResource SubtitleLabel}"/>
-        <Label Text="Only import TOTP seeds you are authorized to use. Copying a seed or generated code can expose it through operating-system clipboard history or synchronization; CipherNest applies the same best-effort timed clipboard cleanup policy used for other secrets." Style="{StaticResource SubtitleLabel}"/>
+        <Label Text="Only import TOTP seeds you are authorized to use. Copying a seed, setup URI, or generated code can expose it through operating-system clipboard history or synchronization; CipherNest applies the same best-effort timed clipboard cleanup policy used for other secrets." Style="{StaticResource SubtitleLabel}"/>
       </VerticalStackLayout></Frame>
       <Label Text="URL" FontAttributes="Bold"/><Entry Text="{Binding Url}" Keyboard="Url"/>
       <Label Text="Tags" FontAttributes="Bold"/><Entry Text="{Binding Tags}" Placeholder="comma, separated, tags"/>
