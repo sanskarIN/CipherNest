@@ -30,6 +30,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IVaultService, VaultService>();
         builder.Services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
         builder.Services.AddSingleton<ITotpService, TotpService>();
+        builder.Services.AddSingleton<ITotpUriCodec, TotpUriCodec>();
         builder.Services.AddSingleton<ISecurityAuditService, SecurityAuditService>();
         builder.Services.AddSingleton<ISafeNoteMarkupService, SafeNoteMarkupService>();
         builder.Services.AddSingleton<SessionLockPolicy>();
