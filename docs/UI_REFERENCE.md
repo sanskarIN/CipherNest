@@ -293,6 +293,9 @@ Visible when the selected item type is TOTP.
 Controls include:
 
 - explanation that Secret is the Base32 TOTP seed;
+- masked sensitive `otpauth://totp/...` setup-URI import field;
+- **Import URI**;
+- **Copy setup URI**;
 - algorithm picker: SHA-1 / SHA-256 / SHA-512;
 - digit picker: 6 / 8;
 - period display;
@@ -301,7 +304,26 @@ Controls include:
 - **Refresh code**;
 - **Copy code**;
 - seconds-remaining status;
-- warning about clipboard exposure and authorization to store the seed.
+- warning about clipboard exposure and authorization to store the seed/setup URI.
+
+#### TOTP setup-URI import
+
+The import field is treated as sensitive transient state because a normal setup URI contains the long-lived seed. Import is local and accepts bounded `otpauth://totp/...` input only. HOTP/counter input, duplicate security-sensitive query keys, unsupported TOTP settings, malformed seeds, inconsistent issuer metadata, and out-of-policy metadata are rejected.
+
+A successful import maps:
+
+- `secret=` to the item Secret;
+- account label to Username/identifier;
+- issuer to Title when supplied;
+- algorithm, digits, and period to the existing TOTP settings.
+
+The dedicated URI entry is cleared after the import attempt. Users should review the imported account/issuer/settings before saving because local parsing does not contact or verify the authentication provider.
+
+#### TOTP setup-URI copy
+
+**Copy setup URI** formats the current account/issuer/seed/settings into a local canonical `otpauth://totp/...` value and copies it through `IClipboardSecurityService`. The URI is not added as a second persisted vault field.
+
+Setup-URI clipboard exposure is more consequential than copying one short-lived generated code because the URI contains the long-lived seed. Timed clipboard cleanup remains best effort and cannot erase operating-system history/synchronization copies.
 
 Generated codes are not persisted.
 
@@ -610,7 +632,7 @@ Plaintext export requires:
 - share flow;
 - best-effort temporary-file cleanup.
 
-Attachments are not silently embedded in CSV export.
+Attachments are not silently embedded in CSV export. TOTP setup-URI interoperability is a separate single-item Item Editor workflow rather than part of generic CSV transfer.
 
 ## 14. About Page
 
@@ -655,7 +677,7 @@ Developer diagnostics must not expose:
 - secondary secrets;
 - DEKs/KEKs;
 - decrypted vault values;
-- TOTP seeds/codes;
+- TOTP seeds/codes/setup URIs;
 - clipboard plaintext;
 - private attachment contents;
 - raw exception messages/stacks containing paths/context.
@@ -663,6 +685,8 @@ Developer diagnostics must not expose:
 ## 16. Sensitive page lifecycle rules
 
 Sensitive ViewModels/pages clear bound credential/decrypted state when disappearing where the current implementation owns that state. Several longer-running authentication/file/share workflows also clear bound passphrase fields before continuing where practical.
+
+The Item Editor specifically clears the dedicated TOTP setup-URI import field after import attempts and again when the editor clears sensitive state on page disappearance.
 
 This reduces lifetime but cannot guarantee removal of .NET managed strings or OS/application copies.
 
@@ -708,12 +732,13 @@ These are OS/platform services, not pure UI controls. Source behavior can only p
 Release validation must verify:
 
 - screenshot/task-preview behavior;
-- clipboard history/synchronization/cleanup;
+- clipboard history/synchronization/cleanup, including copied TOTP setup URIs;
 - file picker cancellation/errors;
 - share-sheet completion/retention;
 - app background/sleep/resume transitions;
 - secure-storage behavior;
 - biometric enrollment/cancellation/lockout;
+- setup-URI import/copy usability and representative third-party TOTP compatibility using synthetic seeds;
 - screen reader/focus interactions.
 
 ## 21. Funding-surface build behavior
@@ -735,6 +760,7 @@ Before merging a UI change, confirm:
 - decrypted data is not introduced into persistent/plaintext UI caches;
 - secrets stay masked until explicit reveal;
 - copy is explicit;
+- setup URIs containing TOTP seeds are treated as secret data;
 - sensitive fields are cleared when ownership/lifecycle allows;
 - raw exception messages are not shown on sensitive paths;
 - platform calls are contained and reported safely;
@@ -756,5 +782,6 @@ Before merging a UI change, confirm:
 - [`architecture/LOCALIZATION.md`](architecture/LOCALIZATION.md)
 - [`security/SESSION_SECURITY.md`](security/SESSION_SECURITY.md)
 - [`security/DATA_LIFECYCLE.md`](security/DATA_LIFECYCLE.md)
+- [`security/TOTP.md`](security/TOTP.md)
 - [`privacy/DIAGNOSTICS.md`](privacy/DIAGNOSTICS.md)
 - [`COMPLETE_PROJECT_DOCUMENTATION.md`](COMPLETE_PROJECT_DOCUMENTATION.md)
