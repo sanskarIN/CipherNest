@@ -101,9 +101,9 @@ public partial class ItemEditorViewModel
     [RelayCommand]
     private void ImportTotpUri()
     {
-        if (!IsTotpItem || IsReauthenticationRequired) return;
         var uriText = TotpUriImportText;
         TotpUriImportText = string.Empty;
+        if (!IsTotpItem || IsReauthenticationRequired) return;
         if (string.IsNullOrWhiteSpace(uriText))
         {
             ErrorMessage = "Paste an otpauth://totp/... setup URI before importing.";
@@ -123,7 +123,7 @@ public partial class ItemEditorViewModel
         }
         catch (ArgumentException)
         {
-            ErrorMessage = "The TOTP setup URI is invalid or unsupported. CipherNest accepts bounded otpauth://totp/... URIs only; HOTP and ambiguous duplicate parameters are rejected.";
+            ErrorMessage = "The TOTP setup URI is invalid or unsupported. CipherNest accepts bounded otpauth://totp/... URIs only; HOTP and ambiguous parameters or labels are rejected.";
         }
         catch (Exception ex)
         {
