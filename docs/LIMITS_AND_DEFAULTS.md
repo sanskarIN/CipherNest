@@ -89,9 +89,12 @@ From `TotpUriCodec`:
 | URI text | maximum 8,192 characters |
 | Query pairs | maximum 16 |
 | Query parameter name | maximum 64 characters; ASCII letters/digits/`-`/`_` only |
-| Account name | maximum 512 characters |
-| Issuer | maximum 256 characters |
+| Query pair shape | non-empty `name=value`; empty pairs rejected |
+| Query value encoding | percent encoding validated for every pair, including otherwise ignored unknown parameters |
+| Account name | maximum 512 characters; `:` rejected inside the component |
+| Issuer | maximum 256 characters; `:` rejected inside the component |
 | Label | maximum 769 characters before account/issuer splitting |
+| Label separator | at most one `:` issuer/account separator; empty issuer prefix rejected |
 | User-info | rejected |
 | Custom port | rejected |
 | URI fragment | rejected |
@@ -102,7 +105,7 @@ From `TotpUriCodec`:
 | Label issuer vs `issuer=` mismatch | rejected when both are present |
 | Imported seed/settings | revalidated by `TotpPolicy` |
 
-Setup URIs normally contain the long-lived Base32 seed. The URI field is sensitive transient UI state, not a separately persisted vault field. Canonical setup-URI copies use the existing timed secret-clipboard path; operating-system clipboard history/synchronization remains outside a guaranteed-erasure boundary.
+The `:` rule avoids format→parse reinterpretation because the Key URI label uses `:` as the issuer/account delimiter. Setup URIs normally contain the long-lived Base32 seed. The URI field is sensitive transient UI state, not a separately persisted vault field. Canonical setup-URI copies use the existing timed secret-clipboard path; operating-system clipboard history/synchronization remains outside a guaranteed-erasure boundary.
 
 ## Vault storage limits
 
@@ -285,3 +288,5 @@ These are resource/safety ceilings, not recommended target sizes for ordinary da
 ## TOTP setup-URI bounds synchronization — 2026-08-18
 
 The `TotpUriCodec` continuation adds a separate bounded text/parser surface without changing vault-record or cryptographic-envelope versions. URI import reuses the existing authoritative `TotpPolicy` seed/settings validation after URI-specific structure and metadata validation. Setup-URI text is intentionally not persisted as a second copy of the seed.
+
+The final hardening pass additionally rejects ambiguous labels with extra `:` separators, rejects `:` inside account/issuer components, rejects an empty issuer prefix before a separator, rejects empty query pairs, and validates percent encoding/control characters for every query value even when the parameter itself is unknown and ignored. These rules preserve deterministic format→parse semantics and prevent malformed extension parameters from bypassing structural validation.
