@@ -79,6 +79,31 @@ From `TotpPolicy`, `VaultItem`, and `TotpService`:
 
 The TOTP limits bound local parser/HMAC work. A generated code is transient presentation state and is not persisted in the encrypted item record.
 
+### TOTP setup-URI interoperability bounds
+
+From `TotpUriCodec`:
+
+| `otpauth://` resource/rule | Current value |
+|---|---|
+| Accepted scheme/type | absolute `otpauth://totp/...` only |
+| URI text | maximum 8,192 characters |
+| Query pairs | maximum 16 |
+| Query parameter name | maximum 64 characters; ASCII letters/digits/`-`/`_` only |
+| Account name | maximum 512 characters |
+| Issuer | maximum 256 characters |
+| Label | maximum 769 characters before account/issuer splitting |
+| User-info | rejected |
+| Custom port | rejected |
+| URI fragment | rejected |
+| Duplicate query keys | rejected case-insensitively |
+| HOTP host/type | rejected |
+| `counter` parameter | rejected |
+| Display metadata Unicode Control/Format runes | rejected |
+| Label issuer vs `issuer=` mismatch | rejected when both are present |
+| Imported seed/settings | revalidated by `TotpPolicy` |
+
+Setup URIs normally contain the long-lived Base32 seed. The URI field is sensitive transient UI state, not a separately persisted vault field. Canonical setup-URI copies use the existing timed secret-clipboard path; operating-system clipboard history/synchronization remains outside a guaranteed-erasure boundary.
+
 ## Vault storage limits
 
 From `CipherNest.Shared.VaultStorageLimits`:
@@ -245,7 +270,7 @@ Favorite
 ReviewAfterUtc
 ```
 
-Attachments are not included in plaintext CSV export. The current CSV surface is generic and does not claim dedicated TOTP/`otpauth://` interoperability.
+Attachments are not included in plaintext CSV export. The CSV surface remains generic rather than acting as a dedicated authenticator migration format; dedicated bounded single-item TOTP `otpauth://totp/...` import/formatting now exists separately in the item editor.
 
 ## Final parser/extraction bounds synchronization — 2026-08-15
 
@@ -256,3 +281,7 @@ The final repository-side hardening reuses and enforces these existing limits ea
 - Backup ZIP restore: aggregate uncompressed archive content remains capped at **1 GiB** and entry count at `VaultStorageLimits.MaximumAttachmentCountTotal + 1`; actual extracted bytes must now exactly equal each entry's declared uncompressed length, using a reusable **128 KiB** extraction buffer.
 
 These are resource/safety ceilings, not recommended target sizes for ordinary data.
+
+## TOTP setup-URI bounds synchronization — 2026-08-18
+
+The `TotpUriCodec` continuation adds a separate bounded text/parser surface without changing vault-record or cryptographic-envelope versions. URI import reuses the existing authoritative `TotpPolicy` seed/settings validation after URI-specific structure and metadata validation. Setup-URI text is intentionally not persisted as a second copy of the seed.
