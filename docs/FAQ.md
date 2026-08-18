@@ -146,11 +146,11 @@ Yes. Items can require per-item current-master re-authentication before their de
 
 ### Is TOTP implemented?
 
-Yes. Local RFC-compatible TOTP generation is implemented.
+Yes. Local RFC-compatible TOTP generation and bounded single-item `otpauth://totp/...` setup-URI interoperability are implemented.
 
 ### Where is the TOTP seed stored?
 
-For a TOTP item, the Base32 seed is kept inside the authenticated encrypted `VaultItem` record.
+For a TOTP item, the Base32 seed is kept inside the authenticated encrypted `VaultItem` record. A setup URI is not persisted as a second vault field.
 
 ### Which algorithms are supported?
 
@@ -172,9 +172,25 @@ No. Generated TOTP codes are transient presentation state and are not persisted 
 
 No. The current UI uses explicit refresh/copy actions rather than a background refresh timer.
 
-### Are QR scanning and `otpauth://` import/export implemented?
+### Is `otpauth://` import/export implemented?
 
-No. Those interoperability surfaces are deliberately deferred and must not be advertised as complete.
+Yes, for bounded TOTP-only setup URIs. The Item Editor can import an `otpauth://totp/...` value locally and can format/copy the current TOTP item as a canonical setup URI. The parser applies URI/query/display limits, rejects duplicate query keys, checks issuer consistency, and reuses the normal TOTP seed/settings validation.
+
+### Is HOTP supported through setup URIs?
+
+No. `otpauth://hotp/...` and `counter` input are deliberately rejected rather than silently converted to TOTP.
+
+### Does setup-URI import contact the provider?
+
+No. Parsing is local. CipherNest does not verify that a server-side enrollment exists or that the displayed issuer/account is trustworthy. Review imported metadata before saving.
+
+### Is a copied setup URI as safe as a copied one-time code?
+
+No. A normal setup URI contains the long-lived seed and can therefore enable future code generation. CipherNest uses its timed secret-clipboard path, but OS clipboard history/synchronization and other applications remain outside guaranteed cleanup.
+
+### Is QR scanning/rendering implemented?
+
+No. Camera/QR scanning and QR rendering remain deferred, as do automatic provider/autofill enrollment surfaces.
 
 ### Does putting a password and TOTP seed in one vault preserve cryptographic factor separation?
 
@@ -272,6 +288,10 @@ The current UI requires the exact confirmation phrase `EXPORT PLAINTEXT`, curren
 
 No.
 
+### Is TOTP setup-URI interoperability part of CSV?
+
+No. It is a dedicated single-item Item Editor path. Generic CSV remains generic plaintext interoperability rather than an authenticator migration format.
+
 ### Does importing a CSV delete or encrypt the original external CSV?
 
 No. The source file remains outside CipherNest and must be handled separately by the user.
@@ -302,7 +322,7 @@ No. CipherNest performs logical application-managed deletion. Filesystems, SSD w
 
 ### Which values have explicit copy actions?
 
-Username, primary secret, secret custom fields, and TOTP codes.
+Username, primary secret, secret custom fields, TOTP codes, and TOTP setup URIs.
 
 ### Does the timer retain the copied plaintext?
 
@@ -376,6 +396,10 @@ No third-party crash-reporting provider is enabled in current source.
 
 Sanitized operation identifiers, exception type, HResult, severity, and fixed omission text. It intentionally omits raw exception messages/stacks and decrypted vault content.
 
+### Can diagnostics contain a TOTP seed or setup URI?
+
+They must not. TOTP seeds, generated codes, and setup URIs are sensitive and must not be emitted through diagnostics or copied into support artifacts.
+
 ## Build and development
 
 ### What SDK does CipherNest use?
@@ -418,7 +442,7 @@ No. Financial support is voluntary and does not change feature access, security/
 - `CipherNest.IntegrationTests`
 - `CipherNest.UiTests`
 
-They cover cryptography, validation, persistence, session policy, backup/restore, attachments, CSV, settings, lifecycle, TOTP, generator, documentation, branding, support metadata, build workflows, and other current invariants.
+They cover cryptography, validation, persistence, session policy, backup/restore, attachments, CSV, settings, lifecycle, TOTP code generation/setup-URI interoperability, generator, documentation, branding, support metadata, build workflows, and other current invariants.
 
 ### What is the current immutable pre-documentation implementation baseline?
 
@@ -446,7 +470,7 @@ Runs:
 - CipherNest CI `31937127961`
 - CodeQL `31937127900`
 
-Documentation commits after that baseline are new exact heads and must rerun configured gates before being called exact-head verified release candidates.
+That baseline remains immutable historical evidence for its exact SHA. The August 18 setup-URI continuation is a newer exact head and must pass its own configured gates before receiving an exact-head verified release-candidate claim.
 
 ### What about the older 240-test and 554-test documents?
 
@@ -454,7 +478,7 @@ They remain valid historical evidence for their original exact SHAs. Historical 
 
 ### Why can CI be green and the project still not be release-ready?
 
-CI cannot fully prove physical-device biometrics, secure storage, clipboard/history, lifecycle timing, screenshots, assistive-technology behavior, package signing, notarization, store review, release dependency/license state, or an independent professional security audit.
+CI cannot fully prove physical-device biometrics, secure storage, clipboard/history, lifecycle timing, screenshots, representative third-party TOTP setup-URI compatibility, assistive-technology behavior, package signing, notarization, store review, release dependency/license state, or an independent professional security audit.
 
 ## Release and distribution
 
@@ -482,7 +506,7 @@ Follow `SECURITY.md` and [`operations/SECURITY_RESPONSE.md`](operations/SECURITY
 
 ### What should support never request?
 
-Support should not request master/backup passphrases, recovery material, real vault contents, decrypted backups, private keys, secondary secrets, or secret-bearing diagnostics.
+Support should not request master/backup passphrases, recovery material, real vault contents, TOTP seeds/setup URIs, decrypted backups, private keys, secondary secrets, or secret-bearing diagnostics.
 
 ### What are the support contacts?
 
@@ -493,7 +517,7 @@ Support: `supportramsandesh@gmail.com`
 
 ### What is still planned?
 
-See [`NEXT_STEPS.md`](NEXT_STEPS.md) and [`FEATURE_MATRIX.md`](FEATURE_MATRIX.md). Major deferred areas include cloud/accounts/collaboration, autofill, Windows Hello, TOTP QR/`otpauth://` interoperability, rich PDF/binary preview/scanning, pronounceable-password mode, destructive wipe-on-failure, and complete translation of remaining literals/additional language catalogs.
+See [`NEXT_STEPS.md`](NEXT_STEPS.md) and [`FEATURE_MATRIX.md`](FEATURE_MATRIX.md). Major deferred areas include cloud/accounts/collaboration, autofill, Windows Hello, TOTP QR/camera and provider enrollment, HOTP interoperability, rich PDF/binary preview/scanning, pronounceable-password mode, destructive wipe-on-failure, and complete translation of remaining literals/additional language catalogs.
 
 ### Where can I see current source/evidence status?
 
