@@ -44,7 +44,7 @@ public sealed class TotpUriCodecTests
         var uri = codec.Format(source);
         var parsed = codec.Parse(uri);
 
-        Assert.StartsWith("otpauth://totp/", uri, StringComparison.Ordinal);
+        Assert.True(uri.StartsWith("otpauth://totp/", StringComparison.Ordinal));
         Assert.Contains("secret=JBSWY3DPEHPK3PXP", uri, StringComparison.Ordinal);
         Assert.Contains("algorithm=SHA512", uri, StringComparison.Ordinal);
         Assert.Contains("digits=8", uri, StringComparison.Ordinal);
