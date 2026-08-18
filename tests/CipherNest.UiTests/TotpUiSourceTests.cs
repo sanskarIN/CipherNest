@@ -40,12 +40,48 @@ public sealed class TotpUiSourceTests
         var xaml = File.ReadAllText(PathAt("src", "CipherNest.App", "Views", "ItemEditorPage.xaml"));
         var totpViewModel = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "ItemEditorViewModel.Totp.cs"));
         var clipboardViewModel = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "ItemEditorViewModel.Clipboard.cs"));
+        var vaultItem = File.ReadAllText(PathAt("src", "CipherNest.Domain", "Models", "VaultItem.cs"));
 
         Assert.Contains("Text=\"{Binding TotpUriImportText}\" IsPassword=\"True\"", xaml, StringComparison.Ordinal);
         Assert.Contains("HOTP is intentionally rejected", xaml, StringComparison.Ordinal);
         Assert.Contains("TotpUriImportText = string.Empty", totpViewModel, StringComparison.Ordinal);
         Assert.Contains("CopySecretAsync(uriText", totpViewModel, StringComparison.Ordinal);
         Assert.Contains("TotpUriImportText = string.Empty", clipboardViewModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("TotpUri", vaultItem, StringComparison.Ordinal);
+        Assert.DoesNotContain("OtpAuth", vaultItem, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TotpUriCodec_IsRegisteredExactlyOnceAndRemainsLocalOnly()
+    {
+        var composition = File.ReadAllText(PathAt("src", "CipherNest.App", "MauiProgram.cs"));
+        var codec = File.ReadAllText(PathAt("src", "CipherNest.Infrastructure", "Services", "TotpUriCodec.cs"));
+        const string registration = "AddSingleton<ITotpUriCodec, TotpUriCodec>()";
+
+        Assert.Contains(registration, composition, StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(composition, registration));
+        Assert.Contains("MaximumUriCharacters = 8_192", codec, StringComparison.Ordinal);
+        Assert.Contains("MaximumQueryPairs = 16", codec, StringComparison.Ordinal);
+        Assert.Contains("StringComparer.OrdinalIgnoreCase", codec, StringComparison.Ordinal);
+        Assert.Contains("TotpPolicy.NormalizeSecret", codec, StringComparison.Ordinal);
+        Assert.Contains("TotpPolicy.ValidateSettings", codec, StringComparison.Ordinal);
+        Assert.Contains("Only otpauth://totp/... URIs are supported; HOTP is not supported.", codec, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpClient", codec, StringComparison.Ordinal);
+        Assert.DoesNotContain("WebRequest", codec, StringComparison.Ordinal);
+        Assert.DoesNotContain("ZXing", codec, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Camera", codec, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int CountOccurrences(string value, string needle)
+    {
+        var count = 0;
+        var offset = 0;
+        while ((offset = value.IndexOf(needle, offset, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            offset += needle.Length;
+        }
+        return count;
     }
 
     private static string PathAt(params string[] segments)
