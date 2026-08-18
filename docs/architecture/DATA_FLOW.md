@@ -93,6 +93,7 @@ VaultItem normalization/validation
       +--> field/count/aggregate resource limits
       +--> secure-note shared limits
       +--> attachment metadata/identity validation
+      +--> TOTP seed/settings validation for OTP items
       |
       v
 VaultService obtains VaultKeyLease
@@ -111,7 +112,7 @@ StoredVaultItem(Guid Id, opaque encrypted envelope)
 IVaultStore / SQLite VaultItems
 ```
 
-The row ID must remain canonical and is authenticated by record AAD. Searchable fields are not copied into plaintext SQL indexes.
+The row ID must remain canonical and is authenticated by record AAD. Searchable fields are not copied into plaintext SQL indexes. A TOTP setup URI is not persisted as a second item field; only the existing account/title/seed/settings item fields are saved.
 
 ## 5. Reading items
 
@@ -267,7 +268,7 @@ construct + validate VaultItem
 VaultService.SaveItemAsync -> encrypted SQLite record
 ```
 
-Importing does not alter/delete the original external plaintext file.
+Importing does not alter/delete the original external plaintext file. Generic CSV remains a separate interoperability surface from TOTP setup-URI import.
 
 ## 12. Plaintext CSV export
 
@@ -406,7 +407,7 @@ Loading bounds the file before JSON parse, normalizes values, and falls back to 
 ## 16. Clipboard copy/clear
 
 ```text
-explicit username/secret copy action
+explicit username/secret/TOTP code/setup-URI copy action
       |
       v
 platform clipboard plaintext
@@ -421,7 +422,7 @@ later: hash current clipboard + fixed-time compare
       +--> mismatch: preserve newer unrelated clipboard content
 ```
 
-The delayed security state avoids retaining the copied plaintext in its timer state, but OS clipboard history/sync and other apps remain external risks.
+The delayed security state avoids retaining the copied plaintext in its timer state, but OS clipboard history/sync and other apps remain external risks. A TOTP setup URI normally embeds the long-lived seed, so its exposure can remain useful to an attacker after a single generated code would have expired.
 
 ## 17. Lock transition
 
@@ -517,16 +518,86 @@ IPrivacySafeExceptionReporter
 sanitized operation + exception type + HResult + severity
 ```
 
-Exception messages/stacks and decrypted vault context are intentionally omitted from the privacy-safe report path.
+Exception messages/stacks and decrypted vault context are intentionally omitted from the privacy-safe report path. TOTP seeds, generated codes, and setup URIs must not be emitted through diagnostics.
 
-## 21. Future data-flow warning
-
-Cloud sync/accounts/collaboration/autofill/TOTP/server storage are not part of this graph. Any future feature that moves vault data across process/device/network boundaries requires a new protocol/data-flow diagram, threat model, privacy assessment, compatibility/version design, and release gate before implementation.
-
-## TOTP seed and code flow
+## 21. TOTP seed and code flow
 
 A `OneTimePassword` item's Base32 seed and algorithm/digit/period settings follow the normal authenticated encrypted `VaultItem` path. After the item is decrypted while unlocked, explicit **Refresh code** passes the seed/settings plus current UTC time to `ITotpService`. The Infrastructure implementation performs bounded Base32 validation/decoding, HMAC generation, and dynamic truncation locally; the returned decimal code exists only in ViewModel presentation state and is not written to SQLite or backup as a generated-code field.
 
 Changing the seed/settings/item type clears displayed code state. A re-authentication-protected item cannot generate/display its code until current-master re-authentication succeeds. Explicit **Copy code** recalculates before copying through `IClipboardSecurityService`, so the same conditional timed-cleanup and OS clipboard-history limitations apply as for other secrets.
 
-The encrypted backup path naturally carries the encrypted seed/settings because it carries the encrypted vault database. QR/`otpauth://` import/export and autofill/provider enrollment are outside this current flow.
+The encrypted backup path naturally carries the encrypted seed/settings because it carries the encrypted vault database.
+
+## 22. TOTP setup-URI import flow
+
+```text
+masked Item Editor setup-URI field
+      |
+      v
+ImportTotpUriCommand
+      |
+      +--> copy current managed input reference locally
+      +--> clear bound URI field immediately
+      |
+      v
+ITotpUriCodec.Parse
+      |
+      +--> <=8,192 URI characters
+      +--> absolute otpauth://totp only
+      +--> no user-info/custom port/fragment
+      +--> exactly one label segment
+      +--> <=16 query pairs
+      +--> duplicate-key rejection
+      +--> percent/control/format metadata validation
+      +--> issuer consistency validation
+      +--> reject HOTP/counter
+      +--> TotpPolicy validates secret/settings
+      |
+      v
+TotpUriProfile
+      |
+      +--> Secret
+      +--> algorithm/digits/period
+      +--> Username/account label
+      +--> Title/issuer where present
+      |
+      v
+user reviews fields
+      |
+      v
+normal VaultItem save path if explicitly saved
+```
+
+Parsing is local and does not contact the provider. An import does not prove provider enrollment or account ownership. The dedicated import field is also cleared when the editor clears sensitive state on page disappearance. Managed-string/runtime copies remain subject to normal .NET lifetime limits.
+
+## 23. TOTP setup-URI copy flow
+
+```text
+current TOTP item fields
+      |
+      v
+CopyTotpUriCommand
+      |
+      v
+TotpUriProfile
+      |
+      v
+ITotpUriCodec.Format
+      |
+      +--> canonical local otpauth://totp URI
+      +--> bounded account/issuer/seed/settings validation
+      |
+      v
+IClipboardSecurityService.CopySecretAsync
+      |
+      +--> configured timed conditional cleanup
+      |
+      v
+platform clipboard / selected trusted destination
+```
+
+The URI is transient and not persisted as another vault field. Operating-system history/synchronization and recipient applications can retain it. Because the URI normally contains the Base32 seed, it must be treated like the seed rather than like one short-lived code.
+
+## 24. Future data-flow warning
+
+Cloud sync/accounts/collaboration/browser autofill/server storage, TOTP QR/camera enrollment, HOTP interoperability, and automatic provider enrollment are not part of this graph. Any future feature that moves vault data across additional process/device/network/camera boundaries requires a new protocol/data-flow diagram, threat model, privacy assessment, compatibility/version design, and release gate before implementation.
