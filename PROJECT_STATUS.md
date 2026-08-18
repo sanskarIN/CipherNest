@@ -36,7 +36,7 @@ For that exact SHA:
 - Mac Catalyst Release passed;
 - CodeQL v4 passed after analyzable core and MAUI application builds.
 
-That is exact evidence only for `8566980f...`. Documentation commits after it require their own exact-head runs before the later SHA can be called release-candidate verified.
+That is exact evidence only for `8566980f...`. The August 18 TOTP setup-URI continuation is newer implementation/documentation work and requires its own final exact-head runs before the later SHA can be called release-candidate verified.
 
 Historical 240-test and 554-test verification records remain preserved for their original exact candidates.
 
@@ -58,7 +58,7 @@ The project now has a full canonical documentation suite including:
 - full architecture/security/privacy/format/build/testing/release/operations documentation;
 - documentation verification records and source-regression tests.
 
-The complete-documentation source-to-doc gate is `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`.
+The complete-documentation source-to-doc gate is `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`. A dedicated August 18 TOTP setup-URI verification record is added by the current continuation once its exact scope/evidence is frozen.
 
 # 3. Implemented core architecture
 
@@ -177,8 +177,19 @@ TOTP seeds are excluded from ordinary password weakness/reuse heuristics. This a
 - Generated codes are transient and not persisted.
 - Temporary decoded/hash/counter buffers zeroed where practical.
 - Max-timestamp validity arithmetic safely clamped.
+- Application `TotpUriProfile` model and `ITotpUriCodec` abstraction.
+- Infrastructure `TotpUriCodec` bounded local parser/formatter.
+- `otpauth://totp/...` text import with 8,192-character URI and 16-query-pair ceilings.
+- TOTP URI account/issuer metadata bounds and Control/Format character rejection.
+- Case-insensitive duplicate query-key rejection.
+- Label/query issuer consistency validation.
+- Imported secret/algorithm/digits/period revalidated through the authoritative TOTP policy.
+- HOTP host/type and `counter` parameter deliberately rejected.
+- Masked transient setup-URI entry cleared after import attempts and when the editor clears sensitive state.
+- Canonical setup-URI copy through the existing timed secret-clipboard service.
+- Setup URI is not persisted as a second vault field.
 
-TOTP QR scanning/rendering, `otpauth://` import/export, and provider/autofill integration are not implemented.
+TOTP QR scanning/rendering/camera enrollment, HOTP interoperability, and provider/autofill integration are not implemented.
 
 # 10. Implemented generators and secure notes
 
@@ -255,6 +266,7 @@ TOTP QR scanning/rendering, `otpauth://` import/export, and provider/autofill in
 - Explicit warning/confirmation.
 - Best-effort temporary plaintext cleanup.
 - Attachments excluded from plaintext CSV export.
+- Generic CSV remains separate from dedicated single-item TOTP setup-URI interoperability.
 
 # 14. Implemented SQLite/migration/replacement hardening
 
@@ -299,7 +311,7 @@ Lifecycle fail-closed paths contain/report secondary lock/clipboard errors rathe
 
 # 16. Implemented clipboard/privacy-safe diagnostics
 
-- Explicit copy for username, primary secret, secret custom fields, and TOTP codes.
+- Explicit copy for username, primary secret, secret custom fields, TOTP codes, and TOTP setup URIs.
 - Delayed state stores SHA-256 fingerprint rather than copied plaintext.
 - Fixed-time fingerprint comparison.
 - Newer unrelated clipboard content preserved.
@@ -310,6 +322,7 @@ Lifecycle fail-closed paths contain/report secondary lock/clipboard errors rathe
 - No third-party crash-reporting provider enabled.
 - Sensitive ViewModel fields cleared on sensitive page disappearance where owned.
 - Bound credential fields cleared before several longer operations where practical.
+- TOTP seeds/codes/setup URIs are prohibited from diagnostics/support artifacts.
 
 # 17. Implemented accessibility/localization source support
 
@@ -370,6 +383,11 @@ Search query: 4,096 trimmed chars
 Settings JSON: 64 KiB / depth 16
 Backup archive: 1 GiB aggregate / 10,001 entries
 Crypto-bound passphrase input: 12–4,096 chars
+TOTP formatted seed input: 4,096 chars
+TOTP normalized seed: 16–1,024 Base32 chars
+TOTP setup URI: 8,192 chars / 16 query pairs
+TOTP URI account: 512 chars
+TOTP URI issuer: 256 chars
 ```
 
 See `docs/LIMITS_AND_DEFAULTS.md` for the authoritative full table.
@@ -380,7 +398,8 @@ Repository automation does not complete these gates:
 
 - physical Android biometric enrollment/absence/cancellation/lockout/secure-storage testing;
 - iOS/Mac Catalyst Face ID/Touch ID/secure-storage runtime testing;
-- real clipboard history/sync/cleanup behavior;
+- real clipboard history/sync/cleanup behavior, including copied TOTP setup URIs;
+- representative TOTP setup-URI compatibility with compatible third-party authenticators using synthetic seeds only;
 - background/sleep/resume lifecycle timing;
 - screenshot/app-switcher privacy behavior;
 - OS share-sheet plaintext retention/cleanup;
@@ -400,8 +419,8 @@ Repository automation does not complete these gates:
 - multi-device conflict resolution;
 - browser/application autofill;
 - Windows Hello convenience unlock;
-- TOTP QR scanning/rendering;
-- bounded `otpauth://` import/export;
+- TOTP QR scanning/rendering/camera enrollment;
+- HOTP interoperability;
 - TOTP provider/autofill enrollment;
 - rich PDF/binary preview and document scanning;
 - pronounceable-password mode;
@@ -409,7 +428,7 @@ Repository automation does not complete these gates:
 - complete migration/review of remaining UI literals into Hindi;
 - additional complete language catalogs.
 
-Deferred features are not represented as complete.
+Bounded TOTP `otpauth://totp/...` text import/formatting is implemented current source and is no longer listed as deferred. Deferred features are not represented as complete.
 
 # 22. Current documentation suite
 
@@ -429,7 +448,7 @@ Canonical entry points:
 - `docs/LIMITS_AND_DEFAULTS.md`
 - architecture/security/privacy/format/testing/release/operations specialist docs.
 
-The complete-documentation verification contract is `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`.
+The complete-documentation verification contract is `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`. The current continuation adds a dedicated TOTP setup-URI verification record rather than rewriting historical verification evidence.
 
 # 23. Next steps
 
@@ -437,10 +456,10 @@ The ordered external-validation/release/future-development roadmap is maintained
 
 Immediate release-oriented sequence:
 
-1. preserve one immutable candidate;
+1. preserve one immutable candidate after the current TOTP URI/documentation work stops changing the head;
 2. run exact-head CI/CodeQL/dependency/documentation gates;
 3. execute device security/lifecycle/clipboard/screenshot tests;
-4. validate backup/restore/recovery/interoperability on targets;
+4. validate backup/restore/recovery and TOTP URI interoperability on targets with synthetic data;
 5. execute accessibility/localization/responsive/performance validation;
 6. review dependencies/licenses/advisories;
 7. package/sign/notarize;
