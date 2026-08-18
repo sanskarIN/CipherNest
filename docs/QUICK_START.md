@@ -89,7 +89,9 @@ Item data remains inside authenticated encrypted record payloads at rest. Cipher
 
 ## 4. TOTP quick start
 
-For a TOTP item:
+For a TOTP item, either enter the provider's authorized Base32 seed/settings directly or import a supported TOTP setup URI.
+
+### Direct seed entry
 
 1. Choose **Time-Based One-Time Password (TOTP)**.
 2. Put the authorized Base32 seed in the Secret field.
@@ -100,7 +102,23 @@ For a TOTP item:
 7. Use **Refresh code** when you need a current code.
 8. Use **Copy code** only when necessary.
 
-Generated codes are transient and are not persisted in the vault item. QR scanning/rendering and `otpauth://` import/export are not implemented by the current source.
+### Import a setup URI
+
+1. Choose or open a TOTP item.
+2. Paste an authorized `otpauth://totp/...` value into the masked setup-URI field.
+3. Choose **Import URI**.
+4. Review the imported account name, issuer/title, algorithm, digits, period, and seed context.
+5. Save only after confirming the metadata belongs to the intended account.
+
+Import is local; CipherNest does not contact the authentication provider. The dedicated URI field is cleared after the import attempt and when the Item Editor clears sensitive state. HOTP/counter input is intentionally rejected.
+
+### Copy a setup URI
+
+Choose **Copy setup URI** only when you intentionally need to transfer the TOTP enrollment to a trusted compatible destination. CipherNest formats the current account/issuer/seed/settings locally and copies the sensitive URI through the same timed secret-clipboard path used for other secrets.
+
+Generated codes are transient and are not persisted in the vault item. A setup URI normally contains the long-lived seed, so it is more sensitive than one generated code. QR scanning/rendering and automatic provider/autofill enrollment are not implemented by the current source.
+
+Current setup-URI defensive ceilings include 8,192 characters and 16 query pairs. See [`security/TOTP.md`](security/TOTP.md) and [`LIMITS_AND_DEFAULTS.md`](LIMITS_AND_DEFAULTS.md) for the complete rules.
 
 ## 5. Add an encrypted attachment
 
@@ -169,6 +187,8 @@ Raw HTML is neutralized rather than rendered. Current secure-note ceilings are 2
 
 Secret copy is always explicit. CipherNest uses a fixed-size SHA-256 fingerprint for delayed clipboard comparison instead of keeping the copied plaintext in timer state.
 
+This policy also applies to copied TOTP setup URIs. Because a setup URI normally embeds the long-lived TOTP seed, protect it like the seed itself rather than treating it as a short-lived code.
+
 Clipboard clearing is best-effort. Operating-system clipboard history, clipboard sync, other applications, input methods, or accessibility software can retain content beyond CipherNest's control.
 
 ## 10. Trash and deletion
@@ -217,6 +237,8 @@ CSV is plaintext interoperability, not the recommended secure transfer path.
 ### Import
 
 Import requires explicit mapping for supported targets such as Title, Username, Secret, URL, Notes, Tags, Collection, and Type. Importing a CSV does not encrypt or remove the original source file outside CipherNest.
+
+TOTP setup-URI import is a separate dedicated Item Editor workflow, not a special CSV migration mode.
 
 ### Export
 
@@ -307,7 +329,7 @@ scripts/
 .github/workflows/
 ```
 
-Dependency direction is deliberately separated. UI code should not directly open the database, derive keys, parse encrypted containers, or obtain raw vault keys.
+Dependency direction is deliberately separated. UI code should not directly open the database, derive keys, parse encrypted containers, or obtain raw vault keys. TOTP setup-URI parsing/formatting is exposed through the Application `ITotpUriCodec` abstraction and implemented in Infrastructure rather than being reimplemented ad hoc in the UI.
 
 ## 18. Core verification
 
@@ -370,7 +392,7 @@ The immutable implementation baseline immediately before this documentation expa
 - Mac Catalyst Release: passed;
 - CodeQL v4: passed after analyzable core and MAUI application builds.
 
-Any documentation commit after that SHA becomes a new exact head and must rerun configured gates before being described as an exact-head verified release candidate.
+That remains historical evidence for that exact SHA. The August 18 TOTP setup-URI continuation creates a newer implementation/documentation head and therefore requires its own configured CI/CodeQL result before it can be described as exact-head verified.
 
 ## 23. Before editing security-sensitive code
 
@@ -379,6 +401,7 @@ Read at minimum:
 - [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md)
 - [`security/CRYPTOGRAPHIC_DESIGN.md`](security/CRYPTOGRAPHIC_DESIGN.md)
 - [`security/SESSION_SECURITY.md`](security/SESSION_SECURITY.md)
+- [`security/TOTP.md`](security/TOTP.md)
 - [`architecture/SESSION_AND_CONCURRENCY.md`](architecture/SESSION_AND_CONCURRENCY.md)
 - [`architecture/DATABASE.md`](architecture/DATABASE.md)
 - [`formats/VAULT_HEADER.md`](formats/VAULT_HEADER.md)
