@@ -27,19 +27,19 @@ For that exact implementation SHA:
 - Mac Catalyst Release passed;
 - CodeQL v4 passed after analyzable core and MAUI application builds.
 
-The full documentation expansion creates later commits, so the immediate task is:
+The August 18 TOTP setup-URI implementation/documentation creates a newer head, so the immediate task is:
 
-1. finish documentation/source-test synchronization;
+1. finish source, tests, and documentation synchronization;
 2. stop changing the candidate;
 3. run/observe exact-head core tests and formatting;
 4. run/observe Windows default + funding-disabled builds;
 5. run/observe Android build;
 6. run/observe iOS simulator + Mac Catalyst builds;
 7. run/observe CodeQL;
-8. record the exact final documentation SHA and run IDs;
+8. record the exact final SHA and run IDs;
 9. do not call that later SHA exact-head verified until all configured gates have finished successfully.
 
-See `verification/COMPLETE_DOCUMENTATION_2026_08_16.md` and `verification/CI_GATES.md`.
+See `verification/COMPLETE_DOCUMENTATION_2026_08_16.md`, the August 18 TOTP URI verification record, and `verification/CI_GATES.md`.
 
 ## Priority 1 — physical-device and lifecycle security validation
 
@@ -65,7 +65,27 @@ On Windows, Android, iOS, and Mac Catalyst where APIs permit:
 - cleanup behavior when lock occurs before the timer;
 - scheduled cleanup independence from the initiating UI request cancellation;
 - actual OS clipboard-history/synchronization behavior;
-- username/secret/custom-secret/TOTP-code paths all use the documented conditional policy.
+- username/secret/custom-secret/TOTP-code/TOTP-setup-URI paths all use the documented conditional policy;
+- setup URI exposure is treated as long-lived seed exposure rather than a short-lived code exposure.
+
+### TOTP setup-URI interoperability
+
+Using synthetic seeds only, validate representative compatible authenticator/provider formats:
+
+- canonical `otpauth://totp/...` import;
+- omitted algorithm/digits/period defaults;
+- percent-encoded account/issuer metadata;
+- exported URI round-trip;
+- issuer label/query agreement;
+- SHA-1/SHA-256/SHA-512 and 6/8-digit settings;
+- representative 30/60-second periods;
+- deliberate rejection of HOTP and `counter`;
+- deliberate rejection of duplicate query keys;
+- malformed/oversized URI rejection;
+- copied URI behavior through each platform clipboard/history/sync surface;
+- import field clearing after success/failure and after leaving the editor.
+
+Do not use real user TOTP seeds or setup URIs in validation artifacts.
 
 ### Biometrics
 
@@ -108,6 +128,7 @@ Keep Windows on master-passphrase fallback until a separately reviewed/tested Wi
 Using disposable synthetic vaults:
 
 - exercise all item types including TOTP;
+- exercise TOTP setup-URI import/copy around save/reopen/re-authentication;
 - exercise master unlock and recovery unlock separately;
 - verify recovery material cannot authorize master-only sensitive actions;
 - change master passphrase and confirm old master wrapper no longer works;
@@ -127,6 +148,7 @@ Test with synthetic datasets:
 - no attachments;
 - many attachments;
 - large attachments;
+- TOTP items imported directly and via synthetic setup URIs;
 - wrong backup passphrase;
 - corrupt/truncated container;
 - unsupported backup version;
@@ -143,7 +165,7 @@ Test with synthetic datasets:
 - stale recovery artifacts;
 - restored biometric reset.
 
-Verify failed restore preserves the active vault.
+Verify failed restore preserves the active vault and that restored TOTP items still generate expected synthetic codes/settings.
 
 ### Database replacement
 
@@ -171,6 +193,8 @@ Validate:
 - plaintext export phrase + current-master auth + warning;
 - temp-file cleanup behavior;
 - fixed/redacted file-error messages.
+
+Generic CSV must remain separate from dedicated TOTP setup-URI interoperability.
 
 ### Attachment export/preview
 
@@ -203,12 +227,13 @@ Execute and record target checks for:
 - tablet/large layouts;
 - resizable desktop windows;
 - touch targets;
-- light/dark/system contrast/readability.
+- light/dark/system contrast/readability;
+- TOTP setup-URI import/copy controls without exposing actual URI/seed through semantic labels.
 
 Localization work:
 
 - verify the current reviewed `hi-IN` resource-backed catalog on devices;
-- continue migrating remaining literals to resources;
+- continue migrating remaining literals to resources, including the new TOTP URI UI strings;
 - review security warnings in every new translation;
 - do not claim full Hindi translation until every remaining user-facing literal is migrated/reviewed;
 - add additional languages only with complete security-sensitive wording review.
@@ -222,7 +247,8 @@ Using synthetic disposable data:
 - 10,000-item vault;
 - representative larger attachments;
 - representative backup archives;
-- large valid CSV imports.
+- large valid CSV imports;
+- boundary-size valid TOTP setup URIs and repeated local parse/format operations.
 
 Measure:
 
@@ -233,7 +259,8 @@ Measure:
 - 50-item incremental rendering responsiveness;
 - attachment throughput;
 - backup/restore duration;
-- settings/storage enumeration behavior.
+- settings/storage enumeration behavior;
+- TOTP URI parser behavior at valid upper resource ceilings.
 
 Do not introduce plaintext indexes merely for speed. Any new encrypted index/search design requires privacy/security review.
 
@@ -249,6 +276,8 @@ For the exact release candidate:
 - document accepted vulnerability/license exceptions with owner and expiry;
 - preserve CodeQL/application-build coverage.
 
+The TOTP URI continuation adds no third-party parser/QR/network dependency; preserve that property unless a reviewed dependency change is justified.
+
 ## Priority 7 — release engineering
 
 Follow `releases/RELEASE_PROCESS.md` and `RELEASE_CHECKLIST.md`.
@@ -263,7 +292,9 @@ For each target distribution:
 - verify application ID, display version/build, permissions/capabilities, icons, splash, privacy declarations;
 - validate adaptive/monochrome/dark-surface branding;
 - use synthetic/demo vault content in screenshots;
+- never include a real TOTP setup URI/seed/code in screenshots or store media;
 - verify store copy contains no unsupported security claims;
+- describe bounded setup-URI text interoperability accurately without claiming QR/camera/HOTP/provider enrollment;
 - verify current target-store/region policy for the BMC CTA;
 - if necessary, package with `CipherNestEnableFundingLink=false` and record it in provenance;
 - freeze the complete documentation suite against the exact shipped artifact.
@@ -282,7 +313,8 @@ Before broader security claims or high-risk positioning, obtain independent revi
 - attachment container/framing/metadata;
 - backup format/archive/rollback;
 - SQLite migration/replacement/recovery;
-- TOTP implementation/same-vault factor tradeoffs;
+- TOTP generation/same-vault factor tradeoffs;
+- TOTP setup-URI parser/formatter bounds, duplicate handling, issuer consistency, Unicode metadata handling, and clipboard lifecycle;
 - clipboard fingerprint design;
 - plaintext export/data lifecycle;
 - resource ceilings/parser hostile-input handling;
@@ -299,7 +331,7 @@ After technical/review gates are complete:
 - create release tag;
 - preserve build provenance/checksums where practical;
 - publish exact supported platform/version matrix;
-- publish accurate privacy/recovery/plaintext-export limitations;
+- publish accurate privacy/recovery/plaintext-export/TOTP-URI limitations;
 - publish support/security-report channels;
 - verify BMC/store policy choice per package;
 - preserve historical verification evidence.
@@ -332,9 +364,18 @@ Requires platform-specific security/privacy/accessibility review and strict sess
 
 Requires a separately reviewed native convenience-unlock implementation and target testing; current release intentionally uses master-passphrase fallback.
 
-### TOTP QR and `otpauth://` interoperability
+### TOTP QR/camera and broader interoperability
 
-Local TOTP generation is already implemented. Future interoperability requires bounded URI/QR parsing, camera lifecycle/privacy review, secret-import UX, provider quirks, tests, and documentation.
+Bounded local `otpauth://totp/...` text import/formatting is already implemented. Future work is deliberately narrower and separate:
+
+- QR rendering;
+- camera/QR scanning;
+- HOTP/counter support if ever desired;
+- automatic provider enrollment;
+- autofill/browser integration;
+- provider-specific migration formats beyond the current bounded TOTP URI surface.
+
+Those additions require camera/lifecycle/privacy review, strict parser/resource policy, provider quirks, source/device tests, and documentation. They must not weaken the current TOTP-only URI boundary.
 
 ### Rich document preview/scanning
 
@@ -357,10 +398,11 @@ A release is not “done” merely because the repository compiles. A release ca
 3. exact-head CodeQL/dependency/security review is complete;
 4. documentation matches the exact candidate;
 5. target-device security/lifecycle/clipboard/screenshot tests are recorded;
-6. accessibility/localization/responsive validation is recorded;
-7. backup/restore/recovery/compatibility validation is recorded;
-8. dependencies/licenses/advisories are reviewed;
-9. package signing/notarization/store validation is complete;
-10. target store/region BMC policy has been resolved;
-11. independent professional security review status is represented truthfully;
-12. release provenance/tag/artifacts are preserved.
+6. representative synthetic TOTP setup-URI interoperability is recorded;
+7. accessibility/localization/responsive validation is recorded;
+8. backup/restore/recovery/compatibility validation is recorded;
+9. dependencies/licenses/advisories are reviewed;
+10. package signing/notarization/store validation is complete;
+11. target store/region BMC policy has been resolved;
+12. independent professional security review status is represented truthfully;
+13. release provenance/tag/artifacts are preserved.
