@@ -102,9 +102,34 @@ public sealed class TotpUriCodecTests
     [InlineData("otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&=value")]
     [InlineData("otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&bad%ZZ=value")]
     [InlineData("otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&issuer=Bad%ZZIssuer")]
+    [InlineData("otpauth://totp/%3Aaccount?secret=JBSWY3DPEHPK3PXP")]
+    [InlineData("otpauth://totp/Issuer%3Aaccount%3Aextra?secret=JBSWY3DPEHPK3PXP&issuer=Issuer")]
+    [InlineData("otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&&issuer=Example")]
+    [InlineData("otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&issuer=Example&")]
+    [InlineData("otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&future=bad%ZZvalue")]
+    [InlineData("otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&future=bad%0Avalue")]
     public void Parse_RejectsUnsupportedOrAmbiguousInputs(string input)
     {
         Assert.Throws<ArgumentException>(() => new TotpUriCodec().Parse(input));
+    }
+
+    [Fact]
+    public void Parse_EnforcesQueryNameBound()
+    {
+        var codec = new TotpUriCodec();
+        var overlongName = new string('x', 65);
+
+        Assert.Throws<ArgumentException>(() => codec.Parse($"otpauth://totp/Example?secret={Secret}&{overlongName}=1"));
+    }
+
+    [Fact]
+    public void Parse_AcceptsExactQueryPairBound()
+    {
+        var codec = new TotpUriCodec();
+        var extras = string.Join('&', Enumerable.Range(0, TotpUriCodec.MaximumQueryPairs - 1).Select(index => $"x{index}=1"));
+        var profile = codec.Parse($"otpauth://totp/Example?secret={Secret}&{extras}");
+
+        Assert.Equal("Example", profile.AccountName);
     }
 
     [Fact]
@@ -116,15 +141,6 @@ public sealed class TotpUriCodecTests
         var extra = string.Join('&', Enumerable.Range(0, TotpUriCodec.MaximumQueryPairs).Select(index => $"x{index}=1"));
         var uri = $"otpauth://totp/Example?secret={Secret}&{extra}";
         Assert.Throws<ArgumentException>(() => codec.Parse(uri));
-    }
-
-    [Fact]
-    public void Parse_EnforcesQueryNameBound()
-    {
-        var codec = new TotpUriCodec();
-        var overlongName = new string('x', 65);
-
-        Assert.Throws<ArgumentException>(() => codec.Parse($"otpauth://totp/Example?secret={Secret}&{overlongName}=1"));
     }
 
     [Fact]
@@ -173,6 +189,8 @@ public sealed class TotpUriCodecTests
         Assert.Throws<ArgumentException>(() => codec.Format(new TotpUriProfile("account", "Issuer", Secret, TotpAlgorithm.Sha1, 7, 30)));
         Assert.Throws<ArgumentException>(() => codec.Format(new TotpUriProfile("account", "Issuer", Secret, TotpAlgorithm.Sha1, 6, 121)));
         Assert.Throws<ArgumentException>(() => codec.Format(new TotpUriProfile("account", "Bad\u202EIssuer", Secret, TotpAlgorithm.Sha1, 6, 30)));
+        Assert.Throws<ArgumentException>(() => codec.Format(new TotpUriProfile("account:extra", "Issuer", Secret, TotpAlgorithm.Sha1, 6, 30)));
+        Assert.Throws<ArgumentException>(() => codec.Format(new TotpUriProfile("account", "Issuer:extra", Secret, TotpAlgorithm.Sha1, 6, 30)));
         Assert.Throws<ArgumentException>(() => codec.Format(new TotpUriProfile("account", "Issuer", Secret, (TotpAlgorithm)99, 6, 30)));
     }
 
