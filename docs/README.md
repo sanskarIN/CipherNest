@@ -91,6 +91,7 @@ These are implementation documents, not promises of permanent compatibility beyo
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — how tests are organized and when source/device testing is required.
 - [`verification/CI_GATES.md`](verification/CI_GATES.md) — configured CI/local gates and evidence rules.
 - [`verification/COMPLETE_DOCUMENTATION_2026_08_16.md`](verification/COMPLETE_DOCUMENTATION_2026_08_16.md) — source-to-document scope and gate for the full documentation expansion.
+- [`verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md`](verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md) — bounded text-only TOTP setup-URI implementation, parser hardening, regression coverage, and remaining exact-head/target validation gates.
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — build/runtime troubleshooting.
 
 ## Current immutable pre-documentation implementation baseline
@@ -120,6 +121,14 @@ Recorded run IDs:
 - CodeQL: `31937127900`
 
 This evidence belongs only to that immutable implementation SHA. The August 18 TOTP setup-URI implementation creates a newer exact head and requires its own configured CI/CodeQL evidence before being described as exact-head release-candidate verified.
+
+## Current continuation verification record
+
+The August 18 implementation and hardening record is:
+
+- [`verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md`](verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md)
+
+It records the text-only interoperability contract, local parser/formatter architecture, resource and ambiguity bounds, UI sensitive-state handling, test coverage, and the manual/platform evidence still required before broader compatibility claims.
 
 ## Historical verification records
 
