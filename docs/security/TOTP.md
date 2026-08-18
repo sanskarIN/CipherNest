@@ -1,14 +1,14 @@
 # Time-Based One-Time Passwords (TOTP)
 
-CipherNest supports local generation of RFC 6238-style time-based one-time passwords for vault items whose type is `OneTimePassword`.
+CipherNest supports local generation of RFC 6238-style time-based one-time passwords for vault items whose type is `OneTimePassword`, plus bounded `otpauth://totp/...` setup-URI import and export for interoperability with compatible authenticator workflows.
 
-This feature is intentionally local-first. CipherNest does not contact an authentication provider to generate a code and does not upload the seed. **Generated one-time codes are not persisted.** The Base32 seed is stored as the item's encrypted `Secret` field inside the existing authenticated vault-record envelope.
+This feature is intentionally local-first. CipherNest does not contact an authentication provider to generate a code, parse a setup URI, or format a setup URI, and it does not upload the seed. **Generated one-time codes are not persisted.** The Base32 seed is stored as the item's encrypted `Secret` field inside the existing authenticated vault-record envelope.
 
 ## Security status
 
 CipherNest has **not** completed an independent professional security audit. TOTP support does not change that status and must not be described as independently audited or as protection against every account-compromise scenario.
 
-A TOTP seed is equivalent to a long-lived authentication secret. Anyone who obtains the seed can normally generate future valid codes until the service-side TOTP enrollment is replaced. Protect the seed at least as carefully as a password or recovery secret.
+A TOTP seed is equivalent to a long-lived authentication secret. Anyone who obtains the seed can normally generate future valid codes until the service-side TOTP enrollment is replaced. An `otpauth://` setup URI normally contains that same seed and must be protected at least as carefully as the seed itself.
 
 ## Supported parameters
 
@@ -19,13 +19,21 @@ The current implementation supports:
 - HMAC-SHA-512;
 - 6-digit or 8-digit codes;
 - periods from 15 through 120 seconds;
-- Base32 seeds using `A-Z` and `2-7`, with case-insensitive input, optional whitespace/hyphen grouping, and optional terminal `=` padding.
+- Base32 seeds using `A-Z` and `2-7`, with case-insensitive input, optional whitespace/hyphen grouping, and optional terminal `=` padding;
+- local `otpauth://totp/...` parsing;
+- local canonical `otpauth://totp/...` formatting;
+- account-name and issuer metadata;
+- default URI parameters of SHA-1, 6 digits, and 30 seconds when those fields are absent.
+
+HOTP is intentionally not supported by the current item model or URI codec. A URI with host/type `hotp` or a `counter` parameter is rejected rather than being silently converted to TOTP.
 
 The default item settings are SHA-1, 6 digits, and 30 seconds because that combination is widely used. The provider's actual enrollment parameters are authoritative; choosing different parameters produces different codes.
 
 ## Resource and parser bounds
 
 TOTP input is treated as untrusted data even though it is usually pasted by the vault owner.
+
+### Base32 seed bounds
 
 - formatted seed input is capped at 4,096 characters before normalization;
 - normalized Base32 seed text is capped at 1,024 characters;
@@ -34,7 +42,25 @@ TOTP input is treated as untrusted data even though it is usually pasted by the 
 - invalid alphabet characters, non-terminal padding, and non-zero residual padding bits are rejected;
 - unsupported algorithms, digit counts, periods, and pre-Unix-epoch timestamps are rejected before code generation.
 
-These limits are defensive ceilings, not recommendations for unusually large seeds.
+### `otpauth://` URI bounds
+
+`TotpUriCodec` applies a separate interoperability boundary:
+
+- URI text is capped at 8,192 characters;
+- only absolute `otpauth://totp/...` URIs are accepted;
+- user-info, custom ports, fragments, HOTP, and `counter` are rejected;
+- the URI must contain exactly one label path segment;
+- query processing is capped at 16 pairs;
+- duplicate query keys are rejected case-insensitively to avoid ambiguous security-sensitive values;
+- query names are limited to a small ASCII identifier form;
+- invalid percent encoding and control characters are rejected;
+- account names are capped at 512 characters;
+- issuers are capped at 256 characters;
+- Unicode Control and Format characters are rejected from display metadata;
+- an issuer encoded in the label and an explicit `issuer=` parameter must match when both are present;
+- imported seed/algorithm/digits/period values are routed through the same authoritative TOTP validation used by code generation.
+
+These limits are defensive ceilings, not recommendations for unusually large seeds, labels, or URIs.
 
 ## Code generation
 
@@ -55,11 +81,50 @@ At generation time CipherNest:
 
 The HMAC object is disposed after each calculation. .NET/operating-system managed-memory limitations still apply: CipherNest cannot guarantee deterministic erasure of every string or runtime copy.
 
-## RFC verification
+## Setup-URI interoperability
+
+`ITotpUriCodec` is the application contract and `TotpUriCodec` is the current infrastructure implementation.
+
+### Import
+
+The item editor accepts a sensitive `otpauth://totp/...` text value. On successful import CipherNest updates:
+
+- `Secret` from `secret=`;
+- algorithm;
+- digits;
+- period;
+- username/identifier from the account label;
+- title from the issuer when available, otherwise from the account label.
+
+The dedicated URI-entry field is cleared after the import attempt and is also cleared when the item editor clears sensitive state on page disappearance.
+
+The import operation does not contact the issuer/provider, does not verify that a server-side enrollment exists, and does not prove that the imported seed belongs to the displayed account. Users should review imported metadata before saving.
+
+### Export/copy
+
+**Copy setup URI** formats the current TOTP seed/settings into a canonical local `otpauth://totp/...` URI. When a username is present, CipherNest uses it as the account name and uses the title as issuer metadata. If the username is empty, the title is used as the account label without duplicating it as issuer metadata.
+
+The resulting URI is copied through the existing secret clipboard service and therefore receives the configured best-effort timed cleanup behavior. The URI is not persisted as a separate vault field.
+
+### What is not implemented
+
+- QR scanning;
+- QR rendering;
+- camera-based enrollment;
+- automatic provider enrollment;
+- provider/network verification;
+- browser/application autofill based on TOTP;
+- HOTP URI import/export.
+
+Those features require separate platform/privacy/security design and testing.
+
+## RFC and interoperability verification
 
 `TotpServiceTests` includes RFC 6238 Appendix B known-answer vectors for SHA-1, SHA-256, and SHA-512 at the standard test timestamps. The tests also cover formatted lowercase Base32 input, configured code lengths, malformed seeds, unsupported settings, input ceilings, and pre-epoch rejection.
 
-Known-answer tests validate compatibility with those published vectors; they are not a substitute for independent cryptographic review.
+`TotpUriCodecTests` covers canonical parsing, standards-compatible defaults, format/parse round trips, wrong schemes, HOTP rejection, duplicate parameters, invalid settings, mismatched issuer metadata, URI/query ceilings, control/format characters, invalid secrets, and empty account names.
+
+Known-answer and parser tests validate deterministic repository behavior; they are not a substitute for independent cryptographic or interoperability review across every third-party authenticator/provider.
 
 ## Vault storage
 
@@ -84,18 +149,20 @@ The item editor exposes a TOTP section only when the selected item type is `OneT
 - there is no background refresh timer in the current implementation;
 - generated codes are presentation state and are not written back to the vault record;
 - changing the seed, algorithm, digit count, period, or item type clears the displayed code;
-- re-authentication-protected items cannot generate/display their code until the item has been re-authenticated;
-- **Copy code** refreshes the code immediately before copying it.
+- re-authentication-protected items cannot generate/display/import/export their TOTP material until the item has been re-authenticated;
+- **Copy code** refreshes the code immediately before copying it;
+- **Import URI** parses a local sensitive setup URI and clears the dedicated import text afterward;
+- **Copy setup URI** formats the current TOTP configuration and copies it using the timed secret-clipboard path.
 
 A manual refresh design keeps lifetime and lifecycle behavior explicit. A future automatic countdown/refresh implementation would require lifecycle, cancellation, accessibility, backgrounding, and sensitive-state review before release.
 
 ## Clipboard boundary
 
-Copying a TOTP code is an explicit user action and uses the same `IClipboardSecurityService` policy as other copied secrets. CipherNest attempts timed conditional cleanup and avoids clearing unrelated newer clipboard content.
+Copying a TOTP code or setup URI is an explicit user action and uses the same `IClipboardSecurityService` policy as other copied secrets. CipherNest attempts timed conditional cleanup and avoids clearing unrelated newer clipboard content.
 
 Clipboard cleanup is best effort. Operating systems may preserve clipboard history, synchronize clipboard content, expose it to accessibility/input services, or allow another application to read it before cleanup. Users can read the generated code directly instead of copying it when clipboard exposure is undesirable.
 
-Copying the Base32 seed through the generic Secret action is also explicit and carries greater long-term risk because the seed can generate future codes.
+Copying the Base32 seed through the generic Secret action or copying a setup URI carries greater long-term risk than copying one short-lived code because either can normally generate future codes.
 
 ## Audit behavior
 
@@ -107,9 +174,9 @@ Exact-duplicate detection still applies, and the duplicate signature includes th
 
 Encrypted CipherNest backup naturally carries TOTP items because it carries the encrypted vault database. Restoring a backup therefore restores the seed/settings represented by those encrypted records.
 
-Plaintext CSV behavior must be reviewed separately before claiming dedicated TOTP interoperability. The current TOTP feature does **not** add QR scanning, QR rendering, `otpauth://` import/export, cloud synchronization, browser autofill, or automatic provider enrollment.
+Dedicated local `otpauth://totp/...` interoperability is now implemented for single TOTP items. Plaintext CSV remains a separate generic transfer surface and should not be described as a dedicated authenticator-migration format. QR scanning/rendering, provider enrollment, cloud synchronization, and browser autofill remain unimplemented.
 
-Do not put real TOTP seeds in screenshots, documentation examples, test fixtures committed to the repository, issue reports, logs, or support messages.
+Do not put real TOTP seeds or setup URIs in screenshots, documentation examples, test fixtures committed to the repository, issue reports, logs, or support messages.
 
 ## Threat considerations
 
@@ -119,7 +186,7 @@ CipherNest does not claim to protect a TOTP account when:
 
 - malware can read the unlocked process or screen;
 - a malicious/compromised OS can capture clipboard or input/output;
-- the user exports/copies the seed to an untrusted destination;
+- the user exports/copies the seed or setup URI to an untrusted destination;
 - the authentication provider accepts a bypass/recovery path controlled by an attacker;
 - the device clock is materially wrong and the provider does not compensate;
 - the underlying service enrollment is compromised.
@@ -131,24 +198,45 @@ For high-value accounts, consider whether keeping the second-factor seed on a se
 Before release, maintainers should:
 
 - run all RFC known-answer tests;
+- run all `TotpUriCodecTests`;
 - verify invalid Base32 forms fail without unbounded work;
+- verify malformed/oversized/duplicate/HOTP setup URIs are rejected without network work;
 - verify 6- and 8-digit rendering on target platforms;
+- verify URI import populates account/issuer/settings correctly and clears the sensitive URI-entry field;
+- verify copied setup URIs round-trip with representative compatible authenticators using synthetic seeds only;
 - verify code generation after save/reopen and after re-authentication;
 - verify seed/settings survive encrypted backup/restore through normal record compatibility tests;
 - verify generated code is cleared when relevant editor state changes;
-- verify explicit clipboard behavior and lock cleanup on supported platforms;
+- verify explicit clipboard behavior and lock cleanup on supported platforms for codes and setup URIs;
 - verify security audit exclusions and duplicate behavior;
-- verify no TOTP seed/code is emitted through diagnostics;
-- verify documentation does not claim QR import, autofill, full second-factor isolation, or independent audit.
+- verify no TOTP seed/code/setup URI is emitted through diagnostics;
+- verify documentation does not claim QR import, provider enrollment, autofill, full second-factor isolation, or independent audit.
 
 ## Final repository-side TOTP hardening — 2026-08-15
 
-The final repository pass adds three implementation guarantees without changing the RFC 6238 code-generation algorithm:
+The August 15 repository pass added three implementation guarantees without changing the RFC 6238 code-generation algorithm:
 
 - the mutable normalization `char[]` owned by `TotpPolicy.NormalizeSecret(...)` is cleared in a `finally` block on success and failure;
-- Base32 normalization/decoding still completes before HMAC construction, including impossible-length, supplied-padding, invalid alphabet, and non-zero residual-bit rejection;
+- Base32 normalization/decoding completes before HMAC construction, including impossible-length, supplied-padding, invalid alphabet, and non-zero residual-bit rejection;
 - a validity window that would extend beyond `DateTimeOffset.MaxValue` is clamped to `DateTimeOffset.MaxValue` instead of throwing after a valid code has already been computed.
 
-`TotpBase32AdversarialTests` now contains exactly 128 deterministic hostile seeds with explicit numeric case IDs so every row is independently discoverable by xUnit. The corpus covers malformed length/padding, invalid digits and punctuation, Unicode control/format/non-ASCII forms, isolated UTF-16 surrogates, oversized normalized/formatted input, and non-zero residual bits. A source-regression test preserves parser-before-HMAC ordering and cleanup of owned mutable key/counter/hash/scratch buffers.
+`TotpBase32AdversarialTests` contains exactly 128 deterministic hostile seeds with explicit numeric case IDs so every row is independently discoverable by xUnit. The corpus covers malformed length/padding, invalid digits and punctuation, Unicode control/format/non-ASCII forms, isolated UTF-16 surrogates, oversized normalized/formatted input, and non-zero residual bits. A source-regression test preserves parser-before-HMAC ordering and cleanup of owned mutable key/counter/hash/scratch buffers.
 
 These cleanups narrow the lifetime of mutable buffers owned by CipherNest. They do **not** make immutable managed `string` copies of a seed deterministically erasable, and they do not provide independent second-factor separation when the TOTP seed and login secret live in the same unlocked vault.
+
+## `otpauth://` interoperability expansion — 2026-08-18
+
+The August 18 continuation adds bounded TOTP setup-URI import/export without adding QR, camera, provider, cloud, or HOTP behavior.
+
+Repository-side guarantees added in this pass include:
+
+- application `TotpUriProfile` model;
+- `ITotpUriCodec` abstraction;
+- `TotpUriCodec` bounded parser/formatter;
+- strict TOTP-only scheme/type validation;
+- duplicate-query rejection;
+- URI/query/display-metadata ceilings;
+- issuer consistency validation;
+- import field clearing after attempts and on page exit;
+- setup-URI copy through the existing timed secret clipboard service;
+- unit and UI/source regression tests for the new boundary.
