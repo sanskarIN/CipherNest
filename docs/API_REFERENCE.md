@@ -340,6 +340,31 @@ The current `TotpService` validates bounded Base32 input/settings, supports SHA-
 
 See `security/TOTP.md` for security/compatibility rules.
 
+## `CipherNest.Application.Abstractions.ITotpUriCodec`
+
+Local TOTP setup-URI interoperability boundary. This contract does not perform network/provider enrollment and intentionally supports TOTP only.
+
+```csharp
+TotpUriProfile Parse(string uriText);
+string Format(TotpUriProfile profile);
+```
+
+`TotpUriProfile`:
+
+```csharp
+public sealed record TotpUriProfile(
+    string AccountName,
+    string Issuer,
+    string Secret,
+    TotpAlgorithm Algorithm,
+    int Digits,
+    int PeriodSeconds);
+```
+
+The current `TotpUriCodec` accepts bounded absolute `otpauth://totp/...` URIs, rejects HOTP/counter input, rejects duplicate query parameters, applies URI/query/display-metadata ceilings, validates issuer consistency, and routes imported seed/settings through `TotpPolicy`. `Format(...)` emits a canonical local TOTP setup URI. A setup URI contains the long-lived seed and must be handled as secret data.
+
+Current URI-specific ceilings are documented in `LIMITS_AND_DEFAULTS.md`; threat and clipboard guidance is documented in `security/TOTP.md`.
+
 ## `CipherNest.Application.Abstractions.ISecurityAuditService`
 
 ```csharp
@@ -399,7 +424,7 @@ public sealed record VaultItem
 
 `Normalize(DateTimeOffset now)` trims `Title`, `Username`, `Url`, and `Collection`; trims/removes empty tags; de-duplicates/sorts tags case-insensitively; and sets `ModifiedUtc` to the supplied time.
 
-For `OneTimePassword` items, `Secret` is the encrypted Base32 seed and the three TOTP settings select HMAC algorithm, decimal digit count, and period. Generated codes are not `VaultItem` fields.
+For `OneTimePassword` items, `Secret` is the encrypted Base32 seed and the three TOTP settings select HMAC algorithm, decimal digit count, and period. Generated codes and imported setup-URI text are not `VaultItem` fields.
 
 ### `TotpAlgorithm`
 
