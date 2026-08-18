@@ -29,7 +29,7 @@ Do not request or commit:
 - payment credentials;
 - signing private keys/passwords;
 - store/API tokens;
-- real TOTP seeds or generated one-time codes.
+- real TOTP seeds, setup URIs, or generated one-time codes.
 
 ## 3. Small reviewable commits
 
@@ -46,13 +46,13 @@ documentation/release gate
 progress ledger
 ```
 
-Every connector-created commit in the current project work uses:
+The requested project commit identity is:
 
 ```text
-Signed-off-by: Sanskar <sanskarin@outlook.in>
+Sanskar <sanskarin@outlook.in>
 ```
 
-The GitHub connector controls actual Git author/committer metadata.
+When commits are created through a connector that does not expose an author-email override, include the requested identity in a `Signed-off-by` trailer where the connector accepts commit-message text, and verify actual Git author/committer metadata independently before release. Do not claim the connector changed author metadata when it did not.
 
 ## 4. Main-branch discipline
 
@@ -94,13 +94,14 @@ SQLite/migrations/replacement/snapshot/deletion
 EncryptedAttachmentStore/attachment policies
 EncryptedBackupService/backup policies
 CSV parser/transfer
+TOTP generation/setup-URI parser/formatter
 biometrics/secure storage
 clipboard/screenshot/lifecycle
 plaintext export/preview
 privacy-safe diagnostics
 ```
 
-Use `THREAT_MODEL.md`, `CRYPTOGRAPHIC_DESIGN.md`, `SESSION_SECURITY.md`, and `DATA_LIFECYCLE.md` as review checklists.
+Use `THREAT_MODEL.md`, `CRYPTOGRAPHIC_DESIGN.md`, `SESSION_SECURITY.md`, `DATA_LIFECYCLE.md`, and `TOTP.md` as review checklists where applicable.
 
 ## 8. Versioned format discipline
 
@@ -117,6 +118,8 @@ Do not conflate them. A schema change does not automatically mean a crypto-versi
 
 If interpretation changes incompatibly, introduce/review the proper version/migration path.
 
+TOTP setup-URI text interoperability is not a new persisted vault format: the current implementation parses or formats transient text around the existing TOTP item fields. Do not introduce a duplicate persisted URI field without explicit compatibility/security review.
+
 ## 9. Migration discipline
 
 Released migrations are compatibility history.
@@ -132,9 +135,11 @@ Released migrations are compatibility history.
 
 Limits exist to bound malicious/corrupted local input and application memory work.
 
-When changing a limit, update all mirrored boundaries, arithmetic-policy tests, integration behavior, test/release gates, `LIMITS_AND_DEFAULTS.md`, and affected format docs.
+When changing a limit, update all mirrored boundaries, arithmetic-policy tests, integration behavior, test/release gates, `LIMITS_AND_DEFAULTS.md`, and affected format/security docs.
 
 Avoid increasing a ceiling merely to make a pathological test/file pass without reviewing memory/CPU/disk consequences.
+
+For TOTP setup URIs, preserve the current independent URI/query/account/issuer ceilings, duplicate-key rejection, and downstream `TotpPolicy` validation unless a reviewed replacement is introduced.
 
 ## 11. Dependency updates
 
@@ -159,11 +164,12 @@ MAUI/Android/iOS/Windows/platform SDK upgrades can change:
 - secure storage;
 - lifecycle behavior;
 - file picker/share behavior;
+- clipboard behavior;
 - screenshot protections;
 - packaging/signing;
 - accessibility semantics.
 
-A successful compile is not enough. Re-run the target device matrix.
+A successful compile is not enough. Re-run the target device matrix. TOTP setup-URI parsing is platform-independent, but copied setup URIs still cross the platform clipboard boundary and need representative runtime validation.
 
 ## 13. Backup/recovery maintenance
 
@@ -190,7 +196,7 @@ Useful requests:
 - whether a separate verified backup exists;
 - approximate non-sensitive file size/count.
 
-Do not ask for passphrases/recovery material/real vault contents.
+Do not ask for passphrases/recovery material/real vault contents/TOTP seeds/setup URIs/current codes.
 
 ## 15. Security reports
 
@@ -229,7 +235,8 @@ For a candidate review:
 - record missing/no-status as missing evidence, not pass;
 - inspect failing logs rather than rerunning until green without understanding failures;
 - keep timeouts/cancel-in-progress behavior;
-- do not disable CodeQL/dependency checks to ship faster.
+- do not disable CodeQL/dependency checks to ship faster;
+- because the main workflow uses cancel-in-progress concurrency, collect final evidence only after the intended exact head stops moving.
 
 ## 19. Store policy maintenance
 
@@ -273,7 +280,7 @@ When adding a language:
 
 Every new UI surface should pass the checklist in `ACCESSIBILITY.md` and receive target-device screen-reader/keyboard/large-text validation before release.
 
-Do not put a secret in semantic metadata merely because it is not visually displayed.
+Do not put a secret in semantic metadata merely because it is not visually displayed. In particular, TOTP setup-URI fields/descriptions must not echo the actual URI/seed into accessibility labels.
 
 ## 23. Performance maintenance
 
@@ -289,14 +296,16 @@ Do not quietly implement one piece of these and advertise the whole feature:
 
 - cloud sync/accounts/collaboration;
 - autofill;
-- TOTP QR scanning/rendering, `otpauth://` enrollment interoperability, and provider/autofill integration;
+- TOTP QR scanning/rendering/camera enrollment;
+- HOTP interoperability;
+- TOTP provider/autofill enrollment;
 - Windows Hello;
 - rich binary/PDF preview/scanning;
 - pronounceable passwords;
 - automatic destructive wipe;
 - complete migration/review of remaining UI literals into additional-language catalogs.
 
-Each requires its own design/test/privacy/migration/release plan.
+Bounded `otpauth://totp/...` text import/formatting is implemented and is no longer part of the deferred list. Each remaining item requires its own design/test/privacy/migration/release plan.
 
 ## 25. Release maintenance
 
@@ -327,15 +336,31 @@ A new maintainer should first read:
 6. `security/THREAT_MODEL.md`;
 7. `security/CRYPTOGRAPHIC_DESIGN.md`;
 8. `security/DATA_LIFECYCLE.md`;
-9. `TESTING_GUIDE.md`;
-10. `releases/RELEASE_PROCESS.md`.
+9. `security/TOTP.md`;
+10. `TESTING_GUIDE.md`;
+11. `releases/RELEASE_PROCESS.md`.
 
 Then run the core verification scripts on a clean checkout before making security-sensitive changes.
 
 ## TOTP maintenance rules
 
-Treat TOTP seed/settings as security-sensitive encrypted record semantics. Preserve the explicit persisted `VaultItemType` numeric values, RFC 6238 known-answer vectors, Base32/resource bounds, no-generated-code-persistence rule, audit exclusions, and explicit clipboard behavior. Any QR/`otpauth://` parser, background refresh, autofill/provider integration, or broader interoperability change requires dedicated threat, parser, lifecycle, accessibility, format, and release review rather than being folded into an unrelated UI patch.
+Treat TOTP seed/settings/setup URIs as security-sensitive semantics. Preserve the explicit persisted `VaultItemType` numeric values, RFC 6238 known-answer vectors, Base32/resource bounds, no-generated-code-persistence rule, audit exclusions, and explicit clipboard behavior.
 
-Never request a user's real TOTP seed or current code in support/security triage. Synthetic seeds only belong in tests/documentation.
+For the implemented setup-URI surface, preserve:
+
+- TOTP-only `otpauth://totp/...` acceptance;
+- HOTP and `counter` rejection;
+- URI/query/display metadata bounds;
+- duplicate-query rejection;
+- issuer consistency validation;
+- downstream `TotpPolicy` validation;
+- masked/transient import UI state;
+- no setup-URI persistence as a separate item field;
+- no secret-bearing diagnostics;
+- setup-URI copy through secret clipboard handling.
+
+Any QR/camera parser/rendering, background refresh, HOTP, autofill/provider integration, or broader interoperability change requires dedicated threat, parser, lifecycle, accessibility, format, and release review rather than being folded into an unrelated UI patch.
+
+Never request a user's real TOTP seed, setup URI, or current code in support/security triage. Synthetic seeds only belong in tests/documentation.
 
 For localization, maintain neutral-English/satellite key parity and do not describe the complete UI as Hindi-translated until remaining literals are migrated and reviewed.
