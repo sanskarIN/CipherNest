@@ -213,6 +213,8 @@ Current direct version pins include:
 | xunit | `2.9.3` |
 | xunit.runner.visualstudio | `3.1.4` |
 
+TOTP setup-URI text interoperability does not add a third-party QR, URI-parser, camera, network, or authenticator dependency; it uses the platform/BCL URI facilities plus existing CipherNest validation.
+
 Dependency changes require restore/build/test review, vulnerability/advisory review, third-party-license review, and release-documentation updates.
 
 ## 9. Persisted user preferences
@@ -303,7 +305,7 @@ Normalized range:
 5..300 seconds
 ```
 
-Clipboard cleanup is best-effort and does not guarantee deletion from OS history/synchronization.
+Clipboard cleanup is best-effort and does not guarantee deletion from OS history/synchronization. This same configured interval is used when a TOTP setup URI is explicitly copied because the URI contains the long-lived seed and follows the secret-clipboard path.
 
 ### Screenshot protection
 
@@ -535,6 +537,8 @@ Current compatibility identifiers:
 | Backup magic | `CNBK0002` |
 | Attachment magic | `CNAT0001` |
 
+The TOTP setup-URI codec is transient text interoperability and does not introduce a new persisted format/schema version. The setup URI is parsed into or formatted from existing TOTP item fields.
+
 Never silently reuse an old format/schema version for an incompatible structure.
 
 ## 12. Cryptographic defaults
@@ -617,6 +621,26 @@ See [`LIMITS_AND_DEFAULTS.md`](LIMITS_AND_DEFAULTS.md) for every current parser/
 
 Whitespace and `-` grouping are removed during normalization. Base32 input is case-insensitive. Generated codes are not persisted.
 
+### TOTP setup-URI parser/formatter
+
+| Setting/resource | Current rule |
+|---|---|
+| Scheme/type | absolute `otpauth://totp/...` only |
+| URI text | maximum 8,192 characters |
+| Query pairs | maximum 16 |
+| Query parameter name | maximum 64 characters; ASCII letters/digits/`-`/`_` |
+| Account name | maximum 512 characters |
+| Issuer | maximum 256 characters |
+| Label | maximum 769 characters before splitting |
+| Duplicate query keys | rejected case-insensitively |
+| User-info/custom port/fragment | rejected |
+| HOTP/`counter` | rejected |
+| Unicode Control/Format in display metadata | rejected |
+| Label/query issuer disagreement | rejected |
+| Secret/settings validation | delegated to the same `TotpPolicy` used by code generation |
+
+`TotpUriCodec` is registered as the singleton implementation of Application `ITotpUriCodec`. Setup URI import/export is local only; no camera, QR, network/provider, or cloud service is configured. The imported URI field is transient sensitive UI state and is not persisted as a separate setting or vault property.
+
 ## 17. Attachment configuration/limits
 
 | Setting | Value |
@@ -657,7 +681,7 @@ Backup restore applies both authenticated-container checks and staged SQLite/res
 | Aggregate row characters | 2,000,000 |
 | Retained user-visible warnings | 20 |
 
-CSV mapped Tags additionally enforce the canonical 100-tag / 128-character item policy before item construction.
+CSV mapped Tags additionally enforce the canonical 100-tag / 128-character item policy before item construction. TOTP setup-URI text interoperability is a separate Item Editor path rather than CSV configuration.
 
 ## 20. Verification scripts
 
@@ -708,7 +732,7 @@ Mac Catalyst: passed
 CodeQL v4: passed
 ```
 
-Later commits must rerun exact-head gates before being described as release-candidate verified.
+Later commits, including the August 18 TOTP setup-URI continuation, must rerun exact-head gates before being described as release-candidate verified.
 
 ## 23. Configuration changes requiring documentation/review
 
@@ -725,6 +749,8 @@ Update the relevant docs/tests whenever changing:
 - KDF defaults/bounds;
 - vault item/resource ceilings;
 - settings defaults/bounds;
+- TOTP algorithms/digits/period/seed rules;
+- TOTP setup-URI syntax/resource/metadata/clipboard boundaries;
 - backup/archive ceilings;
 - CSV limits;
 - platform capability claims;
@@ -739,6 +765,7 @@ Update the relevant docs/tests whenever changing:
 - [`UI_REFERENCE.md`](UI_REFERENCE.md)
 - [`LIMITS_AND_DEFAULTS.md`](LIMITS_AND_DEFAULTS.md)
 - [`API_REFERENCE.md`](API_REFERENCE.md)
+- [`security/TOTP.md`](security/TOTP.md)
 - [`setup/BUILD.md`](setup/BUILD.md)
 - [`verification/CI_GATES.md`](verification/CI_GATES.md)
 - [`releases/REPRODUCIBLE_BUILDS.md`](releases/REPRODUCIBLE_BUILDS.md)
