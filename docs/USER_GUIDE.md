@@ -92,7 +92,6 @@ Every item has a required title and can also contain a username/identifier, secr
 
 The application normalizes title/username/URL/collection and tags before storage. Tags are trimmed, empty tags are removed, duplicate tags are collapsed case-insensitively, and tags are sorted.
 
-
 ### TOTP items
 
 Choose **Time-Based One-Time Password (TOTP)** when you are authorized to store an authentication seed in CipherNest. In this item type, the normal Secret field is the Base32 TOTP seed. Select the provider's algorithm (SHA-1/SHA-256/SHA-512), digit count (6 or 8), and period (15–120 seconds; commonly 30).
@@ -102,10 +101,37 @@ Choose **Time-Based One-Time Password (TOTP)** when you are authorized to store 
 - Generated codes are not saved into the vault record.
 - **Copy code** refreshes immediately and then uses the same timed best-effort clipboard cleanup policy as other secrets.
 - A copied seed has longer-lived risk than a copied one-time code because the seed can generate future codes.
-- QR scanning/rendering and `otpauth://` import/export are not implemented by the current source. Enter only seed/settings you are authorized to use.
+- Bounded local `otpauth://totp/...` setup-URI import and canonical setup-URI copy are implemented.
+- HOTP/counter setup URIs are intentionally rejected.
+- QR scanning/rendering and provider/autofill enrollment are not implemented by the current source.
 - If password and TOTP seed for the same service are kept in one vault, compromise of the unlocked vault can expose both factors.
 
-See `security/TOTP.md` for the precise security model and RFC compatibility details.
+#### Import a TOTP setup URI
+
+Use this only with a setup URI you are authorized to import.
+
+1. Open or create a TOTP item.
+2. Paste the `otpauth://totp/...` value into the masked **Import a TOTP setup URI** field.
+3. Choose **Import URI**.
+4. CipherNest parses the URI locally; it does not contact the provider.
+5. Review the imported account name, issuer/title, algorithm, digits, period, and seed context before saving.
+6. Save the item only after confirming the imported metadata matches the intended account.
+
+The dedicated import field is cleared after the import attempt and is also cleared when the Item Editor clears sensitive page state. The URI contains the long-lived seed, so do not paste it into support chats, logs, screenshots, issue reports, or untrusted applications.
+
+The current parser deliberately applies defensive ceilings and rejects unsupported/ambiguous input such as HOTP, `counter`, duplicate query keys, unsupported algorithms/digits/periods, inconsistent issuer metadata, invalid percent encoding, control/format metadata characters, or a malformed Base32 seed.
+
+#### Copy a TOTP setup URI
+
+1. Open a TOTP item after any required re-authentication.
+2. Confirm the account/issuer/seed/settings are correct.
+3. Choose **Copy setup URI**.
+4. CipherNest formats a canonical `otpauth://totp/...` value locally and copies it through the same timed secret-clipboard service used for other sensitive copy actions.
+5. Paste only into a trusted authenticator or destination you intentionally selected.
+
+A copied setup URI is more sensitive than a single generated code because it normally contains the long-lived seed. Clipboard cleanup is best effort: operating-system history, synchronization, keyboards, accessibility services, or other applications can retain/read the value outside CipherNest's control.
+
+See `security/TOTP.md` for the precise security model, URI limits, and RFC compatibility details.
 
 ### Important item limits
 
@@ -119,6 +145,7 @@ See `security/TOTP.md` for the precise security model and RFC compatibility deta
 - Attachments: maximum 25 per item.
 - Combined item text/metadata budget: 2,000,000 characters.
 - Secure-note text: maximum 200,000 characters and 5,000 lines.
+- TOTP setup URI: maximum 8,192 characters with at most 16 query pairs.
 
 These are safety ceilings, not recommended everyday item sizes.
 
@@ -248,9 +275,11 @@ See `security/PASSPHRASE_GENERATOR.md`.
 
 ## 11. Clipboard behavior
 
-Username, primary-secret, secret-custom-field, and TOTP-code copy actions are explicit.
+Username, primary-secret, secret-custom-field, TOTP-code, and TOTP-setup-URI copy actions are explicit.
 
-After a successful secret copy, CipherNest keeps a fixed-size SHA-256 fingerprint for delayed comparison rather than retaining the copied plaintext in the timer state. It clears only when the current clipboard still matches the value CipherNest previously copied, helping avoid erasing unrelated clipboard content copied afterward.
+After a successful sensitive copy, CipherNest keeps a fixed-size SHA-256 fingerprint for delayed comparison rather than retaining the copied plaintext in the timer state. It clears only when the current clipboard still matches the value CipherNest previously copied, helping avoid erasing unrelated clipboard content copied afterward.
+
+A TOTP setup URI normally contains the long-lived seed, so its clipboard exposure can remain useful to an attacker much longer than one generated code.
 
 Platform clipboard history, clipboard synchronization, keyboard software, accessibility services, other apps, screenshots, and OS caches remain outside CipherNest's deletion guarantees.
 
@@ -324,6 +353,8 @@ Supported mapping targets are:
 - Type
 
 Review every mapping before import. The source CSV remains plaintext outside CipherNest; importing it does not delete or encrypt the original external file.
+
+Dedicated TOTP setup-URI import is handled directly inside a TOTP Item Editor rather than through generic CSV mapping.
 
 ### Plaintext CSV export
 
@@ -408,6 +439,8 @@ See `ACCESSIBILITY.md` and `architecture/LOCALIZATION.md`.
 
 CipherNest does not enable a third-party analytics or crash-reporting service in the current source. The internal privacy-safe exception reporter records sanitized operation identifiers, exception type, HResult, severity, and fixed text while intentionally omitting exception messages/stacks and decrypted vault content.
 
+TOTP seeds, generated codes, and setup URIs must not be emitted through diagnostics or support artifacts.
+
 See `privacy/DIAGNOSTICS.md` and `../PRIVACY.md`.
 
 ## 21. Support and security reports
@@ -416,7 +449,7 @@ Repository: https://github.com/sanskarIN/CipherNest
 Business: sanskarin@outlook.in  
 Support: supportramsandesh@gmail.com
 
-For security issues, follow `../SECURITY.md`. Never send a real vault, passphrase, recovery key, decrypted backup, secret-bearing screenshot, signing key, or private attachment to a public issue.
+For security issues, follow `../SECURITY.md`. Never send a real vault, passphrase, recovery key, TOTP seed/setup URI, decrypted backup, secret-bearing screenshot, signing key, or private attachment to a public issue.
 
 ## 22. Features intentionally not represented as complete
 
@@ -430,6 +463,6 @@ The current release does not claim completed support for:
 - pronounceable-password mode;
 - destructive automatic wipe after failed unlock attempts;
 - complete migration/review of the remaining UI into Hindi/additional translation catalogs;
-- TOTP QR scanning/rendering, `otpauth://` import/export, and autofill/provider enrollment integration.
+- TOTP QR scanning/rendering, HOTP interoperability, and autofill/provider enrollment integration.
 
 See `NEXT_STEPS.md` for the reviewed future-work sequence.
