@@ -58,6 +58,7 @@ public sealed class DocumentationCoverageSourceTests
         ["docs", "verification", "VERIFIED_MAIN_BASELINE_2026_08_15.md"],
         ["docs", "verification", "REPOSITORY_AUDIT_2026_08_16.md"],
         ["docs", "verification", "COMPLETE_DOCUMENTATION_2026_08_16.md"],
+        ["docs", "verification", "TOTP_URI_INTEROPERABILITY_2026_08_18.md"],
         ["docs", "operations", "BACKUP_RECOVERY_RUNBOOK.md"],
         ["docs", "operations", "SECURITY_RESPONSE.md"],
         ["docs", "releases", "PACKAGING.md"],
@@ -153,6 +154,7 @@ public sealed class DocumentationCoverageSourceTests
                      "verification/VERIFIED_MAIN_BASELINE_2026_08_15.md",
                      "verification/REPOSITORY_AUDIT_2026_08_16.md",
                      "verification/COMPLETE_DOCUMENTATION_2026_08_16.md",
+                     "verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md",
                      "operations/BACKUP_RECOVERY_RUNBOOK.md",
                      "operations/SECURITY_RESPONSE.md",
                      "releases/RELEASE_PROCESS.md"
@@ -274,6 +276,48 @@ public sealed class DocumentationCoverageSourceTests
                  })
         {
             Assert.Contains(expected, complete, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void CurrentTotpInteroperabilityDocumentation_MatchesImplementedBoundary()
+    {
+        var readme = File.ReadAllText(PathAt("README.md"));
+        var complete = File.ReadAllText(PathAt("docs", "COMPLETE_PROJECT_DOCUMENTATION.md"));
+        var features = File.ReadAllText(PathAt("docs", "FEATURE_MATRIX.md"));
+        var userGuide = File.ReadAllText(PathAt("docs", "USER_GUIDE.md"));
+        var faq = File.ReadAllText(PathAt("docs", "FAQ.md"));
+        var totp = File.ReadAllText(PathAt("docs", "security", "TOTP.md"));
+        var store = File.ReadAllText(PathAt("docs", "releases", "STORE_LISTING_GUIDE.md"));
+        var verification = File.ReadAllText(PathAt("docs", "verification", "TOTP_URI_INTEROPERABILITY_2026_08_18.md"));
+
+        foreach (var current in new[] { readme, complete, features, userGuide, faq, totp, store, verification })
+        {
+            Assert.Contains("otpauth://totp/", current, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("HOTP", current, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("ITotpUriCodec -> TotpUriCodec", complete, StringComparison.Ordinal);
+        Assert.Contains("Copy setup URI", userGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("8,192", totp, StringComparison.Ordinal);
+        Assert.Contains("at most one `:`", totp, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("empty query pairs", totp, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("universal", store, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Final ambiguity hardening", totp, StringComparison.OrdinalIgnoreCase);
+
+        foreach (var stale in new[]
+                 {
+                     "`otpauth://` import/export are not implemented",
+                     "`otpauth://` import/export | **Deferred**",
+                     "TOTP QR/`otpauth://` interoperability"
+                 })
+        {
+            Assert.DoesNotContain(stale, readme, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(stale, complete, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(stale, features, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(stale, userGuide, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(stale, faq, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(stale, store, StringComparison.OrdinalIgnoreCase);
         }
     }
 
