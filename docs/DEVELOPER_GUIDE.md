@@ -14,13 +14,13 @@ For a faster orientation, also use [`QUICK_START.md`](QUICK_START.md), [`FEATURE
 
 - `src/CipherNest.Shared` — product/version/storage constants and small cross-layer primitives.
 - `src/CipherNest.Domain` — framework-independent domain records and enums.
-- `src/CipherNest.Application` — use-case abstractions, policies, validation, DTOs, safe-note contracts, session/security policy, and application exceptions; no MAUI/SQLite dependency.
-- `src/CipherNest.Infrastructure` — Argon2id/AES-GCM cryptography, SQLite, migrations, encrypted attachments, encrypted backup/restore, CSV parsing/transfer, password/passphrase generation, RFC-compatible TOTP generation, and local audit implementations.
+- `src/CipherNest.Application` — use-case abstractions, policies, validation, DTOs, safe-note contracts, TOTP URI profile/contract, session/security policy, and application exceptions; no MAUI/SQLite dependency.
+- `src/CipherNest.Infrastructure` — Argon2id/AES-GCM cryptography, SQLite, migrations, encrypted attachments, encrypted backup/restore, CSV parsing/transfer, password/passphrase generation, RFC-compatible TOTP generation, bounded TOTP setup-URI parsing/formatting, and local audit implementations.
 - `src/CipherNest.App` — .NET MAUI composition, Views/ViewModels, routes, lifecycle, biometrics, secure storage, clipboard, screenshot controls, file picker/share, localization/accessibility state, storage maintenance, About/legal/BMC UI, and privacy-safe diagnostics.
 
 ### Test projects
 
-- `tests/CipherNest.UnitTests` — deterministic policy, validation, parser, generator, TOTP, and cryptographic tests.
+- `tests/CipherNest.UnitTests` — deterministic policy, validation, parser, generator, TOTP generation/setup-URI, and cryptographic tests.
 - `tests/CipherNest.IntegrationTests` — real SQLite/vault/backup/attachment/import/migration/session integration tests.
 - `tests/CipherNest.UiTests` — source/UI/documentation/workflow regression tests that do not require booting a MAUI target.
 
@@ -44,9 +44,9 @@ Rules:
 
 1. Domain must not depend on MAUI, SQLite, platform APIs, or Infrastructure.
 2. Application abstractions must not expose raw SQLite connections, MAUI controls, platform-native objects, or raw DEK arrays.
-3. Infrastructure implements Application abstractions and owns encrypted persistence/format logic.
+3. Infrastructure implements Application abstractions and owns encrypted persistence/format/interoperability logic that is platform independent.
 4. App owns platform integration and dependency injection.
-5. Views must not derive keys, parse encrypted containers, or open the database directly.
+5. Views must not derive keys, parse encrypted containers, parse TOTP setup URIs, or open the database directly.
 6. Unsupported platform capabilities must have an honest fallback/unsupported state.
 
 ## 3. Build-quality defaults
@@ -86,6 +86,7 @@ Current singleton registrations include:
 - `IVaultService -> VaultService`
 - `IPasswordGenerator -> PasswordGenerator`
 - `ITotpService -> TotpService`
+- `ITotpUriCodec -> TotpUriCodec`
 - `ISecurityAuditService -> SecurityAuditService`
 - `ISafeNoteMarkupService -> SafeNoteMarkupService`
 - `ISettingsStore -> JsonSettingsStore`
@@ -270,9 +271,9 @@ Do not insert/reorder existing persisted values without an explicit compatibilit
 
 ## 13. TOTP extension rules
 
-TOTP seed storage and local code generation are **implemented** current features, not deferred work.
+TOTP seed storage, local code generation, and bounded TOTP setup-URI text interoperability are **implemented** current features.
 
-`ITotpService` is an Application abstraction with a platform-independent Infrastructure implementation.
+`ITotpService` is the Application code-generation abstraction. `ITotpUriCodec` is the Application setup-URI parsing/formatting abstraction. Both have platform-independent Infrastructure implementations.
 
 Current supported behavior:
 
@@ -283,9 +284,20 @@ Current supported behavior:
 - explicit refresh/copy;
 - generated codes are not persisted;
 - RFC 6238 known-answer tests;
-- bounded parser/HMAC inputs.
+- bounded Base32 parser/HMAC inputs;
+- local bounded `otpauth://totp/...` parsing;
+- local canonical `otpauth://totp/...` formatting;
+- URI length/query-count/name/display-metadata bounds;
+- duplicate-query rejection;
+- label/query issuer consistency validation;
+- imported secret/settings revalidation through `TotpPolicy`;
+- HOTP host/type and `counter` rejection;
+- sensitive URI field clearing after import and on editor sensitive-state cleanup;
+- setup-URI clipboard copy through the existing timed secret-clipboard service.
 
-Do not add QR parsing/rendering, `otpauth://` URI parsing/export, automatic background refresh timers, autofill, or provider enrollment as incidental changes. Those **remain deferred** and require bounded parsing, lifecycle/accessibility/privacy/security review, source/device tests, threat-model updates, and interoperability docs.
+`TotpUriCodec` must remain a bounded, local parser/formatter. Never log URI text, echo it in exception/user diagnostics, silently accept HOTP into the TOTP model, remove duplicate-key rejection, or create a second persisted setup-URI field that duplicates the seed without a separate compatibility/security design.
+
+Do not add QR scanning/rendering, camera enrollment, automatic background refresh timers, autofill, HOTP, or provider enrollment as incidental changes. Those **remain deferred** and require lifecycle/accessibility/privacy/security review, source/device tests, threat-model updates, and interoperability documentation.
 
 TOTP algorithm numeric values are also persisted compatibility. Keep TOTP/`VaultItemType` compatibility tests green.
 
@@ -337,7 +349,8 @@ Rules:
 - mapped Tags must enforce the canonical 100-tag/128-character item policy before item construction;
 - export requires current-master re-authentication plus the exact UI acknowledgement phrase;
 - attachments are not silently included;
-- temporary plaintext staging is cleaned best-effort without leaking sensitive paths.
+- temporary plaintext staging is cleaned best-effort without leaking sensitive paths;
+- generic CSV must not be described as dedicated TOTP authenticator migration now that dedicated single-item `otpauth://totp/...` interoperability exists separately.
 
 ## 17. Error handling and diagnostics
 
@@ -356,7 +369,7 @@ Do not log:
 - raw exception messages/stacks through the privacy-safe path;
 - identifying filesystem paths;
 - clipboard plaintext;
-- TOTP seeds/codes.
+- TOTP seeds/codes/setup URIs.
 
 See `privacy/DIAGNOSTICS.md`.
 
@@ -372,10 +385,13 @@ File picker, share sheet, launcher, secure storage, biometrics, clipboard, scree
 - use source tests where runtime automation is impossible;
 - still execute simulator/physical-device validation before release claims.
 
+TOTP setup-URI parsing itself is platform-independent and local; setup-URI copy still crosses the platform clipboard boundary and therefore needs runtime clipboard validation on release targets.
+
 ## 19. UI/ViewModel conventions
 
 - Keep decrypted state out of global/static UI state.
 - Clear sensitive ViewModel fields when sensitive pages disappear.
+- Treat TOTP setup-URI entry text as secret transient state and clear it after import attempts.
 - Do not reveal secret custom-field values merely to populate quick-action lists.
 - Preserve per-item re-authentication behavior.
 - Keep layouts responsive on narrow/resizable windows.
@@ -433,7 +449,7 @@ Source support does not replace TalkBack/VoiceOver/Narrator/keyboard/focus/large
 
 ### Unit tests
 
-Use for pure policies, validators, cryptographic vectors, bounded parsers, generator/TOTP behavior, and deterministic services.
+Use for pure policies, validators, cryptographic vectors, bounded parsers, generator/TOTP code generation/setup-URI behavior, and deterministic services.
 
 ### Integration tests
 
@@ -450,11 +466,12 @@ Use for source/documentation/workflow invariants that do not require a device, s
 - BMC/funding build guards;
 - CI/script presence;
 - documentation presence/links/disclaimers;
+- TOTP setup-URI field masking/clearing and secure clipboard routing;
 - WinRT/AOT-safe ViewModel patterns.
 
 ### Device/manual tests
 
-Required for biometrics, screenshot protection, clipboard history/API behavior, secure storage, lifecycle callbacks, picker/share behavior, assistive technologies, signing/packaging, and store behavior.
+Required for biometrics, screenshot protection, clipboard history/API behavior, secure storage, lifecycle callbacks, picker/share behavior, representative third-party setup-URI compatibility, assistive technologies, signing/packaging, and store behavior.
 
 ## 24. Local and hosted verification
 
@@ -495,7 +512,7 @@ CodeQL:       31937127900
 
 The recorded Apple hosted pairing remains `macos-26`, .NET SDK `10.0.302`, Xcode `26.5`, workload set `10.0.300.3`, iOS RID `iossimulator-arm64`, and Mac Catalyst RID `maccatalyst-arm64`.
 
-Do not report a later SHA as verified until its own configured gates finish successfully. Historical 240-test and 554-test evidence files remain valid historical records for their original SHAs.
+Do not report a later SHA as verified until its own configured gates finish successfully. The August 18 TOTP setup-URI continuation is a later change series and therefore needs its own exact-head CI/CodeQL evidence. Historical 240-test and 554-test evidence files remain valid historical records for their original SHAs.
 
 ## 25. Source-control practice
 
@@ -507,7 +524,7 @@ Prefer small logical commits, especially for security-sensitive changes:
 4. documentation/release gate;
 5. progress ledger.
 
-Never commit real vault files, decrypted backups, secret-bearing screenshots, passphrases, recovery material, signing keys, certificates, private keys, or store credentials.
+Never commit real vault files, decrypted backups, TOTP setup URIs/seeds/codes, secret-bearing screenshots, passphrases, recovery material, signing keys, certificates, private keys, or store credentials.
 
 Recent repository workflow metadata records the active commit identity as `Sanskar <sanskarin@outlook.in>`.
 
@@ -518,6 +535,7 @@ Before merging, confirm:
 - dependency direction remains intact;
 - tests exist at the correct layer;
 - malformed/untrusted input is bounded before expensive work;
+- duplicate/ambiguous security-sensitive URI parameters are rejected rather than silently selected;
 - cancellation cannot corrupt committed state;
 - rollback/recovery remains uncancellable after destructive commit points where required;
 - cleanup cannot mask the primary failure;
@@ -540,14 +558,15 @@ Do not bolt these onto the current local-only architecture without separate secu
 - collaboration/shared vaults;
 - browser/app autofill;
 - Windows Hello convenience unlock;
-- TOTP QR scanning/rendering and bounded `otpauth://` import/export;
+- TOTP QR scanning/rendering and camera enrollment;
+- HOTP interoperability;
 - TOTP provider/autofill enrollment;
 - rich binary/PDF preview and scanning;
 - pronounceable-password generation;
 - destructive wipe after failed attempts;
 - complete migration/review of remaining UI literals and additional full localization catalogs.
 
-Local TOTP seed storage/generation itself and the reviewed Hindi resource-backed catalog are already implemented current features and must not be listed as deferred.
+Local TOTP seed storage/generation, bounded TOTP setup-URI text import/formatting, and the reviewed Hindi resource-backed catalog are already implemented current features and must not be listed as deferred.
 
 See `NEXT_STEPS.md` and `FEATURE_MATRIX.md`.
 
@@ -565,6 +584,7 @@ See `NEXT_STEPS.md` and `FEATURE_MATRIX.md`.
 - [`architecture/SESSION_AND_CONCURRENCY.md`](architecture/SESSION_AND_CONCURRENCY.md)
 - [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md)
 - [`security/CRYPTOGRAPHIC_DESIGN.md`](security/CRYPTOGRAPHIC_DESIGN.md)
+- [`security/TOTP.md`](security/TOTP.md)
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md)
 - [`verification/CI_GATES.md`](verification/CI_GATES.md)
 - [`verification/COMPLETE_DOCUMENTATION_2026_08_16.md`](verification/COMPLETE_DOCUMENTATION_2026_08_16.md)
