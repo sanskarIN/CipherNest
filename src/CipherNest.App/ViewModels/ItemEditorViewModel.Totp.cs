@@ -1,4 +1,5 @@
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Models;
 using CipherNest.App.Services;
 using CipherNest.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -29,9 +30,13 @@ public partial class ItemEditorViewModel
     [ObservableProperty]
     public partial int TotpSecondsRemaining { get; set; }
 
+    [ObservableProperty]
+    public partial string TotpUriImportText { get; set; } = string.Empty;
+
     partial void OnSelectedTypeChanged(VaultItemType value)
     {
         IsTotpItem = value == VaultItemType.OneTimePassword;
+        TotpUriImportText = string.Empty;
         ClearTotpPresentation();
     }
 
@@ -93,6 +98,80 @@ public partial class ItemEditorViewModel
         }
     }
 
+    [RelayCommand]
+    private void ImportTotpUri()
+    {
+        if (!IsTotpItem || IsReauthenticationRequired) return;
+        var uriText = TotpUriImportText;
+        TotpUriImportText = string.Empty;
+        if (string.IsNullOrWhiteSpace(uriText))
+        {
+            ErrorMessage = "Paste an otpauth://totp/... setup URI before importing.";
+            return;
+        }
+
+        try
+        {
+            var profile = ServiceProviderHelper.GetRequiredService<ITotpUriCodec>().Parse(uriText);
+            Secret = profile.Secret;
+            SelectedTotpAlgorithm = profile.Algorithm;
+            TotpDigits = profile.Digits;
+            TotpPeriodSeconds = profile.PeriodSeconds;
+            Username = profile.AccountName;
+            Title = string.IsNullOrWhiteSpace(profile.Issuer) ? profile.AccountName : profile.Issuer;
+            ErrorMessage = "TOTP setup URI imported locally. Review the account, issuer, algorithm, digits, and period before saving.";
+        }
+        catch (ArgumentException)
+        {
+            ErrorMessage = "The TOTP setup URI is invalid or unsupported. CipherNest accepts bounded otpauth://totp/... URIs only; HOTP and ambiguous duplicate parameters are rejected.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.ImportTotpUri", ex);
+            ErrorMessage = "The TOTP setup URI could not be imported safely. Existing item fields were not intentionally changed after the failure.";
+        }
+        finally
+        {
+            uriText = string.Empty;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyTotpUriAsync()
+    {
+        if (!IsTotpItem || IsReauthenticationRequired) return;
+        string uriText = string.Empty;
+        try
+        {
+            var accountName = Username.Trim();
+            var issuer = Title.Trim();
+            if (string.IsNullOrWhiteSpace(accountName))
+            {
+                accountName = issuer;
+                issuer = string.Empty;
+            }
+
+            var profile = new TotpUriProfile(accountName, issuer, Secret, SelectedTotpAlgorithm, TotpDigits, TotpPeriodSeconds);
+            uriText = ServiceProviderHelper.GetRequiredService<ITotpUriCodec>().Format(profile);
+            var preferences = await _settings.LoadAsync();
+            await _clipboard.CopySecretAsync(uriText, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
+            ErrorMessage = "TOTP setup URI copied with timed clipboard cleanup where supported. The URI contains the seed and must be protected like the seed itself.";
+        }
+        catch (ArgumentException)
+        {
+            ErrorMessage = "A TOTP setup URI could not be created. Enter a valid Base32 seed and account name, then review the algorithm, digits, and period.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("ItemEditor.CopyTotpUri", ex);
+            ErrorMessage = "The TOTP setup URI could not be copied safely. The encrypted vault item remains unchanged.";
+        }
+        finally
+        {
+            uriText = string.Empty;
+        }
+    }
+
     private VaultItem ApplyTotpSettings(VaultItem item) => item with
     {
         TotpAlgorithm = SelectedTotpAlgorithm,
@@ -106,6 +185,7 @@ public partial class ItemEditorViewModel
         TotpDigits = item.TotpDigits;
         TotpPeriodSeconds = item.TotpPeriodSeconds;
         IsTotpItem = item.Type == VaultItemType.OneTimePassword;
+        TotpUriImportText = string.Empty;
         ClearTotpPresentation();
     }
 
