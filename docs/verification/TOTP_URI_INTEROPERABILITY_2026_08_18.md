@@ -70,8 +70,12 @@ Current parser/formatter safety properties:
 | URI length | maximum 8,192 characters |
 | Query pairs | maximum 16 |
 | Query parameter name | maximum 64 characters; ASCII letters/digits/`-`/`_` |
-| Account name | maximum 512 characters |
-| Issuer | maximum 256 characters |
+| Query pair shape | non-empty `name=value`; empty pairs rejected |
+| Query value encoding | percent encoding/control characters validated for every pair, including ignored unknown parameters |
+| Account name | maximum 512 characters; `:` rejected inside component |
+| Issuer | maximum 256 characters; `:` rejected inside component |
+| Label separator | at most one decoded `:` issuer/account delimiter |
+| Empty issuer prefix | rejected when a separator is present |
 | User-info | rejected |
 | Custom port | rejected |
 | Fragment | rejected |
@@ -87,7 +91,25 @@ Current parser/formatter safety properties:
 
 Imported seed/settings are not accepted under a weaker URI-specific rule. They are routed through the same `TotpPolicy.NormalizeSecret(...)` and `TotpPolicy.ValidateSettings(...)` used by normal TOTP code generation/item validation.
 
-Formatting validates the same account/issuer/seed/settings boundary, percent-encodes the label/query data, emits the configured algorithm/digits/period explicitly, and rejects an encoded result larger than the URI ceiling.
+Formatting validates the same account/issuer/seed/settings boundary, reserves `:` exclusively for the issuer/account label separator, percent-encodes the label/query data, emits the configured algorithm/digits/period explicitly, and rejects an encoded result larger than the URI ceiling.
+
+### Final ambiguity/resource hardening
+
+The final repository pass identified and fixed three parser ambiguity/normalization problems before candidate freeze:
+
+1. account or issuer text containing `:` could make a formatted URI parse back into different issuer/account metadata;
+2. `StringSplitOptions.RemoveEmptyEntries` allowed empty query pairs such as `&&` or a trailing `&` to disappear silently;
+3. unknown query parameters were name-validated but their values were not decoded/validated, allowing malformed percent encoding in ignored extension data to escape the URI structural boundary.
+
+The final implementation now:
+
+- rejects more than one decoded label `:`;
+- rejects `:` inside account/issuer components;
+- rejects an empty issuer before a separator;
+- rejects empty query pairs;
+- validates percent encoding/control characters for all query values before deciding whether a parameter is semantically used.
+
+These rules preserve deterministic format→parse semantics and keep malformed extension parameters inside the same bounded parser trust boundary.
 
 ## 4. Dependency injection
 
@@ -166,12 +188,16 @@ Current coverage includes:
 - user-info/custom-port/fragment rejection;
 - multi-segment label-path rejection;
 - malformed query rejection;
-- invalid percent-encoding rejection;
+- empty query-pair and trailing-separator rejection;
+- invalid percent-encoding rejection for used and ignored/unknown parameters;
 - URI-length/query-count rejection;
+- exact 16-query-pair acceptance and first-over rejection;
 - query-name ceiling;
 - exact account/issuer boundary acceptance;
 - account/issuer first-over-limit rejection;
 - control/format metadata rejection;
+- multi-colon/empty-issuer label rejection;
+- colon-bearing formatter account/issuer rejection;
 - invalid formatter seed/settings/metadata/enum rejection;
 - encoded formatter output exceeding the URI ceiling.
 
@@ -183,9 +209,10 @@ Updated:
 
 ```text
 tests/CipherNest.UiTests/TotpUiSourceTests.cs
+tests/CipherNest.UiTests/DocumentationCoverageSourceTests.cs
 ```
 
-Current source invariants include:
+Current source/documentation invariants include:
 
 - TOTP controls remain TOTP-item-only;
 - code refresh/copy remain explicit;
@@ -199,7 +226,10 @@ Current source invariants include:
 - `VaultItem` does not gain a separate `TotpUri`/`OtpAuth` persisted property;
 - `ITotpUriCodec -> TotpUriCodec` registration is present exactly once;
 - the codec remains local-only and does not depend on `HttpClient`, `WebRequest`, ZXing, or camera code;
-- parser constants and downstream TOTP validation remain visible at the source boundary.
+- parser constants and downstream TOTP validation remain visible at the source boundary;
+- the August 18 verification record remains part of the required documentation suite;
+- current-facing docs keep text-only `otpauth://totp/...` interoperability implemented rather than regressing to the old deferred claim;
+- QR/HOTP/provider/universal-compatibility limitations remain visible.
 
 ## 8. Documentation synchronized in this continuation
 
@@ -214,6 +244,7 @@ docs/QUICK_START.md
 docs/FEATURE_MATRIX.md
 docs/UI_REFERENCE.md
 docs/CONFIGURATION_REFERENCE.md
+docs/COMPLETE_PROJECT_DOCUMENTATION.md
 docs/USER_GUIDE.md
 docs/FAQ.md
 docs/DEVELOPER_GUIDE.md
@@ -224,12 +255,13 @@ docs/NEXT_STEPS.md
 docs/TEST_PLAN.md
 docs/TESTING_GUIDE.md
 docs/RELEASE_CHECKLIST.md
+docs/releases/STORE_LISTING_GUIDE.md
 docs/architecture/DATA_FLOW.md
 docs/security/THREAT_MODEL.md
 docs/security/TOTP.md
 ```
 
-Additional current-facing documentation may be synchronized in the same August 18 continuation before the final candidate is frozen. Historical dated verification/history records are intentionally not rewritten to pretend they described functionality that did not exist at their original SHA/date.
+Historical dated verification/history records are intentionally not rewritten to pretend they described functionality that did not exist at their original SHA/date.
 
 ## 9. Security/trust conclusions
 
@@ -267,16 +299,16 @@ The immutable implementation baseline used by the complete-documentation expansi
 Recorded evidence for that exact historical SHA:
 
 ```text
-UnitTests:       346 passed
-IntegrationTests: 98 passed
-UI/source tests: 111 passed
-Total:           555 passed, 0 failed, 0 skipped
-Windows Release: passed
+UnitTests:         346 passed
+IntegrationTests:  98 passed
+UI/source tests:   111 passed
+Total:             555 passed, 0 failed, 0 skipped
+Windows Release:   passed
 Windows funding-disabled Release: passed
-Android Release: passed
+Android Release:   passed
 iOS simulator Release: passed
 Mac Catalyst Release: passed
-CodeQL v4: passed
+CodeQL v4:         passed
 ```
 
 Recorded runs:
@@ -299,7 +331,8 @@ Therefore the final August 18 head must be frozen before exact-head evidence is 
 ```text
 Repository implementation: present
 Repository tests: added/expanded
-Current-facing docs: synchronized/in progress
+Current-facing docs: synchronized
+Final ambiguity/resource hardening: present
 Historical verified baseline: preserved
 Final August 18 exact-head core/platform/CodeQL verification: required
 Independent professional security audit: not completed
@@ -332,6 +365,8 @@ Using synthetic seeds only:
 - validate representative 30/60-second periods;
 - export and import the generated URI in representative compatible authenticator applications;
 - confirm deliberate HOTP/counter rejection;
+- confirm extra/empty issuer separators and colon-bearing account/issuer values are rejected as documented;
+- confirm empty query pairs and malformed unknown parameter values are rejected;
 - confirm import field clearing after success/failure/navigation;
 - confirm no actual seed/URI leaks through semantic accessibility text;
 - inspect platform clipboard history/sync behavior for copied setup URIs;
