@@ -52,6 +52,21 @@ public sealed class TotpUiSourceTests
     }
 
     [Fact]
+    public void TotpUriImport_ClearsSensitiveTextBeforeEligibilityGuardReturns()
+    {
+        var viewModel = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "ItemEditorViewModel.Totp.cs"));
+        var methodStart = viewModel.IndexOf("private void ImportTotpUri()", StringComparison.Ordinal);
+        var capture = viewModel.IndexOf("var uriText = TotpUriImportText;", methodStart, StringComparison.Ordinal);
+        var clear = viewModel.IndexOf("TotpUriImportText = string.Empty;", capture, StringComparison.Ordinal);
+        var guard = viewModel.IndexOf("if (!IsTotpItem || IsReauthenticationRequired) return;", clear, StringComparison.Ordinal);
+
+        Assert.True(methodStart >= 0, "ImportTotpUri method was not found.");
+        Assert.True(capture > methodStart, "TOTP setup URI must be captured inside ImportTotpUri.");
+        Assert.True(clear > capture, "The bound setup URI must be cleared immediately after capture.");
+        Assert.True(guard > clear, "The bound setup URI must be cleared before an ineligible/reauthentication guard can return.");
+    }
+
+    [Fact]
     public void TotpUriCodec_IsRegisteredExactlyOnceAndRemainsLocalOnly()
     {
         var composition = File.ReadAllText(PathAt("src", "CipherNest.App", "MauiProgram.cs"));
