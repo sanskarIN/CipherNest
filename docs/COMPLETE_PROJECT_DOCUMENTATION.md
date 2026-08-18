@@ -107,6 +107,7 @@ The current design emphasizes:
 - encrypted streaming attachments;
 - authenticated encrypted backups;
 - guarded plaintext interoperability;
+- bounded local TOTP `otpauth://totp/...` text interoperability;
 - explicit clipboard/temporary-plaintext limitations;
 - privacy-safe diagnostics;
 - honest platform/security limitations;
@@ -121,11 +122,11 @@ The current design emphasizes:
 CipherNest is designed to provide:
 
 1. **A usable local encrypted vault** without requiring a remote account service.
-2. **A small, reviewable security-sensitive core** around key wrapping, authenticated records, attachment containers, backup containers, session state, and persistence boundaries.
+2. **A small, reviewable security-sensitive core** around key wrapping, authenticated records, attachment containers, backup containers, session state, persistence boundaries, and bounded TOTP setup-URI parsing/formatting.
 3. **Explicit recovery semantics** rather than pretending forgotten credentials can always be reset.
-4. **Bounded hostile-input handling** so malformed database/header/CSV/settings/backup/attachment inputs cannot request unlimited work.
+4. **Bounded hostile-input handling** so malformed database/header/CSV/settings/backup/attachment/TOTP-URI inputs cannot request unlimited work.
 5. **Cross-platform MAUI reach** across Windows, Android, iOS, and Mac Catalyst.
-6. **Clear plaintext boundaries** whenever the user explicitly copies, previews, exports, or shares decrypted content.
+6. **Clear plaintext boundaries** whenever the user explicitly copies, previews, exports, shares, or transfers decrypted/secret-bearing content.
 7. **Accurate documentation** that separates source implementation, hosted evidence, platform validation, and future work.
 
 ---
@@ -142,8 +143,10 @@ The current release does not claim completed support for:
 - browser/application autofill;
 - Windows Hello convenience unlock;
 - TOTP QR scanning/rendering;
-- `otpauth://` import/export;
-- TOTP provider/autofill enrollment;
+- camera-based TOTP enrollment;
+- HOTP/counter interoperability;
+- automatic TOTP provider enrollment;
+- TOTP provider/autofill integration;
 - rich binary/PDF rendering beyond the bounded safe text-preview formats;
 - document scanning;
 - pronounceable-password mode;
@@ -151,8 +154,11 @@ The current release does not claim completed support for:
 - complete translation of every remaining literal into Hindi;
 - complete additional-language catalogs;
 - guaranteed managed-memory erasure;
+- guaranteed clipboard-history/synchronization erasure;
 - guaranteed physical erasure from storage media;
 - recovery when every valid local master/recovery path is lost.
+
+Bounded **text-only** TOTP `otpauth://totp/...` import and canonical formatting/copy are implemented. That implementation must not be confused with QR/camera enrollment, HOTP, provider enrollment, universal third-party authenticator compatibility, or clipboard-history erasure.
 
 Deferred features must not be represented in the UI, README, store listing, or release notes as complete until implementation, tests, security/privacy review, documentation, and target validation support that claim.
 
@@ -179,7 +185,7 @@ Minimum declared platform versions:
 | Windows | 10.0.19041.0 | Desktop target; current convenience unlock is master-passphrase fallback. |
 | Linux | — | No shipping MAUI application target in the current solution. |
 
-Hosted compilation does not replace physical-device/runtime validation of biometrics, secure storage, lifecycle, screenshots, clipboard, share sheets, accessibility, signing, packaging, or store behavior.
+Hosted compilation does not replace physical-device/runtime validation of biometrics, secure storage, lifecycle, screenshots, clipboard, share sheets, accessibility, signing, packaging, store behavior, or representative third-party TOTP setup-URI interoperability.
 
 ---
 
@@ -212,6 +218,8 @@ Hosted compilation does not replace physical-device/runtime validation of biomet
 
 Package versions are centralized in `Directory.Packages.props`.
 
+The TOTP setup-URI implementation uses the .NET `Uri`/text APIs and existing project abstractions; it does not add a QR, camera, HTTP/provider, or third-party TOTP URI dependency.
+
 ---
 
 # 7. Repository layout
@@ -232,6 +240,7 @@ CipherNest/
 │  ├─ architecture/
 │  ├─ branding/
 │  ├─ formats/
+│  ├─ history/
 │  ├─ operations/
 │  ├─ privacy/
 │  ├─ releases/
@@ -273,6 +282,8 @@ Owns framework-independent domain records/enums:
 
 Owns stable use-case abstractions, policies, validators, application-facing DTOs, session/security policy, safe-note contracts, clocks, and exceptions. It does not own MAUI controls or SQLite connections.
 
+The TOTP interoperability contract lives here through `ITotpUriCodec` and `TotpUriProfile` so the App does not implement a parallel parser.
+
 ### `CipherNest.Infrastructure`
 
 Owns:
@@ -285,6 +296,7 @@ Owns:
 - CSV parsing/transfer;
 - local password/passphrase generation;
 - local TOTP generation;
+- bounded local TOTP setup-URI parsing/formatting;
 - local audit implementation;
 - other platform-independent concrete services.
 
@@ -326,12 +338,12 @@ Key rules:
 
 1. Domain must not depend on MAUI, SQLite, or platform APIs.
 2. Application abstractions must not expose raw database connections, UI controls, raw vault-key arrays, or platform-native objects.
-3. Infrastructure implements application abstractions and owns encrypted persistence/format logic.
+3. Infrastructure implements application abstractions and owns encrypted persistence/format logic plus bounded TOTP setup-URI parsing/formatting.
 4. App owns platform interaction and composition.
-5. Views must not derive keys, open SQLite directly, or parse encrypted containers.
+5. Views must not derive keys, open SQLite directly, parse encrypted containers, or implement an independent `otpauth://` parser.
 6. New platform capabilities need honest unsupported/fallback states.
 
-See `architecture/ARCHITECTURE.md` and `architecture/DEPENDENCY_MAP.md`.
+See `architecture/ARCHITECTURE.md`, `architecture/DEPENDENCY_MAP.md`, and `architecture/DATA_FLOW.md`.
 
 ---
 
@@ -347,6 +359,7 @@ Current singleton registrations include:
 - `IVaultService -> VaultService`
 - `IPasswordGenerator -> PasswordGenerator`
 - `ITotpService -> TotpService`
+- `ITotpUriCodec -> TotpUriCodec`
 - `ISecurityAuditService -> SecurityAuditService`
 - `ISafeNoteMarkupService -> SafeNoteMarkupService`
 - `ISettingsStore -> JsonSettingsStore`
@@ -404,7 +417,7 @@ The complete page-by-page interaction reference is [`UI_REFERENCE.md`](UI_REFERE
 | Onboarding | Create local vault and optional recovery material. |
 | Unlock | Master/recovery/optional biometric convenience unlock. |
 | Vault | Search/filter/sort/list, navigation, lock, BMC entry. |
-| Item Editor | Item CRUD, TOTP, secure note, custom fields, attachments. |
+| Item Editor | Item CRUD, TOTP code generation/setup-URI text interoperability, secure note, custom fields, attachments. |
 | Generator | Password/passphrase generation. |
 | Generator Defaults | Persist generator defaults. |
 | Audit | Local vault-content security findings. |
@@ -414,6 +427,8 @@ The complete page-by-page interaction reference is [`UI_REFERENCE.md`](UI_REFERE
 | Transfer | CSV import/plaintext export. |
 | About | Version/legal/repository/support/BMC/audit status. |
 | Developer | Redacted developer diagnostics/information. |
+
+The TOTP Item Editor panel includes manual code refresh/copy, a masked transient setup-URI import field, **Import URI**, and **Copy setup URI**. The setup-URI field is cleared after import attempts and when the editor clears owned sensitive state.
 
 ---
 
@@ -471,6 +486,8 @@ Examples include:
 - full local-vault deletion;
 - protected item operations where configured.
 
+For a re-authentication-protected TOTP item, code generation and setup-URI import/copy remain behind the same item re-authentication gate.
+
 ---
 
 # 13. Biometric convenience unlock
@@ -525,6 +542,8 @@ Backup passphrase ─Argon2id─> backup key ─AES-GCM─> backup chunks
 - 16-byte GCM authentication tags;
 - unique nonce generation per encrypted object/chunk;
 - associated data binding record/chunk identity/context.
+
+TOTP uses standard HMAC-based RFC 6238 code generation through SHA-1/SHA-256/SHA-512. Setup-URI parsing/formatting does not alter the vault cryptographic format and does not perform provider/network cryptography.
 
 ## New-wrapper KDF defaults
 
@@ -620,6 +639,8 @@ Numeric values are compatibility-sensitive because the encrypted serialized mode
 
 `Normalize(...)` trims/canonicalizes appropriate fields, removes empty tags, de-duplicates/sorts tags case-insensitively, and updates modification time.
 
+For TOTP items, the Base32 seed and algorithm/digits/period are persisted in the encrypted item payload. Generated codes and pasted/formatted setup-URI text are **not** separate persisted item fields.
+
 See `formats/VAULT_RECORDS.md` and `API_REFERENCE.md`.
 
 ---
@@ -656,6 +677,24 @@ Defensive ceilings reduce accidental or hostile CPU/memory/disk/archive/UI work.
 | Combined item text/metadata | 2,000,000 chars |
 | Secure note | 200,000 chars / 5,000 lines |
 | Search query | 4,096 trimmed chars |
+
+## TOTP ceilings
+
+| Resource | Maximum/rule |
+|---|---|
+| Formatted Base32 seed | 4,096 chars |
+| Normalized Base32 seed | 16–1,024 chars |
+| Setup URI | 8,192 chars |
+| Setup-URI query pairs | 16 |
+| Setup-URI query-name length | 64 ASCII identifier chars |
+| Setup-URI account name | 512 chars; `:` reserved/rejected inside component |
+| Setup-URI issuer | 256 chars; `:` reserved/rejected inside component |
+| Label separators | at most one issuer/account `:` separator |
+| Empty query pair | rejected |
+| Duplicate query key | rejected case-insensitively |
+| HOTP/counter | rejected |
+
+The URI parser also rejects user-info, custom ports, fragments, multiple label path segments, malformed percent encoding, unsupported settings, malformed Base32, inconsistent issuer metadata, and Unicode Control/Format display metadata.
 
 ## Attachment ceilings
 
@@ -844,21 +883,59 @@ Current TOTP implementation:
 - explicit code copy;
 - generated codes are transient and never saved as item fields;
 - decoded/hash/counter buffers are zeroed where practical;
-- validity-window arithmetic safely clamps at `DateTimeOffset.MaxValue`.
+- validity-window arithmetic safely clamps at `DateTimeOffset.MaxValue`;
+- bounded local TOTP-only `otpauth://totp/...` text import;
+- canonical local setup-URI formatting/copy;
+- setup-URI copy through the existing timed secret-clipboard service;
+- dedicated setup-URI import text cleared after import attempts and Item Editor sensitive-state cleanup.
 
-Input bounds:
+## TOTP setup-URI behavior
 
-- formatted seed: up to 4,096 chars;
-- normalized seed: 16–1,024 chars.
+The Application contract is `ITotpUriCodec`, implemented by Infrastructure `TotpUriCodec`.
+
+Import maps:
+
+- `secret=` -> encrypted TOTP Secret field;
+- account label -> Username/identifier;
+- issuer -> Title when available;
+- algorithm/digits/period -> existing TOTP settings.
+
+Parser protections include:
+
+- absolute `otpauth://totp/...` only;
+- URI/query/display-metadata ceilings;
+- at most one issuer/account label separator;
+- `:` rejected inside issuer/account components to avoid format/parse ambiguity;
+- empty query pairs rejected;
+- duplicate query names rejected case-insensitively;
+- malformed percent encodings rejected, including otherwise ignored unknown parameters;
+- HOTP/counter rejected;
+- unsupported algorithm/digits/period rejected;
+- invalid Base32 seed rejected;
+- issuer label/query mismatch rejected;
+- Unicode Control/Format display metadata rejected.
+
+Formatting validates the same component/seed/settings policy, emits a canonical URI, and rejects encoded output above the URI ceiling.
+
+A setup URI normally contains the long-lived seed. It must be protected like the seed itself and has a materially longer compromise lifetime than one generated code.
 
 Not implemented:
 
 - QR scanning/rendering;
-- `otpauth://` import/export;
-- provider/autofill enrollment;
+- camera enrollment;
+- HOTP/counter support;
+- provider/network verification/enrollment;
+- browser/application autofill;
 - background refresh timer.
 
-See `security/TOTP.md`.
+Input bounds:
+
+- formatted seed: up to 4,096 chars;
+- normalized seed: 16–1,024 chars;
+- setup URI: up to 8,192 chars;
+- setup-URI query pairs: up to 16.
+
+See `security/TOTP.md`, `API_REFERENCE.md`, `LIMITS_AND_DEFAULTS.md`, and `verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md`.
 
 ---
 
@@ -1039,6 +1116,8 @@ The parser is bounded for columns/rows/fields/aggregate row work and treats head
 
 Importing a plaintext source CSV does not remove/encrypt that external source file.
 
+Dedicated TOTP setup-URI import is a separate single-item Item Editor workflow. Generic CSV must not be advertised as a dedicated authenticator migration format.
+
 ## Export
 
 Plaintext CSV export requires:
@@ -1077,9 +1156,12 @@ Explicit copy actions exist for:
 - username;
 - primary secret;
 - secret custom field;
-- TOTP code.
+- TOTP code;
+- TOTP setup URI.
 
 After a secret copy, delayed cleanup tracks only a SHA-256 fingerprint, not the copied plaintext string. Current clipboard content is hashed and compared in fixed time; CipherNest clears only if the current clipboard still matches its previous copy, preserving unrelated content copied later.
+
+A TOTP setup URI normally embeds the long-lived seed. Copying that URI has greater long-term exposure than copying one short-lived generated code even though both use the same conditional clipboard service.
 
 Clipboard limits:
 
@@ -1087,9 +1169,10 @@ Clipboard limits:
 - clipboard synchronization may retain content;
 - other applications/input methods/accessibility services can observe content;
 - screenshots/cameras remain external;
+- the destination authenticator/app retains pasted data according to its own behavior;
 - the fingerprint itself is not a password-storage primitive.
 
-See `security/DATA_LIFECYCLE.md` and `security/SESSION_SECURITY.md`.
+See `security/DATA_LIFECYCLE.md`, `security/SESSION_SECURITY.md`, and `security/TOTP.md`.
 
 ---
 
@@ -1181,6 +1264,8 @@ Implemented source support includes:
 - System/Light/Dark theme handling;
 - wrapping vault actions for narrow/resizable windows.
 
+The TOTP setup-URI field is masked and uses non-secret semantic description text; real URI/seed content must not be injected into accessibility metadata.
+
 Release validation still requires representative testing with:
 
 - TalkBack;
@@ -1191,7 +1276,8 @@ Release validation still requires representative testing with:
 - OS large text/scaling;
 - contrast/readability;
 - narrow/large/resizable windows;
-- touch-target checks.
+- touch-target checks;
+- TOTP URI warning/readability and field-clearing behavior.
 
 See `ACCESSIBILITY.md`.
 
@@ -1212,6 +1298,8 @@ Neutral English is the fallback catalog. A reviewed `hi-IN` satellite catalog ex
 Not every remaining UI literal has been migrated to resources. Therefore CipherNest does not claim a completely translated Hindi UI.
 
 Language preference must not alter encrypted formats or stored vault semantics.
+
+New TOTP URI warning/error strings must remain security-accurate if/when migrated into additional resource catalogs.
 
 See `architecture/LOCALIZATION.md`.
 
@@ -1238,7 +1326,7 @@ It intentionally does not record:
 - secondary secrets;
 - DEKs/KEKs;
 - decrypted vault items;
-- TOTP seeds/codes;
+- TOTP seeds/codes/setup URIs;
 - clipboard plaintext;
 - private attachments;
 - raw secret-bearing CSV rows;
@@ -1380,6 +1468,8 @@ Dependency rules:
 
 A previous SQLite native dependency advisory blocker led to current pins of Microsoft.Data.Sqlite `10.0.10` and SQLitePCLRaw.bundle_e_sqlite3 `2.1.12`.
 
+The TOTP URI continuation intentionally added no external QR/camera/network/parser package.
+
 ---
 
 # 37. Automated tests
@@ -1395,9 +1485,12 @@ Use for:
 - cryptographic known-answer/tamper behavior;
 - generators;
 - parser/resource rules;
-- TOTP compatibility;
+- TOTP code compatibility;
+- TOTP setup-URI parse/format round trips and adversarial boundaries;
 - settings normalization;
 - other deterministic services.
+
+`TotpUriCodecTests` covers canonical/default parsing, explicit/label issuer handling, format/parse round trips, exact/first-over limits, duplicate/empty/malformed query behavior, HOTP/counter rejection, invalid percent encoding including ignored unknown parameters, label-separator ambiguity, metadata restrictions, unsupported settings, invalid seeds, and encoded-output ceilings.
 
 ## Integration tests
 
@@ -1425,6 +1518,8 @@ Protect source/documentation/workflow invariants without requiring a running MAU
 - documentation presence/links/disclaimers;
 - WinRT/AOT-safe ViewModel observable-property patterns;
 - CI/workflow/script presence;
+- TOTP URI local-only architecture/DI/source safety;
+- sensitive TOTP URI field-clearing/copy-path behavior;
 - security-sensitive source ordering/invariants.
 
 Source tests are regression signals, not runtime platform proof.
@@ -1433,7 +1528,7 @@ Source tests are regression signals, not runtime platform proof.
 
 # 38. Hosted CI and CodeQL baseline
 
-The immutable implementation baseline immediately before this complete-documentation expansion is:
+The immutable implementation baseline immediately before the complete-documentation expansion is:
 
 ```text
 commit: 8566980ff981b8b4072f9010ec7b7ba54aba051e
@@ -1476,9 +1571,9 @@ iOS RID: iossimulator-arm64
 Mac Catalyst RID: maccatalyst-arm64
 ```
 
-Any commit after `8566980f...` becomes a new exact head and must rerun configured gates before being described as an exact-head verified release candidate.
+The August 18 TOTP setup-URI implementation/documentation commits are later than that immutable baseline. They require their own exact-head configured CI/CodeQL evidence before the newer head can be described as an exact-head verified release candidate.
 
-See `verification/CI_GATES.md` and the verification history.
+See `verification/CI_GATES.md`, `verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md`, and the verification history.
 
 ---
 
@@ -1494,6 +1589,9 @@ Protected/sensitive assets include:
 - master passphrase during entry/derivation;
 - recovery material;
 - biometric secondary secret;
+- TOTP Base32 seeds;
+- generated TOTP codes;
+- TOTP setup URIs containing seeds;
 - encrypted backups;
 - encrypted attachments;
 - plaintext import data before encryption;
@@ -1503,6 +1601,12 @@ Protected/sensitive assets include:
 ## Strongest intended locked-state protection
 
 A copied locked database/attachment store does not contain plaintext item data; the attacker must obtain/derive a valid path to the DEK. Argon2id increases offline guessing cost, but protection still depends substantially on passphrase strength and the recorded KDF parameters.
+
+## TOTP setup-URI trust boundary
+
+The URI parser validates **structure and bounds**, not issuer identity or provider enrollment. A malicious source can provide a structurally valid URI containing attacker-chosen metadata/seed. CipherNest cannot infer that the URI belongs to the intended account. Users must review imported account/issuer/settings before saving.
+
+The parser is local-only and does not make HTTP/provider/camera/QR calls.
 
 ## Partial mitigations
 
@@ -1514,7 +1618,7 @@ CipherNest partially mitigates, but cannot eliminate:
 - interactive brute force;
 - malicious local apps;
 - weak chosen passphrases;
-- malicious local import/backup files;
+- malicious local import/backup/TOTP-URI files/text;
 - biometric subsystem/secure-storage weaknesses;
 - logical deletion remnants;
 - supply-chain compromise.
@@ -1525,8 +1629,8 @@ CipherNest partially mitigates, but cannot eliminate:
 - kernel/hypervisor compromise;
 - hardware keyloggers/hostile firmware;
 - process injection/attacker-controlled user session;
-- user-intentional plaintext sharing;
-- copies retained by OS/share/backup/indexer/destination software;
+- user-intentional plaintext/seed/setup-URI sharing;
+- copies retained by OS/share/clipboard/backup/indexer/destination software;
 - guaranteed GC-string erasure;
 - guaranteed physical flash sanitization;
 - loss of every master/recovery path.
@@ -1542,25 +1646,28 @@ Sensitive plaintext can exist transiently:
 - while typed into credential fields;
 - after authenticated record decryption;
 - in ViewModel/UI strings;
+- in TOTP setup-URI import/format strings;
+- in generated TOTP codes;
 - in safe note/text previews;
 - in explicit clipboard content;
 - in explicit plaintext CSV export;
 - in explicit attachment-export temporary files;
-- inside destination applications/OS services after a user-requested share.
+- inside destination applications/OS services after a user-requested copy/share.
 
 CipherNest reduces lifetime where practical by:
 
 - zeroing owned byte arrays;
 - clearing sensitive ViewModel fields on page disappearance;
+- clearing the TOTP setup-URI entry after import attempts and Item Editor sensitive-state cleanup;
 - clearing bound credential fields before longer operations where practical;
 - using key leases and session cancellation;
 - deleting app-controlled temp files best-effort;
 - storing only clipboard fingerprints in delayed state;
 - keeping diagnostics redacted.
 
-These controls do not provide deterministic erasure of .NET strings, OS buffers, other apps, clipboard history, filesystem snapshots, backups, or physical storage remnants.
+These controls do not provide deterministic erasure of .NET strings, OS buffers, other apps, clipboard history/synchronization, filesystem snapshots, backups, or physical storage remnants.
 
-See `security/DATA_LIFECYCLE.md`.
+See `security/DATA_LIFECYCLE.md` and `security/TOTP.md`.
 
 ---
 
@@ -1576,10 +1683,11 @@ Current version surfaces are independent:
 | Vault-header document | current 2; minimum supported 1 |
 | Attachment container | magic `CNAT0001` |
 | Backup container | version 2 / `CNBK0002` |
+| TOTP setup URI | external text interoperability; no CipherNest persisted-format version added |
 
-Compatibility rule: never silently change an incompatible structure under an existing version identifier.
+Compatibility rule: never silently change an incompatible persisted structure under an existing version identifier.
 
-A format/schema change requires:
+A persisted format/schema change requires:
 
 - explicit version/migration plan;
 - known-answer/round-trip/tamper/wrong-key tests;
@@ -1589,6 +1697,8 @@ A format/schema change requires:
 - documentation updates;
 - release notes/checklist updates.
 
+A TOTP URI parser/formatter behavior change requires bounded interoperability tests and documentation/release-claim review even though it does not change the encrypted vault schema.
+
 Canonical format docs:
 
 - `formats/VAULT_HEADER.md`
@@ -1596,6 +1706,7 @@ Canonical format docs:
 - `formats/ATTACHMENTS.md`
 - `formats/ENCRYPTED_BACKUP.md`
 - `formats/CSV_TRANSFER.md`
+- `security/TOTP.md` for the external TOTP setup-URI text boundary.
 
 ---
 
@@ -1612,14 +1723,15 @@ Release candidate work includes:
 5. dependency/advisory review;
 6. third-party-license review;
 7. target-device manual validation;
-8. accessibility/localization/responsive validation;
-9. backup/restore/recovery/compatibility validation;
-10. signing/provisioning/notarization;
-11. package identity/version/icon/splash/permissions review;
-12. store privacy declarations;
-13. target store/region funding-link policy decision;
-14. documentation freeze against the exact candidate;
-15. release notes/tag/checksums/provenance where practical.
+8. TOTP setup-URI representative compatibility validation with synthetic seeds;
+9. accessibility/localization/responsive validation;
+10. backup/restore/recovery/compatibility validation;
+11. signing/provisioning/notarization;
+12. package identity/version/icon/splash/permissions review;
+13. store privacy declarations;
+14. target store/region funding-link policy decision;
+15. documentation freeze against the exact candidate;
+16. release notes/tag/checksums/provenance where practical.
 
 Signing keys, certificates, store API tokens, private keys, passwords, and other release secrets must remain outside Git history.
 
@@ -1636,6 +1748,7 @@ Store/distribution owners must validate current rules for:
 - encryption/export-control requirements where applicable;
 - permissions/capabilities;
 - biometric disclosure;
+- TOTP setup-URI claims/screenshots;
 - data collection statements;
 - age/content classifications where applicable;
 - signing/notarization/package identity.
@@ -1647,6 +1760,8 @@ CipherNestEnableFundingLink=false
 ```
 
 and record that property in provenance.
+
+Store wording may accurately describe bounded local TOTP text-URI import/copy only after the exact packaged candidate is verified. It must not imply QR/camera, HOTP, automatic provider enrollment, universal authenticator compatibility, or clipboard-history deletion.
 
 See `releases/STORE_LISTING_GUIDE.md`.
 
@@ -1664,6 +1779,7 @@ Never request that a user publicly provide:
 - recovery material;
 - secondary secret;
 - cryptographic keys;
+- TOTP seed/code/setup URI;
 - decrypted backup;
 - private attachments;
 - plaintext secret CSV;
@@ -1680,6 +1796,8 @@ Use `operations/BACKUP_RECOVERY_RUNBOOK.md` for:
 - interruption/failure handling;
 - active-vault preservation expectations;
 - synthetic/disposable validation data.
+
+TOTP interoperability testing must also use synthetic seeds and accounts rather than production enrollment secrets.
 
 ---
 
@@ -1705,6 +1823,7 @@ Before requesting help, consult:
 - `USER_GUIDE.md`;
 - `FAQ.md`;
 - `TROUBLESHOOTING.md`;
+- `security/TOTP.md` for TOTP/setup-URI behavior;
 - `operations/BACKUP_RECOVERY_RUNBOOK.md`;
 - `setup/BUILD.md`.
 
@@ -1719,6 +1838,8 @@ A useful non-sensitive support report includes:
 - whether a separately verified encrypted backup exists;
 - approximate non-sensitive file counts/sizes where relevant.
 
+Never include a real TOTP setup URI in a support ticket because it normally contains the long-lived seed.
+
 See `SUPPORT.md`.
 
 ---
@@ -1730,12 +1851,14 @@ Before merging a change, confirm:
 - dependency direction remains intact;
 - the right test layer covers the change;
 - untrusted input is bounded before expensive work;
+- security-sensitive text formats reject ambiguity and malformed encodings;
 - cancellation cannot corrupt committed state;
 - required rollback cannot be cancelled after a destructive commit point;
 - cleanup failures do not hide the primary failure;
 - no raw secret/path exception surface was introduced;
 - no unintended plaintext index/cache was introduced;
 - format/schema compatibility is explicit;
+- TOTP setup URIs remain local-only, secret-bearing, and non-persisted as a second field;
 - MAUI ViewModel observable properties remain WinRT/AOT-safe;
 - build/toolchain changes are verified and documented;
 - security/privacy docs reflect attack-surface changes;
@@ -1765,9 +1888,9 @@ Required rules:
 2. Preserve immutable commit/run identifiers with hosted evidence.
 3. Never claim an independent security audit unless one actually occurred.
 4. Keep managed-memory/plaintext/export/platform limitations visible.
-5. Update format/security docs when persistence/crypto/session behavior changes.
+5. Update format/security docs when persistence/crypto/session/interoperability behavior changes.
 6. Use synthetic/demo data only in docs/screenshots/examples.
-7. Never commit passphrases, recovery material, vault contents, signing/store secrets, or private diagnostic artifacts.
+7. Never commit passphrases, recovery material, vault contents, TOTP seeds/setup URIs, signing/store secrets, or private diagnostic artifacts.
 8. Keep public application metadata centralized where code consumes it.
 9. Do not rewrite historical verification files to pretend they describe later commits.
 10. Add/update documentation regression tests when new canonical entry points are introduced.
@@ -1783,7 +1906,9 @@ Even with a fully green hosted implementation baseline, repository-only automati
 - full Android biometric runtime matrix;
 - iOS/Mac Catalyst Face ID/Touch ID runtime matrix;
 - secure-storage loss/enrollment changes;
-- clipboard history/sync/cleanup on every OS;
+- clipboard history/sync/cleanup on every OS, including copied TOTP setup URIs;
+- representative third-party authenticator acceptance of every supported TOTP URI combination;
+- provider-specific URI quirks;
 - background/sleep/resume lifecycle timing;
 - screenshot/app-switcher privacy on representative targets;
 - OS share-sheet plaintext retention/cleanup;
@@ -1808,13 +1933,17 @@ High-level future areas include:
 - collaboration/shared-vault protocol work;
 - browser/application autofill;
 - Windows Hello convenience unlock;
-- bounded TOTP QR/`otpauth://` interoperability;
+- TOTP QR/camera scanning/rendering with separate privacy/security review;
+- HOTP interoperability if a reviewed product model is added;
+- provider enrollment/autofill integration;
 - richer document preview/scanning with separate attack-surface review;
 - complete localization migration/review;
 - additional languages;
 - improved performance/large-vault observation;
 - independent professional review and remediation;
 - evidence-backed signed releases.
+
+Bounded TOTP `otpauth://totp/...` **text** import and canonical formatting/copy have moved out of the future-feature list into implemented source plus target-validation work.
 
 The ordered source/release roadmap is in `NEXT_STEPS.md`.
 
@@ -1831,7 +1960,9 @@ The ordered source/release roadmap is in `NEXT_STEPS.md`.
 - [ ] Test restore with controlled/disposable data.
 - [ ] Lock the vault when leaving the device.
 - [ ] Treat clipboard/export/share as plaintext exposure.
-- [ ] Do not send real vault secrets to support/public issues.
+- [ ] Treat TOTP setup URIs like long-lived authentication seeds.
+- [ ] Review issuer/account/settings before saving an imported TOTP URI.
+- [ ] Do not send real vault/TOTP secrets to support/public issues.
 - [ ] Understand that CipherNest has not completed an independent professional security audit.
 
 ## Developer checklist
@@ -1840,6 +1971,7 @@ The ordered source/release roadmap is in `NEXT_STEPS.md`.
 - [ ] Run affected platform verification.
 - [ ] Add the right unit/integration/source tests.
 - [ ] Preserve security/resource bounds.
+- [ ] Reject parser ambiguity/malformed encodings before sensitive use.
 - [ ] Preserve version compatibility.
 - [ ] Avoid raw exception/secret logging.
 - [ ] Update documentation.
@@ -1853,6 +1985,7 @@ The ordered source/release roadmap is in `NEXT_STEPS.md`.
 - [ ] CodeQL reviewed.
 - [ ] Dependency review complete.
 - [ ] Device/simulator matrix complete.
+- [ ] TOTP setup-URI compatibility/clipboard checks complete with synthetic seeds.
 - [ ] Accessibility/localization/responsive checks complete.
 - [ ] Backup/restore/recovery checks complete.
 - [ ] Signing/notarization complete.
@@ -1920,6 +2053,7 @@ The ordered source/release roadmap is in `NEXT_STEPS.md`.
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md)
 - [`ACCESSIBILITY.md`](ACCESSIBILITY.md)
 - [`verification/CI_GATES.md`](verification/CI_GATES.md)
+- [`verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md`](verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md)
 - [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)
 - [`releases/RELEASE_PROCESS.md`](releases/RELEASE_PROCESS.md)
 - [`releases/PACKAGING.md`](releases/PACKAGING.md)
@@ -1959,11 +2093,15 @@ The ordered source/release roadmap is in `NEXT_STEPS.md`.
 
 **Secondary secret** — Random secret used for optional biometric convenience wrapper; protected through platform secure storage where supported.
 
+**TOTP** — Time-based one-time password generated locally from an encrypted Base32 seed plus algorithm/digits/period settings.
+
+**`otpauth://totp/...` setup URI** — External secret-bearing text format used to transfer TOTP account/issuer/seed/settings. CipherNest supports bounded local TOTP-only text parsing/formatting; the URI is not a separate persisted vault field.
+
 **`.cna`** — CipherNest encrypted attachment container.
 
 **`.cnbak`** — CipherNest authenticated encrypted backup container.
 
-**Plaintext boundary** — A deliberate operation where decrypted data leaves encrypted storage, such as clipboard copy, attachment export, or CSV export.
+**Plaintext boundary** — A deliberate operation where decrypted/secret-bearing data leaves encrypted storage, such as clipboard copy, TOTP setup-URI copy, attachment export, or CSV export.
 
 **Source/UI test** — Automated repository/source-shape regression test that does not by itself prove physical-device runtime behavior.
 
@@ -1973,4 +2111,4 @@ The ordered source/release roadmap is in `NEXT_STEPS.md`.
 
 ## Final documentation note
 
-The pre-documentation implementation baseline `8566980ff981b8b4072f9010ec7b7ba54aba051e` completed the configured hosted CI and CodeQL paths successfully with **555 passing tests** and successful Windows default/funding-disabled, Android, iOS simulator, and Mac Catalyst Release compilation. This documentation expansion occurs after that immutable implementation baseline; therefore subsequent documentation commits must execute their own configured source/documentation gates before the later head is called an exact-head verified release candidate.
+The pre-documentation implementation baseline `8566980ff981b8b4072f9010ec7b7ba54aba051e` completed the configured hosted CI and CodeQL paths successfully with **555 passing tests** and successful Windows default/funding-disabled, Android, iOS simulator, and Mac Catalyst Release compilation. The August 18 TOTP setup-URI continuation occurs after that immutable baseline and has added/expanded source, tests, documentation, threat/release gates, and a dedicated verification record. The newer final head must execute its own configured CI/CodeQL gates before it is called an exact-head verified release candidate; historical evidence is not silently inherited.
