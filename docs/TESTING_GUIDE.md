@@ -31,7 +31,9 @@ Typical coverage includes:
 - item validation;
 - settings normalization;
 - session-lock/backoff/trash/clipboard policies;
-- attachment/backup path/header/resource policies.
+- attachment/backup path/header/resource policies;
+- RFC-compatible TOTP code generation and hostile Base32 input;
+- bounded TOTP `otpauth://totp/...` parsing/formatting, defaults, ambiguity rejection, metadata validation, and resource ceilings.
 
 ### `tests/CipherNest.IntegrationTests`
 
@@ -56,6 +58,8 @@ Use for real interactions among infrastructure components, especially:
 
 Integration tests should use disposable temporary directories/data and must never rely on or modify a developer's real CipherNest vault.
 
+TOTP setup-URI parsing/formatting itself is platform-independent and pure enough for UnitTests. Integration coverage remains valuable for the imported fields after they are explicitly saved through the ordinary encrypted TOTP `VaultItem` path; the URI text itself must not become a second persisted field.
+
 ### `tests/CipherNest.UiTests`
 
 This project deliberately has no MAUI project reference. It contains source/repository/UI-structure regression checks that can run on a normal .NET host.
@@ -69,6 +73,7 @@ Typical checks include:
 - privacy-safe error reporting source patterns;
 - no legacy `.DisplayAlert(` calls;
 - session/key/backup/attachment/database ordering invariants visible in source;
+- TOTP setup-URI field masking/transient cleanup, codec routing, and secure clipboard routing;
 - CI workflow and verification-script presence;
 - funding/support metadata consistency.
 
@@ -84,6 +89,7 @@ A source test can prove that a required call/order/string/pattern is present in 
 - a biometric enrollment/device state works;
 - a screenshot is actually blocked;
 - a screen reader announces content correctly;
+- a third-party authenticator accepts a generated setup URI or exposes identical provider-specific behavior;
 - a signing/store package is valid.
 
 Whenever practical, pair source invariants with runtime unit/integration tests and then target-device/manual validation for platform behavior.
@@ -195,7 +201,8 @@ For `VaultItemValidator` and decrypted record boundaries test:
 - attachment metadata/control characters;
 - duplicate attachment IDs/storage names;
 - payload-ID versus authenticated-row-ID mismatch;
-- serialized/decrypted/storage byte ceilings.
+- serialized/decrypted/storage byte ceilings;
+- TOTP seed/settings validity for `OneTimePassword` items.
 
 Boundary values should test both maximum accepted and first rejected values where practical.
 
@@ -327,7 +334,78 @@ Cover:
 - exact exported header/escaping;
 - no attachment/custom-field inclusion unless intentionally changed/documented.
 
-## 15. Settings tests
+## 15. TOTP tests
+
+### Code generation
+
+Cover:
+
+- RFC 6238 known-answer vectors for SHA-1/SHA-256/SHA-512;
+- 6/8-digit output;
+- 15..120-second periods;
+- formatted lowercase/grouped Base32 input;
+- invalid alphabet;
+- impossible encoded lengths;
+- invalid supplied padding;
+- non-zero residual bits;
+- unsupported settings;
+- pre-Unix-epoch time;
+- `DateTimeOffset.MaxValue` validity-window clamping;
+- formatted/normalized input ceilings;
+- owned temporary scratch/key/hash/counter buffer cleanup where source/runtime can prove it.
+
+### Setup-URI parser/formatter
+
+Use synthetic seeds only. Cover:
+
+- canonical `otpauth://totp/...` parse;
+- standards-compatible defaults when algorithm/digits/period are absent;
+- encoded account name and issuer;
+- format -> parse round trip;
+- URI max 8,192 and first rejected over-limit input;
+- query max 16 and first rejected over-limit input;
+- account max 512;
+- issuer max 256;
+- query parameter name max 64 and allowed ASCII syntax;
+- wrong schemes;
+- HOTP host/type;
+- `counter` parameter;
+- user-info/custom port/fragment;
+- missing secret;
+- duplicate query keys case-insensitively;
+- invalid percent encoding;
+- Control/Format metadata characters, including representative supplementary Unicode Format input;
+- label/query issuer mismatch;
+- unsupported algorithm/digits/period;
+- invalid Base32 secret;
+- empty account.
+
+Source/UI coverage should additionally ensure:
+
+- `ITotpUriCodec` is registered to `TotpUriCodec` in DI;
+- Item Editor invokes the abstraction instead of implementing a second parser;
+- import field is masked;
+- import field clears after attempts and when sensitive page state clears;
+- setup URI is not added to `VaultItem` as another persisted field;
+- `Copy setup URI` uses `IClipboardSecurityService.CopySecretAsync`;
+- diagnostic/error text does not include actual setup URI/seed.
+
+### Manual interoperability
+
+Automated round-trip tests do not prove every third-party implementation accepts CipherNest output. On release candidates, use synthetic seeds to test representative compatible authenticators/provider URI forms and record:
+
+- imported account/issuer presentation;
+- SHA-1/SHA-256/SHA-512;
+- 6/8-digit settings;
+- representative periods such as 30/60 seconds;
+- exported URI acceptance;
+- percent-encoded labels;
+- clipboard history/synchronization behavior;
+- deliberate HOTP rejection.
+
+Never place a real setup URI or seed in screenshots, CI logs, issues, or support artifacts.
+
+## 16. Settings tests
 
 Cover:
 
@@ -349,7 +427,7 @@ Cover:
 - no stale staging after success;
 - cleanup failure not masking primary result.
 
-## 16. Session/concurrency tests
+## 17. Session/concurrency tests
 
 Concurrency bugs often require controlled scheduling.
 
@@ -368,7 +446,7 @@ Important scenarios:
 
 Prefer deterministic barriers/TaskCompletionSource-controlled fake streams/stores over timing-only sleeps.
 
-## 17. Clipboard tests
+## 18. Clipboard tests
 
 Pure policy/source tests should verify:
 
@@ -377,11 +455,12 @@ Pure policy/source tests should verify:
 - fixed-time comparison;
 - fingerprint-buffer zeroing;
 - initiating caller cancellation does not silently remove scheduled cleanup after a successful copy;
-- newer unrelated clipboard value is preserved.
+- newer unrelated clipboard value is preserved;
+- primary secrets, TOTP codes, and TOTP setup URIs route through the same secret-clipboard policy.
 
-Real-device tests are still required because OS clipboard APIs/history/sync differ by platform.
+Real-device tests are still required because OS clipboard APIs/history/sync differ by platform. Treat setup-URI clipboard results as long-lived seed exposure, not equivalent to one short-lived code.
 
-## 18. Lifecycle tests
+## 19. Lifecycle tests
 
 Policy tests should cover:
 
@@ -394,7 +473,7 @@ Source/runtime tests should ensure lifecycle exception fallback separately conta
 
 Device tests must cover suspend/resume/sleep/wake/task switching.
 
-## 19. Biometric tests
+## 20. Biometric tests
 
 ### Android
 
@@ -426,7 +505,7 @@ Real/simulator-capable environments should cover:
 
 Confirm no false biometric convenience-unlock UI claim; master-passphrase fallback remains current behavior.
 
-## 20. Screenshot/privacy tests
+## 21. Screenshot/privacy tests
 
 On each target:
 
@@ -436,7 +515,9 @@ On each target:
 - verify unsupported target messaging is honest;
 - confirm protected content remains masked by default independent of screenshot support.
 
-## 21. Accessibility tests
+The TOTP setup-URI input must remain masked and must not be placed in screenshots/store media during testing.
+
+## 22. Accessibility tests
 
 See `ACCESSIBILITY.md` for complete matrix. At minimum test:
 
@@ -448,23 +529,26 @@ See `ACCESSIBILITY.md` for complete matrix. At minimum test:
 - reduced motion;
 - 44-DIP target intent;
 - light/dark/system contrast;
-- narrow/landscape/desktop resizing.
+- narrow/landscape/desktop resizing;
+- TOTP setup-URI controls without the actual URI/seed appearing in semantic descriptions.
 
-## 22. Localization tests
+## 23. Localization tests
 
-Current release is English-first.
+Current preference/catalog support includes System, English, and a reviewed `hi-IN` resource-backed catalog for migrated strings.
 
 Test:
 
 - System fallback;
 - explicit English preference;
+- explicit Hindi preference;
 - startup/resume preference application;
-- missing-resource fallback behavior;
-- long-string layout resilience for future localization.
+- neutral-English missing-resource fallback behavior;
+- Hindi key parity/reviewed security-warning values;
+- long-string layout resilience, including new TOTP setup-URI UI strings when migrated to resources.
 
-Do not claim Hindi/additional language completeness without complete reviewed catalogs.
+Do not claim complete Hindi/additional-language coverage until every remaining literal is migrated and reviewed.
 
-## 23. Privacy-safe diagnostics tests
+## 24. Privacy-safe diagnostics tests
 
 Ensure sensitive error paths:
 
@@ -472,11 +556,12 @@ Ensure sensitive error paths:
 - use stable reporter operation IDs;
 - do not show/log `ex.Message` directly;
 - do not include decrypted field/path values;
+- do not include TOTP seeds, generated codes, or setup URIs;
 - clean temporary diagnostic/share staging best-effort.
 
 Repository/source scans for dangerous patterns are supplementary, not authoritative.
 
-## 24. CI checks
+## 25. CI checks
 
 Main CI is configured for:
 
@@ -491,7 +576,9 @@ Additional workflows include CodeQL MAUI application analysis and dependency rev
 
 See `verification/CI_GATES.md` for exact evidence requirements.
 
-## 25. Testing new bugs
+Because CI uses cancel-in-progress concurrency on branch pushes, do not collect final evidence while a multi-commit continuation is still moving `main`. Freeze the intended exact head first, then record only that head's completed runs.
+
+## 26. Testing new bugs
 
 For every fixed bug:
 
@@ -502,7 +589,7 @@ For every fixed bug:
 5. Add source coverage if a critical ordering/API pattern is otherwise difficult to execute automatically.
 6. Update `TEST_PLAN.md`/`RELEASE_CHECKLIST.md` if the class of failure is release-relevant.
 
-## 26. Performance/resource testing
+## 27. Performance/resource testing
 
 Use synthetic disposable data only.
 
@@ -514,17 +601,19 @@ Measure/review:
 - encrypted attachment throughput;
 - large CSV valid parsing;
 - backup/restore near normal large sizes;
+- TOTP setup-URI parse/format behavior near valid URI/query/account/issuer ceilings;
 - memory use near valid item/record resource ceilings.
 
 Do not build tests that routinely allocate the absolute 100k/256MiB/1GiB ceilings in constrained CI unless the test environment is explicitly designed for it. Policy-level boundary tests can verify arithmetic cheaply.
 
-## 27. Test-data safety
+## 28. Test-data safety
 
 Never use:
 
 - a real user's vault;
 - real passwords/tokens;
 - real recovery keys;
+- real TOTP seeds/setup URIs/current codes;
 - real payment-card details;
 - real private documents;
 - signing credentials;
@@ -532,7 +621,7 @@ Never use:
 
 Use clearly synthetic fixtures and temporary directories.
 
-## 28. Release evidence
+## 29. Release evidence
 
 A release candidate should retain:
 
@@ -542,11 +631,12 @@ A release candidate should retain:
 - CI run URLs/results;
 - CodeQL/dependency/vulnerability review results;
 - device/emulator matrix/results;
+- representative synthetic TOTP setup-URI interoperability results;
 - restore compatibility results;
 - signing/package provenance without secrets;
 - written exceptions for any not-applicable gate.
 
-## 29. Failure policy
+## 30. Failure policy
 
 Release is blocked by unresolved:
 
@@ -555,6 +645,7 @@ Release is blocked by unresolved:
 - migration/restore compatibility break;
 - malformed authenticated metadata escaping validation;
 - unbounded attacker-controlled resource metadata;
+- ambiguous/unsafe security-sensitive TOTP setup-URI parsing;
 - stale destructive authorization surviving session transition;
 - secret/path leakage in diagnostics;
 - known high-severity dependency issue without a documented owned exception.
@@ -580,3 +671,9 @@ The final source-side hardening adds focused regression coverage for three remai
 The first hosted checkpoint also caught a repository-formatting newline violation and an xUnit duplicate-theory-ID diagnostic that caused one intended surrogate corpus case not to execute independently. Both were corrected before the documentation freeze. The corrected checkpoint at `483428a0146e5e086a03c9356217139712d1ea1c` completed 346 Unit, 98 Integration, and 110 UI/source tests: **554 passed, 0 failed, 0 skipped**, with analyzer builds and configured core formatting checks successful.
 
 That checkpoint is historical once later documentation commits exist; release evidence must always be taken from the exact final candidate head.
+
+## TOTP setup-URI regression boundary — 2026-08-18
+
+The August 18 continuation adds deterministic unit coverage around `TotpUriCodec` and source/UI coverage around Item Editor handling. This boundary is deliberately text-only and local-only: the tests must continue to prove no incidental QR/camera/provider/cloud dependency is required for the implemented parser/formatter surface.
+
+Automated tests reduce parser/resource/regression risk; they do **not** certify compatibility with every authenticator/provider. Exact release candidates still need representative manual interoperability with synthetic secrets plus target-platform clipboard/history/accessibility validation.
