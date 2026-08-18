@@ -31,7 +31,7 @@ public sealed class TotpUriCodec : ITotpUriCodec
             throw new ArgumentException("TOTP URI must not contain user-info, a custom port, or a fragment.", nameof(uriText));
 
         var escapedPath = uri.GetComponents(UriComponents.Path, UriFormat.UriEscaped);
-        if (string.IsNullOrEmpty(escapedPath) || escapedPath.Contains('/', StringComparison.Ordinal))
+        if (string.IsNullOrEmpty(escapedPath) || escapedPath.Contains('/'))
             throw new ArgumentException("TOTP URI must contain exactly one account label path segment.", nameof(uriText));
 
         var label = DecodeComponent(escapedPath, plusAsSpace: false, "label").Trim();
