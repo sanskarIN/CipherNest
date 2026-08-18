@@ -51,14 +51,20 @@ TOTP input is treated as untrusted data even though it is usually pasted by the 
 - user-info, custom ports, fragments, HOTP, and `counter` are rejected;
 - the URI must contain exactly one label path segment;
 - query processing is capped at 16 pairs;
+- every query pair must be non-empty `name=value` syntax;
 - duplicate query keys are rejected case-insensitively to avoid ambiguous security-sensitive values;
-- query names are limited to a small ASCII identifier form;
-- invalid percent encoding and control characters are rejected;
+- query names are limited to a small ASCII identifier form with a 64-character ceiling;
+- percent encoding/control characters are validated for every query value, including otherwise ignored future/unknown parameters;
 - account names are capped at 512 characters;
 - issuers are capped at 256 characters;
+- the decoded label may contain at most one `:` issuer/account separator;
+- an empty issuer prefix before a separator is rejected;
+- `:` is rejected inside the account and issuer components so formatter output cannot be reinterpreted on parse;
 - Unicode Control and Format characters are rejected from display metadata;
 - an issuer encoded in the label and an explicit `issuer=` parameter must match when both are present;
 - imported seed/algorithm/digits/period values are routed through the same authoritative TOTP validation used by code generation.
+
+The colon rule is deliberate. The Key URI label uses `:` to separate issuer from account. Allowing additional colons inside either component would make a formatted URI capable of parsing back into different metadata.
 
 These limits are defensive ceilings, not recommendations for unusually large seeds, labels, or URIs.
 
@@ -104,6 +110,8 @@ The import operation does not contact the issuer/provider, does not verify that 
 
 **Copy setup URI** formats the current TOTP seed/settings into a canonical local `otpauth://totp/...` URI. When a username is present, CipherNest uses it as the account name and uses the title as issuer metadata. If the username is empty, the title is used as the account label without duplicating it as issuer metadata.
 
+Account/issuer values containing `:` are rejected because the character is reserved as the label delimiter and would otherwise make round-trip interpretation ambiguous.
+
 The resulting URI is copied through the existing secret clipboard service and therefore receives the configured best-effort timed cleanup behavior. The URI is not persisted as a separate vault field.
 
 ### What is not implemented
@@ -122,7 +130,7 @@ Those features require separate platform/privacy/security design and testing.
 
 `TotpServiceTests` includes RFC 6238 Appendix B known-answer vectors for SHA-1, SHA-256, and SHA-512 at the standard test timestamps. The tests also cover formatted lowercase Base32 input, configured code lengths, malformed seeds, unsupported settings, input ceilings, and pre-epoch rejection.
 
-`TotpUriCodecTests` covers canonical parsing, standards-compatible defaults, format/parse round trips, wrong schemes, HOTP rejection, duplicate parameters, invalid settings, mismatched issuer metadata, URI/query ceilings, control/format characters, invalid secrets, and empty account names.
+`TotpUriCodecTests` covers canonical parsing, standards-compatible defaults, explicit/label issuer behavior, format/parse round trips, wrong schemes, HOTP/counter rejection, case-insensitive duplicate parameters, empty query pairs, invalid settings, mismatched issuer metadata, URI/query ceilings, exact and first-over account/issuer bounds, additional/empty label separators, invalid percent encoding including unknown parameters, control/format characters, invalid secrets, and encoded formatter ceilings.
 
 Known-answer and parser tests validate deterministic repository behavior; they are not a substitute for independent cryptographic or interoperability review across every third-party authenticator/provider.
 
@@ -140,6 +148,8 @@ A TOTP item uses the normal encrypted `VaultItem` record:
 The seed and TOTP settings are inside the authenticated encrypted record payload rather than plaintext searchable SQLite columns.
 
 `VaultItemValidator` performs TOTP-specific validation before a `OneTimePassword` record can be saved through normal vault-service paths.
+
+The pasted/formatted setup URI is not stored as a separate property in `VaultItem`.
 
 ## Editor behavior
 
@@ -191,6 +201,8 @@ CipherNest does not claim to protect a TOTP account when:
 - the device clock is materially wrong and the provider does not compensate;
 - the underlying service enrollment is compromised.
 
+A structurally valid URI is not proof of issuer identity. A malicious source can provide attacker-chosen issuer/account/seed data that passes syntax/resource validation. Review imported metadata before saving.
+
 For high-value accounts, consider whether keeping the second-factor seed on a separate trusted device better matches your threat model.
 
 ## Release validation
@@ -200,7 +212,9 @@ Before release, maintainers should:
 - run all RFC known-answer tests;
 - run all `TotpUriCodecTests`;
 - verify invalid Base32 forms fail without unbounded work;
-- verify malformed/oversized/duplicate/HOTP setup URIs are rejected without network work;
+- verify malformed/oversized/duplicate/empty-query/HOTP setup URIs are rejected without network work;
+- verify multi-colon/empty-issuer labels and colon-bearing account/issuer formatter inputs are rejected deterministically;
+- verify malformed percent encoding in unknown extension parameters is rejected rather than ignored;
 - verify 6- and 8-digit rendering on target platforms;
 - verify URI import populates account/issuer/settings correctly and clears the sensitive URI-entry field;
 - verify copied setup URIs round-trip with representative compatible authenticators using synthetic seeds only;
@@ -210,7 +224,7 @@ Before release, maintainers should:
 - verify explicit clipboard behavior and lock cleanup on supported platforms for codes and setup URIs;
 - verify security audit exclusions and duplicate behavior;
 - verify no TOTP seed/code/setup URI is emitted through diagnostics;
-- verify documentation does not claim QR import, provider enrollment, autofill, full second-factor isolation, or independent audit.
+- verify documentation does not claim QR import, provider enrollment, autofill, full second-factor isolation, universal compatibility, or independent audit.
 
 ## Final repository-side TOTP hardening — 2026-08-15
 
@@ -240,3 +254,16 @@ Repository-side guarantees added in this pass include:
 - import field clearing after attempts and on page exit;
 - setup-URI copy through the existing timed secret clipboard service;
 - unit and UI/source regression tests for the new boundary.
+
+### Final ambiguity hardening
+
+The final August 18 parser pass additionally:
+
+- rejects more than one decoded `:` label separator;
+- rejects `:` inside account/issuer components during formatting and parsing;
+- rejects an empty issuer prefix before a label separator;
+- rejects empty query pairs instead of silently dropping them;
+- validates percent encoding/control characters for all query values, including well-named unknown extension parameters;
+- adds regression tests for each of those cases and for the exact 16-query-pair boundary.
+
+These rules are intended to keep canonical formatting deterministic and prevent malformed/ambiguous extension data from being silently normalized into a different interpretation.
