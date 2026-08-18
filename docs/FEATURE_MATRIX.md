@@ -141,8 +141,10 @@ Persisted numeric values are compatibility-sensitive and must not be reordered w
 | Manual code refresh | **Implemented** | No background refresh timer. |
 | Explicit code copy | **Implemented** | Uses timed conditional clipboard cleanup. |
 | Persist generated TOTP code | **Not a product capability** | Generated codes are transient presentation state. |
-| QR scanning/rendering | **Deferred** | Requires separate parsing/camera/lifecycle/security design. |
-| `otpauth://` import/export | **Deferred** | Requires bounded interoperability design. |
+| Bounded `otpauth://totp/...` import | **Implemented** | Local-only parser with URI/query/display bounds, duplicate-key rejection, issuer consistency checks, and authoritative seed/settings validation. |
+| Canonical `otpauth://totp/...` formatting/copy | **Implemented** | Formats current account/issuer/seed/settings locally and copies the sensitive URI through timed secret-clipboard cleanup. |
+| HOTP/counter interoperability | **Not a product capability** | Current TOTP item model intentionally rejects HOTP URIs and `counter` parameters. |
+| QR scanning/rendering | **Deferred** | Requires camera/rendering/lifecycle/privacy/security design. |
 | Autofill/provider enrollment | **Deferred** | Separate platform/security project. |
 
 ## 9. Password/passphrase generation
@@ -218,7 +220,7 @@ Persisted numeric values are compatibility-sensitive and must not be reordered w
 | CSV import | **Implemented** | Bounded streaming parser and validation. |
 | Plaintext CSV export | **Implemented** | Requires explicit phrase, current-master auth, warning. |
 | CSV attachment export | **Not a product capability** | Attachments are not included in plaintext CSV export. |
-| TOTP `otpauth://` interoperability | **Deferred** | Generic CSV does not claim it. |
+| TOTP `otpauth://` interoperability | **Implemented outside CSV** | Dedicated single-item URI import/formatting is implemented; generic CSV is not presented as an authenticator-migration format. |
 | Guaranteed removal of source/imported CSV | **Not a product capability** | Source file is outside CipherNest's storage boundary. |
 
 ## 14. Clipboard and plaintext handling
@@ -229,6 +231,7 @@ Persisted numeric values are compatibility-sensitive and must not be reordered w
 | Explicit primary-secret copy | **Implemented** | User action required. |
 | Explicit secret custom-field copy | **Implemented** | User action required. |
 | Explicit TOTP code copy | **Implemented** | User action required. |
+| Explicit TOTP setup-URI copy | **Implemented** | User action required; URI contains the long-lived seed and uses secret clipboard handling. |
 | Fingerprint-only delayed state | **Implemented** | SHA-256 fingerprint, not plaintext timer state. |
 | Fixed-time matching | **Implemented** | Prevents ordinary variable-time fingerprint comparison. |
 | Preserve newer unrelated clipboard content | **Implemented** | Clears only when the current clipboard still matches CipherNest's copy. |
@@ -291,7 +294,7 @@ Persisted numeric values are compatibility-sensitive and must not be reordered w
 | Onboarding | **Implemented** | Creates vault/master/recovery. |
 | Unlock | **Implemented** | Master/recovery/optional biometric convenience unlock. |
 | Vault | **Implemented** | Search/filter/sort/list, navigation, lock, BMC support entry. |
-| Item Editor | **Implemented** | Create/edit items, TOTP, notes, custom fields, attachments, re-auth actions. |
+| Item Editor | **Implemented** | Create/edit items, TOTP including bounded setup-URI interoperability, notes, custom fields, attachments, re-auth actions. |
 | Generator | **Implemented** | Password/passphrase generation. |
 | Generator Defaults | **Implemented** | Persistent generator defaults. |
 | Audit | **Implemented** | Local security findings. |
@@ -380,7 +383,8 @@ These are not hidden product features; they are evidence still required for an a
 - physical Android biometric enrollment/denial/cancellation/lockout/secure-storage matrix;
 - physical/simulator iOS Face ID/Touch ID and secure-storage behavior;
 - Mac Catalyst biometric/runtime behavior;
-- Windows/iOS/macOS/Android clipboard history/cleanup behavior;
+- Windows/iOS/macOS/Android clipboard history/cleanup behavior, including copied TOTP setup URIs;
+- representative `otpauth://totp/...` interoperability checks with synthetic seeds and compatible third-party authenticators;
 - background/sleep/resume lifecycle behavior;
 - screenshot/app-switcher privacy behavior;
 - share-sheet temporary plaintext retention/cleanup behavior;
@@ -406,7 +410,7 @@ The current source does **not** claim completed support for:
 - browser/app autofill;
 - Windows Hello convenience unlock;
 - TOTP QR scanning/rendering;
-- bounded `otpauth://` import/export;
+- HOTP interoperability;
 - TOTP provider/autofill enrollment;
 - rich binary/PDF preview beyond bounded safe text preview;
 - document scanning;
