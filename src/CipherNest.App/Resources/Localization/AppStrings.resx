@@ -35,4 +35,16 @@
   <data name="TotpCurrentCodeSemanticDescription" xml:space="preserve"><value>Current locally generated one-time password</value></data>
   <data name="TotpCopyCodeSemanticDescription" xml:space="preserve"><value>Copy the current one-time password temporarily</value></data>
   <data name="TotpSafetyWarning" xml:space="preserve"><value>Only import TOTP seeds you are authorized to use. Copying a seed, setup URI, or generated code can expose it through operating-system clipboard history or synchronization; CipherNest applies the same best-effort timed clipboard cleanup policy used for other secrets.</value></data>
+  <data name="TotpPeriodFormat" xml:space="preserve"><value>Period: {0} seconds</value></data>
+  <data name="TotpValidityFormat" xml:space="preserve"><value>Valid for about {0} more seconds after refresh.</value></data>
+  <data name="TotpInvalidSeedSettingsError" xml:space="preserve"><value>The TOTP seed or settings are invalid. Use a Base32 seed, 6 or 8 digits, and a period from 15 to 120 seconds.</value></data>
+  <data name="TotpGenerateError" xml:space="preserve"><value>The one-time code could not be generated safely. The encrypted seed remains unchanged.</value></data>
+  <data name="TotpCopyCodeError" xml:space="preserve"><value>The one-time code could not be copied safely. You can still read it directly while the vault remains unlocked.</value></data>
+  <data name="TotpImportMissingUriError" xml:space="preserve"><value>Paste an otpauth://totp/... setup URI before importing.</value></data>
+  <data name="TotpImportSuccess" xml:space="preserve"><value>TOTP setup URI imported locally. Review the account, issuer, algorithm, digits, and period before saving.</value></data>
+  <data name="TotpImportInvalidError" xml:space="preserve"><value>The TOTP setup URI is invalid or unsupported. CipherNest accepts bounded otpauth://totp/... URIs only; HOTP and ambiguous parameters or labels are rejected.</value></data>
+  <data name="TotpImportFailureError" xml:space="preserve"><value>The TOTP setup URI could not be imported safely. Existing item fields were not intentionally changed after the failure.</value></data>
+  <data name="TotpCopyUriSuccess" xml:space="preserve"><value>TOTP setup URI copied with timed clipboard cleanup where supported. The URI contains the seed and must be protected like the seed itself.</value></data>
+  <data name="TotpCopyUriInvalidError" xml:space="preserve"><value>A TOTP setup URI could not be created. Enter a valid Base32 seed and account name, then review the algorithm, digits, and period.</value></data>
+  <data name="TotpCopyUriFailureError" xml:space="preserve"><value>The TOTP setup URI could not be copied safely. The encrypted vault item remains unchanged.</value></data>
 </root>
