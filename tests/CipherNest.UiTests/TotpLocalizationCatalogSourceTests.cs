@@ -21,7 +21,19 @@ public sealed class TotpLocalizationCatalogSourceTests
         "TotpCopySetupUriSemanticDescription",
         "TotpCurrentCodeSemanticDescription",
         "TotpCopyCodeSemanticDescription",
-        "TotpSafetyWarning"
+        "TotpSafetyWarning",
+        "TotpPeriodFormat",
+        "TotpValidityFormat",
+        "TotpInvalidSeedSettingsError",
+        "TotpGenerateError",
+        "TotpCopyCodeError",
+        "TotpImportMissingUriError",
+        "TotpImportSuccess",
+        "TotpImportInvalidError",
+        "TotpImportFailureError",
+        "TotpCopyUriSuccess",
+        "TotpCopyUriInvalidError",
+        "TotpCopyUriFailureError"
     ];
 
     [Fact]
@@ -40,7 +52,7 @@ public sealed class TotpLocalizationCatalogSourceTests
     }
 
     [Fact]
-    public void TotpSecurityCatalog_TranslatesSensitiveWarningsAndActions()
+    public void TotpSecurityCatalog_TranslatesSensitiveWarningsActionsFormatsAndStatuses()
     {
         var neutral = ReadCatalog("AppStrings.resx");
         var hindi = ReadCatalog("AppStrings.hi-IN.resx");
@@ -52,6 +64,10 @@ public sealed class TotpLocalizationCatalogSourceTests
 
         Assert.Equal("otpauth://totp/...", neutral["TotpImportPlaceholder"]);
         Assert.Equal(neutral["TotpImportPlaceholder"], hindi["TotpImportPlaceholder"]);
+        Assert.Contains("{0}", neutral["TotpPeriodFormat"], StringComparison.Ordinal);
+        Assert.Contains("{0}", hindi["TotpPeriodFormat"], StringComparison.Ordinal);
+        Assert.Contains("{0}", neutral["TotpValidityFormat"], StringComparison.Ordinal);
+        Assert.Contains("{0}", hindi["TotpValidityFormat"], StringComparison.Ordinal);
     }
 
     private static Dictionary<string, string> ReadCatalog(string fileName)
