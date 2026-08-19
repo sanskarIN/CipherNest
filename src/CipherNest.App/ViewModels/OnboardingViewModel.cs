@@ -1,3 +1,4 @@
+using System.Globalization;
 using CipherNest.Application.Abstractions;
 using CipherNest.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,7 +21,7 @@ public partial class OnboardingViewModel : ObservableObject
     public partial string Confirmation { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string StrengthLabel { get; set; } = "Enter a long unique master passphrase.";
+    public partial string StrengthLabel { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial bool RecoveryLimitAcknowledged { get; set; }
@@ -48,13 +49,14 @@ public partial class OnboardingViewModel : ObservableObject
         _vault = vault;
         _generator = generator;
         _exceptions = exceptions;
+        StrengthLabel = OnboardingText("OnboardingStrengthInitial");
     }
 
     partial void OnMasterPassphraseChanged(string value)
     {
         StrengthLabel = value.Length > MaximumMasterPassphraseCharacters
-            ? $"Master passphrase cannot exceed {MaximumMasterPassphraseCharacters:N0} characters."
-            : _generator.Evaluate(value).Label;
+            ? OnboardingFormat("OnboardingMasterTooLongFormat", MaximumMasterPassphraseCharacters)
+            : PasswordStrengthLabel(value);
         CreateVaultCommand.NotifyCanExecuteChanged();
     }
 
@@ -93,16 +95,19 @@ public partial class OnboardingViewModel : ObservableObject
         }
         catch (ArgumentException)
         {
-            ErrorMessage = $"Master passphrase must contain between {MinimumMasterPassphraseCharacters:N0} and {MaximumMasterPassphraseCharacters:N0} supported characters and satisfy the strength requirement.";
+            ErrorMessage = OnboardingFormat(
+                "OnboardingMasterRequirementsErrorFormat",
+                MinimumMasterPassphraseCharacters,
+                MaximumMasterPassphraseCharacters);
         }
         catch (InvalidOperationException)
         {
-            ErrorMessage = "A local vault already exists or could not be initialized safely.";
+            ErrorMessage = OnboardingText("OnboardingVaultExistsError");
         }
         catch (Exception ex)
         {
             _exceptions.Report("Onboarding.CreateVault", ex);
-            ErrorMessage = "The local vault could not be created safely. No successful setup is being reported; check local storage access and try again.";
+            ErrorMessage = OnboardingText("OnboardingCreateFailureError");
         }
         finally
         {
@@ -120,4 +125,24 @@ public partial class OnboardingViewModel : ObservableObject
         ShowRecoveryKey = false;
         await Shell.Current.GoToAsync("//vault");
     }
+
+    private string PasswordStrengthLabel(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return OnboardingText("PasswordStrengthEmpty");
+
+        return _generator.Evaluate(value).Score switch
+        {
+            <= 0 => OnboardingText("PasswordStrengthVeryWeak"),
+            1 => OnboardingText("PasswordStrengthWeak"),
+            2 => OnboardingText("PasswordStrengthFair"),
+            3 => OnboardingText("PasswordStrengthStrong"),
+            _ => OnboardingText("PasswordStrengthVeryStrong")
+        };
+    }
+
+    private static string OnboardingText(string key) =>
+        ServiceProviderHelper.GetRequiredService<ILocalizationService>().Get(key);
+
+    private static string OnboardingFormat(string key, params object[] args) =>
+        string.Format(CultureInfo.CurrentUICulture, OnboardingText(key), args);
 }
