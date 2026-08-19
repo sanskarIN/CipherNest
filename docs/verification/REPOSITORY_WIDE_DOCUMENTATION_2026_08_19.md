@@ -129,6 +129,16 @@ Before describing the final documentation head as exact-head verified, observe t
 
 If the connected workflow evidence is unavailable or still running, record that fact rather than fabricating success.
 
+## Observed workflow-evidence lookup
+
+After the exhaustive documentation, inventory synchronization, maintenance-policy update, and live-ledger update, the candidate head inspected was:
+
+`6501f2f2d3b7d3efd27d5e8d2bb99e4c14f7cfb1`
+
+The connected `fetch_commit_workflow_runs` helper returned an empty workflow-run list for that SHA. The helper's contract filters to pull-request-triggered runs, so an empty result is **not** evidence that push-triggered CI passed, failed, or did not run.
+
+Accordingly this record makes no exact-head CI success claim for the documentation continuation. The configured gates remain required before a later immutable candidate is described as exact-head verified.
+
 ## External/manual gates intentionally unchanged
 
 Repository-wide prose coverage does not complete:
