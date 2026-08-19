@@ -112,6 +112,26 @@ A focused source-contract test is added by this continuation to require the new 
 
 The guard is deliberately separate from physical-device tests. It protects repository/documentation structure, not runtime platform behavior.
 
+### Tracked-file completeness hardening
+
+The later August 19 continuation strengthened `tests/CipherNest.UiTests/RepositoryDocumentationInventorySourceTests.cs` from representative inventory sampling to a tracked-file completeness gate.
+
+The test now:
+
+- executes `git ls-files -z` from the located repository root;
+- treats Git's tracked-file set as the authoritative inventory input rather than enumerating generated build output or unrelated untracked local files;
+- maps every tracked path below `src/` to `docs/SOURCE_CODE_REFERENCE.md`;
+- maps every tracked path below `tests/` to `docs/TEST_SUITE_REFERENCE.md`;
+- maps every other tracked path to `docs/REPOSITORY_FILE_REFERENCE.md`;
+- fails with the exact missing path and expected inventory when any tracked file is not represented;
+- retains representative layer/suite assertions as additional readability/ownership checks.
+
+This closes the earlier gap where the source-contract test could pass while an unrepresented tracked file existed outside the representative sample. The hardening was introduced by commit `e915df167df4170be5642c9925bac881340a0cf0`.
+
+The gate requires Git because the contract is specifically about **tracked** repository files. GitHub-hosted CI already checks out the repository through Git, while source archives or environments without repository metadata are not equivalent evidence for this tracked-file contract.
+
+No passing-test claim is inferred merely from adding the stronger assertion. Exact-head test evidence still requires an observed run for the candidate SHA.
+
 ## Exact-head verification requirements
 
 This documentation continuation changes tracked files and therefore creates a new candidate head. Historical evidence does not automatically transfer.
@@ -139,6 +159,8 @@ The connected `fetch_commit_workflow_runs` helper returned an empty workflow-run
 
 Accordingly this record makes no exact-head CI success claim for the documentation continuation. The configured gates remain required before a later immutable candidate is described as exact-head verified.
 
+The later tracked-file completeness hardening likewise does not inherit the historical candidate's evidence. Its commits require their own observable exact-head CI evidence before release-candidate verification is claimed.
+
 ## External/manual gates intentionally unchanged
 
 Repository-wide prose coverage does not complete:
@@ -159,4 +181,4 @@ Those remain release evidence gates in `NEXT_STEPS.md`, `TEST_PLAN.md`, `RELEASE
 
 ## Maintenance rule
 
-A future file addition, deletion, rename or material responsibility change is incomplete until its file-level reference and affected canonical documentation are updated. A later verification record that should remain mandatory must also be added to the documentation source guard.
+A future file addition, deletion, rename or material responsibility change is incomplete until its file-level reference and affected canonical documentation are updated. The tracked-file completeness test is intended to make an omitted tracked path fail automatically instead of depending on reviewer memory. A later verification record that should remain mandatory must also be added to the documentation source guard.
