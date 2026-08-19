@@ -176,4 +176,38 @@
   <data name="SettingsDeleteAuthFailure" xml:space="preserve"><value>मास्टर-पासफ्रेज़ पुष्टि विफल होने के कारण वॉल्ट हटाना रद्द कर दिया गया।</value></data>
   <data name="SettingsDeleteFailure" xml:space="preserve"><value>वॉल्ट हटाना या स्थानीय सुरक्षित-स्टोरेज सफाई सुरक्षित रूप से पूरी नहीं हो सकी। CipherNest ने ऑपरेशन को पूर्ण घोषित नहीं किया।</value></data>
   <data name="SettingsDeleteConfirmFailure" xml:space="preserve"><value>वॉल्ट-हटाने की पुष्टि सुरक्षित रूप से नहीं दिखाई जा सकी। कोई हटाने की प्रक्रिया शुरू नहीं हुई।</value></data>
+  <data name="SettingsAppearanceAccessibilityTitle" xml:space="preserve"><value>रूप और सुगम्यता</value></data>
+  <data name="SettingsThemeLabel" xml:space="preserve"><value>थीम</value></data>
+  <data name="SettingsLanguageLabel" xml:space="preserve"><value>भाषा</value></data>
+  <data name="SettingsLanguageSummary" xml:space="preserve"><value>माइग्रेट किए गए इंटरफ़ेस भागों के लिए अंग्रेज़ी और समीक्षित हिन्दी संसाधन उपलब्ध हैं। सिस्टम मोड उपलब्ध समीक्षित कैटलॉग का अनुसरण करता है और जहाँ अनुवाद अभी माइग्रेट नहीं हुआ है वहाँ अंग्रेज़ी पर वापस आता है।</value></data>
+  <data name="SettingsSaveLanguageButton" xml:space="preserve"><value>भाषा प्राथमिकता सहेजें</value></data>
+  <data name="SettingsReducedMotionLabel" xml:space="preserve"><value>कम मोशन प्राथमिकता</value></data>
+  <data name="SettingsLargerInterfaceLabel" xml:space="preserve"><value>बड़ा इंटरफ़ेस प्राथमिकता</value></data>
+  <data name="SettingsLockPrivacyTitle" xml:space="preserve"><value>लॉक और गोपनीयता</value></data>
+  <data name="SettingsLockTimeoutLabel" xml:space="preserve"><value>लॉक टाइमआउट (सेकंड)</value></data>
+  <data name="SettingsLockOnBackgroundLabel" xml:space="preserve"><value>ऐप के बैकग्राउंड में जाने पर लॉक करें</value></data>
+  <data name="SettingsClipboardClearLabel" xml:space="preserve"><value>क्लिपबोर्ड साफ करने का अंतराल (सेकंड)</value></data>
+  <data name="SettingsScreenshotProtectionLabel" xml:space="preserve"><value>जहाँ समर्थित हो वहाँ स्क्रीनशॉट सुरक्षा</value></data>
+  <data name="SettingsTrashRetentionLabel" xml:space="preserve"><value>ट्रैश रखने की अवधि (दिन)</value></data>
+  <data name="SettingsLocalRemindersTitle" xml:space="preserve"><value>स्थानीय रिमाइंडर</value></data>
+  <data name="SettingsBackupReminderLabel" xml:space="preserve"><value>एन्क्रिप्टेड बैकअप रिमाइंडर अंतराल (दिन)</value></data>
+  <data name="SettingsReviewRemindersLabel" xml:space="preserve"><value>वॉल्ट अनलॉक रहने पर स्थानीय आइटम समीक्षा रिमाइंडर दिखाएँ</value></data>
+  <data name="SettingsReviewReminderLeadLabel" xml:space="preserve"><value>समीक्षा रिमाइंडर अग्रिम समय (दिन)</value></data>
+  <data name="SettingsReviewReminderSummary" xml:space="preserve"><value>समीक्षा रिमाइंडर अनलॉक के बाद एन्क्रिप्टेड आइटम मेटाडेटा से स्थानीय रूप से गणना किए जाते हैं; यह रिलीज़ वॉल्ट विवरण किसी बाहरी नोटिफिकेशन सेवा को नहीं भेजती।</value></data>
+  <data name="SettingsSaveSettingsButton" xml:space="preserve"><value>सेटिंग्स सहेजें</value></data>
+  <data name="SettingsGeneratorDefaultsTitle" xml:space="preserve"><value>जेनरेटर डिफ़ॉल्ट</value></data>
+  <data name="SettingsGeneratorDefaultsSummary" xml:space="preserve"><value>जेनरेट किए गए पासवर्ड और याद रखने योग्य पासफ्रेज़ के लिए स्थानीय डिफ़ॉल्ट चुनें।</value></data>
+  <data name="SettingsConfigureGeneratorButton" xml:space="preserve"><value>जेनरेटर डिफ़ॉल्ट कॉन्फ़िगर करें</value></data>
+  <data name="SettingsStorageCacheTitle" xml:space="preserve"><value>स्टोरेज और कैश</value></data>
+  <data name="SettingsStorageCacheSummary" xml:space="preserve"><value>कैश सफाई जानबूझकर एन्क्रिप्टेड वॉल्ट डेटाबेस, एन्क्रिप्टेड अटैचमेंट स्टोर या ऐप डेटा में रखे बैकअप को कभी नहीं हटाती।</value></data>
+  <data name="SettingsRefreshStorageButton" xml:space="preserve"><value>स्टोरेज रीफ़्रेश करें</value></data>
+  <data name="SettingsClearCacheButton" xml:space="preserve"><value>अस्थायी कैश साफ करें</value></data>
+  <data name="SettingsFundingTitle" xml:space="preserve"><value>☕ CipherNest विकास का समर्थन करें</value></data>
+  <data name="SettingsFundingBadgeSemanticDescription" xml:space="preserve"><value>CipherNest के लिए Buy Me a Coffee समर्थन बैज</value></data>
+  <data name="SettingsFundingSummary" xml:space="preserve"><value>Buy Me a Coffee समर्थन वैकल्पिक है और फीचर पहुँच, सुरक्षा, गोपनीयता, लाइसेंसिंग, रिकवरी या समर्थन प्राथमिकता को कभी नहीं बदलता।</value></data>
+  <data name="SettingsFundingButton" xml:space="preserve"><value>☕ Buy Me a Coffee समर्थन देखें</value></data>
+  <data name="SettingsFundingButtonSemanticDescription" xml:space="preserve"><value>Buy Me a Coffee समर्थन लिंक के साथ About पेज खोलें</value></data>
+  <data name="SettingsAboutLegalTitle" xml:space="preserve"><value>About, कानूनी जानकारी और आभार</value></data>
+  <data name="SettingsAboutLegalSummary" xml:space="preserve"><value>संस्करण/बिल्ड, GPL-3.0-or-later लाइसेंस, गोपनीयता/शर्तों के संदर्भ, तृतीय-पक्ष सूचनाएँ, समर्थन संपर्क, रिपॉज़िटरी जानकारी, आभार और ऑडिट स्थिति देखें।</value></data>
+  <data name="SettingsOpenAboutLegalButton" xml:space="preserve"><value>About और कानूनी जानकारी खोलें</value></data>
 </root>
