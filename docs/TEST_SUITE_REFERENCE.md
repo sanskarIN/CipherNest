@@ -125,7 +125,7 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/OnboardingFailureContainmentSourceTests.cs` — onboarding failure containment/sensitive-state cleanup.
 - `tests/CipherNest.UiTests/OnboardingLocalizationSourceTests.cs` — onboarding/recovery security localization.
 - `tests/CipherNest.UiTests/OnboardingPassphraseBoundsSourceTests.cs` — onboarding passphrase bounds before expensive work.
-- `tests/CipherNest.UiTests/RepositoryDocumentationInventorySourceTests.cs` — repository-wide file-reference/current-verification presence, hub linking, and representative layer/suite inventory guards.
+- `tests/CipherNest.UiTests/RepositoryDocumentationInventorySourceTests.cs` — canonical document/hub presence plus exhaustive `git ls-files` mapping of every tracked path to `REPOSITORY_FILE_REFERENCE.md`, `SOURCE_CODE_REFERENCE.md`, or `TEST_SUITE_REFERENCE.md`; representative layer/suite assertions remain as secondary ownership checks.
 - `tests/CipherNest.UiTests/RepositoryUiStructureTests.cs` — expected pages/ViewModels/routes/resources/project structure.
 - `tests/CipherNest.UiTests/RestoreCompletionStateSourceTests.cs` — restore completion state only after required completion/reset.
 - `tests/CipherNest.UiTests/SensitiveCredentialLifetimeSourceTests.cs` — credential/recovery/master input cleanup.
@@ -167,7 +167,8 @@ See `TESTING_GUIDE.md`, `TEST_PLAN.md`, `verification/CI_GATES.md`, and `RELEASE
 For every new/removed/renamed/materially repurposed test file:
 
 1. update this reference in the same change series;
-2. update `REPOSITORY_FILE_REFERENCE.md` when repository structure/documentation semantics change;
-3. update documentation source guards when a new canonical document/verification record should remain mandatory;
-4. update exact test counts only after an observable exact-SHA run;
-5. preserve historical pass-count records instead of rewriting them for newer heads.
+2. keep the tracked-file documentation gate passing so every tracked path remains represented by its canonical inventory;
+3. update `REPOSITORY_FILE_REFERENCE.md` when repository structure/documentation semantics change;
+4. update documentation source guards when a new canonical document/verification record should remain mandatory;
+5. update exact test counts only after an observable exact-SHA run;
+6. preserve historical pass-count records instead of rewriting them for newer heads.
