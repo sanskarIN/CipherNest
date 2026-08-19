@@ -47,4 +47,50 @@
   <data name="TotpCopyUriSuccess" xml:space="preserve"><value>TOTP setup URI copied with timed clipboard cleanup where supported. The URI contains the seed and must be protected like the seed itself.</value></data>
   <data name="TotpCopyUriInvalidError" xml:space="preserve"><value>A TOTP setup URI could not be created. Enter a valid Base32 seed and account name, then review the algorithm, digits, and period.</value></data>
   <data name="TotpCopyUriFailureError" xml:space="preserve"><value>The TOTP setup URI could not be copied safely. The encrypted vault item remains unchanged.</value></data>
+  <data name="CipherNestLogoSemanticDescription" xml:space="preserve"><value>CipherNest logo</value></data>
+  <data name="UnlockTitle" xml:space="preserve"><value>Unlock CipherNest</value></data>
+  <data name="BiometricUnlockButton" xml:space="preserve"><value>Unlock with biometrics</value></data>
+  <data name="BiometricUnlockSemanticDescription" xml:space="preserve"><value>Authenticate with the device biometric system to unlock CipherNest</value></data>
+  <data name="UnlockAlternativeLabel" xml:space="preserve"><value>or use your master passphrase / recovery key</value></data>
+  <data name="UnlockCredentialPlaceholder" xml:space="preserve"><value>Master passphrase or recovery key</value></data>
+  <data name="UnlockCredentialSemanticDescription" xml:space="preserve"><value>Master passphrase or recovery key</value></data>
+  <data name="UnlockErrorSemanticDescription" xml:space="preserve"><value>Unlock error status</value></data>
+  <data name="UnlockButton" xml:space="preserve"><value>Unlock</value></data>
+  <data name="UnlockRecoveryWarning" xml:space="preserve"><value>Forgotten passphrases cannot be recovered unless you saved the optional recovery key during setup. Biometric unlock never replaces that recovery limitation.</value></data>
+  <data name="UnlockMasterSessionRequired" xml:space="preserve"><value>Enter the master passphrase to begin this security session. Biometric unlock becomes available for later locks during the configured period.</value></data>
+  <data name="UnlockRateLimitFormat" xml:space="preserve"><value>Too many failed attempts. Try again in {0} seconds.</value></data>
+  <data name="UnlockAuthenticationError" xml:space="preserve"><value>The passphrase is incorrect or the vault cannot be authenticated.</value></data>
+  <data name="UnlockPeriodicMasterDue" xml:space="preserve"><value>The periodic master-passphrase check is due. Unlock with the master passphrase first.</value></data>
+  <data name="UnlockBiometricPrompt" xml:space="preserve"><value>Authenticate to unlock your local CipherNest vault.</value></data>
+  <data name="UnlockBiometricFailed" xml:space="preserve"><value>Biometric authentication was cancelled or failed. Use the master passphrase instead.</value></data>
+  <data name="UnlockBiometricSecretUnavailable" xml:space="preserve"><value>The protected biometric unlock secret is unavailable. Unlock with the master passphrase and re-enable biometrics in Settings.</value></data>
+  <data name="UnlockBiometricDataMismatch" xml:space="preserve"><value>Biometric unlock data no longer matches this vault. Use the master passphrase and configure biometrics again.</value></data>
+  <data name="OnboardingCreateVaultTitle" xml:space="preserve"><value>Create your local vault</value></data>
+  <data name="OnboardingLocalSummary" xml:space="preserve"><value>CipherNest stores the current release entirely on this device. No account or cloud service is required.</value></data>
+  <data name="OnboardingSaveRecoveryKeyTitle" xml:space="preserve"><value>Save your recovery key now</value></data>
+  <data name="OnboardingRecoveryKeyExplanation" xml:space="preserve"><value>This key can unlock your vault if you forget the master passphrase. It is shown only during setup; CipherNest cannot retrieve it later. Store it separately from this device.</value></data>
+  <data name="OnboardingRecoveryKeySemanticDescription" xml:space="preserve"><value>Recovery key shown once</value></data>
+  <data name="OnboardingRecoveryKeySavedAcknowledgement" xml:space="preserve"><value>I saved the recovery key in a separate safe place.</value></data>
+  <data name="OnboardingContinueButton" xml:space="preserve"><value>Continue to vault</value></data>
+  <data name="OnboardingRecoveryLimitationTitle" xml:space="preserve"><value>Recovery limitation</value></data>
+  <data name="OnboardingRecoveryLimitationBody" xml:space="preserve"><value>If you lose the master passphrase and any optional recovery key, CipherNest cannot recover this local-only vault.</value></data>
+  <data name="MasterPassphraseLabel" xml:space="preserve"><value>Master passphrase</value></data>
+  <data name="MasterPassphrasePlaceholder" xml:space="preserve"><value>Long, unique and strong</value></data>
+  <data name="OnboardingStrengthInitial" xml:space="preserve"><value>Enter a long unique master passphrase.</value></data>
+  <data name="OnboardingMasterTooLongFormat" xml:space="preserve"><value>Master passphrase cannot exceed {0:N0} characters.</value></data>
+  <data name="PasswordStrengthEmpty" xml:space="preserve"><value>Empty</value></data>
+  <data name="PasswordStrengthVeryWeak" xml:space="preserve"><value>Very weak</value></data>
+  <data name="PasswordStrengthWeak" xml:space="preserve"><value>Weak</value></data>
+  <data name="PasswordStrengthFair" xml:space="preserve"><value>Fair</value></data>
+  <data name="PasswordStrengthStrong" xml:space="preserve"><value>Strong</value></data>
+  <data name="PasswordStrengthVeryStrong" xml:space="preserve"><value>Very strong</value></data>
+  <data name="ConfirmMasterPassphraseLabel" xml:space="preserve"><value>Confirm master passphrase</value></data>
+  <data name="ConfirmMasterPassphrasePlaceholder" xml:space="preserve"><value>Re-enter the passphrase</value></data>
+  <data name="OnboardingGenerateRecoveryOption" xml:space="preserve"><value>Generate an optional local recovery key and show it once</value></data>
+  <data name="OnboardingRecoveryAcknowledgement" xml:space="preserve"><value>I understand the recovery limitations.</value></data>
+  <data name="OnboardingErrorSemanticDescription" xml:space="preserve"><value>Vault creation error status</value></data>
+  <data name="OnboardingCreateButton" xml:space="preserve"><value>Create vault</value></data>
+  <data name="OnboardingMasterRequirementsErrorFormat" xml:space="preserve"><value>Master passphrase must contain between {0:N0} and {1:N0} supported characters and satisfy the strength requirement.</value></data>
+  <data name="OnboardingVaultExistsError" xml:space="preserve"><value>A local vault already exists or could not be initialized safely.</value></data>
+  <data name="OnboardingCreateFailureError" xml:space="preserve"><value>The local vault could not be created safely. No successful setup is being reported; check local storage access and try again.</value></data>
 </root>
