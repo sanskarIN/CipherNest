@@ -27,7 +27,7 @@ For that exact implementation SHA:
 - Mac Catalyst Release passed;
 - CodeQL v4 passed after analyzable core and MAUI application builds.
 
-The August 18 TOTP setup-URI implementation/documentation creates a newer head, so the immediate task is:
+The August 18 TOTP setup-URI implementation and August 19 TOTP workflow-localization continuation create a newer head, so the immediate task is:
 
 1. finish source, tests, and documentation synchronization;
 2. stop changing the candidate;
@@ -39,7 +39,7 @@ The August 18 TOTP setup-URI implementation/documentation creates a newer head, 
 8. record the exact final SHA and run IDs;
 9. do not call that later SHA exact-head verified until all configured gates have finished successfully.
 
-See `verification/COMPLETE_DOCUMENTATION_2026_08_16.md`, the August 18 TOTP URI verification record, and `verification/CI_GATES.md`.
+See `verification/COMPLETE_DOCUMENTATION_2026_08_16.md`, the August 18 TOTP URI verification record, `verification/TOTP_LOCALIZATION_2026_08_19.md`, and `verification/CI_GATES.md`.
 
 ## Priority 1 — physical-device and lifecycle security validation
 
@@ -233,7 +233,8 @@ Execute and record target checks for:
 Localization work:
 
 - verify the current reviewed `hi-IN` resource-backed catalog on devices;
-- continue migrating remaining literals to resources, including the new TOTP URI UI strings;
+- verify the newly migrated TOTP fixed/dynamic/status strings in English, Hindi, and System modes;
+- continue migrating remaining literals outside the now-resource-backed TOTP workflow;
 - review security warnings in every new translation;
 - do not claim full Hindi translation until every remaining user-facing literal is migrated/reviewed;
 - add additional languages only with complete security-sensitive wording review.
