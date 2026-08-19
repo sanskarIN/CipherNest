@@ -35,4 +35,16 @@
   <data name="TotpCurrentCodeSemanticDescription" xml:space="preserve"><value>वर्तमान स्थानीय रूप से जेनरेट किया गया एक-बार पासवर्ड</value></data>
   <data name="TotpCopyCodeSemanticDescription" xml:space="preserve"><value>वर्तमान एक-बार पासवर्ड को अस्थायी रूप से कॉपी करें</value></data>
   <data name="TotpSafetyWarning" xml:space="preserve"><value>केवल वे TOTP सीड आयात करें जिनका उपयोग करने की आपको अनुमति है। किसी सीड, सेटअप URI या जेनरेट किए गए कोड को कॉपी करने से वह ऑपरेटिंग सिस्टम की क्लिपबोर्ड हिस्ट्री या सिंक्रोनाइज़ेशन में दिखाई दे सकता है; CipherNest अन्य सीक्रेट्स की तरह ही सर्वोत्तम-प्रयास वाली समयबद्ध क्लिपबोर्ड सफाई नीति लागू करता है।</value></data>
+  <data name="TotpPeriodFormat" xml:space="preserve"><value>अवधि: {0} सेकंड</value></data>
+  <data name="TotpValidityFormat" xml:space="preserve"><value>रीफ़्रेश करने के बाद लगभग {0} सेकंड और मान्य।</value></data>
+  <data name="TotpInvalidSeedSettingsError" xml:space="preserve"><value>TOTP सीड या सेटिंग्स अमान्य हैं। Base32 सीड, 6 या 8 अंक, और 15 से 120 सेकंड की अवधि का उपयोग करें।</value></data>
+  <data name="TotpGenerateError" xml:space="preserve"><value>एक-बार कोड सुरक्षित रूप से जेनरेट नहीं किया जा सका। एन्क्रिप्टेड सीड अपरिवर्तित है।</value></data>
+  <data name="TotpCopyCodeError" xml:space="preserve"><value>एक-बार कोड सुरक्षित रूप से कॉपी नहीं किया जा सका। वॉल्ट अनलॉक रहने तक आप इसे सीधे पढ़ सकते हैं।</value></data>
+  <data name="TotpImportMissingUriError" xml:space="preserve"><value>आयात करने से पहले otpauth://totp/... सेटअप URI पेस्ट करें।</value></data>
+  <data name="TotpImportSuccess" xml:space="preserve"><value>TOTP सेटअप URI स्थानीय रूप से आयात हो गया। सहेजने से पहले अकाउंट, जारीकर्ता, एल्गोरिदम, अंकों और अवधि की समीक्षा करें।</value></data>
+  <data name="TotpImportInvalidError" xml:space="preserve"><value>TOTP सेटअप URI अमान्य या असमर्थित है। CipherNest केवल सीमित otpauth://totp/... URI स्वीकार करता है; HOTP तथा अस्पष्ट पैरामीटर या लेबल अस्वीकार किए जाते हैं।</value></data>
+  <data name="TotpImportFailureError" xml:space="preserve"><value>TOTP सेटअप URI सुरक्षित रूप से आयात नहीं किया जा सका। विफलता के बाद मौजूदा आइटम फ़ील्ड जानबूझकर नहीं बदले गए।</value></data>
+  <data name="TotpCopyUriSuccess" xml:space="preserve"><value>जहाँ समर्थित है वहाँ समयबद्ध क्लिपबोर्ड सफाई के साथ TOTP सेटअप URI कॉपी किया गया। URI में सीड होता है और इसे सीड की तरह ही सुरक्षित रखना चाहिए।</value></data>
+  <data name="TotpCopyUriInvalidError" xml:space="preserve"><value>TOTP सेटअप URI नहीं बनाया जा सका। मान्य Base32 सीड और अकाउंट नाम दर्ज करें, फिर एल्गोरिदम, अंकों और अवधि की समीक्षा करें।</value></data>
+  <data name="TotpCopyUriFailureError" xml:space="preserve"><value>TOTP सेटअप URI सुरक्षित रूप से कॉपी नहीं किया जा सका। एन्क्रिप्टेड वॉल्ट आइटम अपरिवर्तित है।</value></data>
 </root>
