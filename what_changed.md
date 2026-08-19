@@ -466,11 +466,15 @@ It also clarifies historical evidence preservation, safe ledger rollover, TOTP/l
 - `c292dad9ab30bb7da42b5c887272255059262141` — `docs(tests): document repository inventory guard`
 - `86847ddecf6d693c0268efd86840acbdce039779` — `docs(repo): synchronize current documentation artifacts`
 - `22f02b67c001f2ce4ce036a14d4f83c766a0b82e` — `docs(maintenance): require exhaustive file inventory updates`
+- `6501f2f2d3b7d3efd27d5e8d2bb99e4c14f7cfb1` — `docs(ledger): record repository-wide documentation pass`
+- `72a0fb9e26e83a3f80f570125a5b20acacd84c6f` — `docs(verification): record documentation candidate evidence lookup`
 
-This ledger commit follows those commits and therefore is not self-listed by SHA in its own pre-commit content.
+This ledger commit follows the listed commits and therefore is not self-listed by SHA in its own pre-commit content.
 
 ### Verification status and unchanged external gates
 
 No new build/test/platform success is inferred from documentation changes. The historical verified implementation baseline remains historical evidence only.
+
+The connected workflow helper was queried for candidate `6501f2f2d3b7d3efd27d5e8d2bb99e4c14f7cfb1` and returned no associated runs. That helper is limited to pull-request-triggered runs, so the empty result is neither a pass nor a failure and does not prove whether push-triggered CI ran.
 
 The final head created by this continuation still requires observable exact-head workflow evidence before it can be described as fully CI-verified. Physical-device biometrics/secure storage/lifecycle/clipboard/screenshot behavior, assistive-technology and translated-layout validation, signing/notarization/store acceptance, representative third-party TOTP interoperability, dependency/license release review, and independent professional security review remain external/manual release gates.
