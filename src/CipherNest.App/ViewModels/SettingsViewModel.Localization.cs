@@ -1,3 +1,4 @@
+using System.Globalization;
 using CipherNest.App.Services;
 using CipherNest.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -34,4 +35,19 @@ public partial class SettingsViewModel
             _ => localization.Get("SystemPreferenceSaved")
         };
     }
+
+    private static string SettingsText(string key) =>
+        ServiceProviderHelper.GetRequiredService<ILocalizationService>().Get(key);
+
+    private static string SettingsFormat(string key, params object[] args) =>
+        string.Format(CultureInfo.CurrentUICulture, SettingsText(key), args);
+
+    private static string LocalizedStrengthLabel(int score) => score switch
+    {
+        <= 0 => SettingsText("PasswordStrengthVeryWeak"),
+        1 => SettingsText("PasswordStrengthWeak"),
+        2 => SettingsText("PasswordStrengthFair"),
+        3 => SettingsText("PasswordStrengthStrong"),
+        _ => SettingsText("PasswordStrengthVeryStrong")
+    };
 }
