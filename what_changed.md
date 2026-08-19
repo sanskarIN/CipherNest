@@ -213,3 +213,98 @@ This work does **not** claim:
 - store acceptance/signing completion;
 - absence of unknown defects;
 - completion of an independent professional security audit.
+
+---
+
+## 2026-08-19 — Settings surface localization continuation
+
+### Starting head
+
+This continuation resumed from repository head:
+
+`e5edfadfdc2476dca0b27af19f46a975a6c1d229`
+
+The head already contained additional August 19 localization work after the earlier live-ledger entry, including authentication, About security/privacy, Settings security-decision surfaces, Settings security operation statuses, and corresponding tests/documentation. This continuation did not duplicate those completed commits.
+
+### Remaining Settings fixed-text migration
+
+Migrated the remaining fixed Settings presentation surface to the existing `l10n:Translate` path. The newly resource-backed sections cover:
+
+- appearance and accessibility;
+- theme and language labels;
+- accurate language-scope explanation;
+- language preference save action;
+- reduced-motion and larger-interface labels;
+- lock/privacy timing controls;
+- background-lock, clipboard cleanup, screenshot-protection and trash-retention labels;
+- local backup/review reminder controls and privacy explanation;
+- generator-defaults navigation;
+- storage/cache fixed guidance and actions;
+- optional Buy Me a Coffee support card text and accessibility descriptions;
+- About/legal navigation.
+
+The language-scope text was also corrected so it no longer describes Hindi merely as a future catalog; it now accurately states that reviewed Hindi resources are shipped for migrated surfaces while unmigrated text can still fall back to English.
+
+### Security and privacy wording preserved
+
+The migrated resources preserve important boundaries:
+
+- review reminders are calculated locally after unlock and do not claim to send vault details to an external notification service;
+- cache cleanup does not intentionally delete the encrypted vault database, encrypted attachment store, or app-data backups;
+- Buy Me a Coffee support remains optional and never changes feature access, security, privacy, licensing, recovery, or support priority;
+- localization remains presentation-only and does not change vault data, cryptographic formats, persistence, authorization, backup compatibility, or destructive behavior.
+
+### Neutral and Hindi catalog expansion
+
+Expanded both localization catalogs with matching keys for the new Settings surface:
+
+- `src/CipherNest.App/Resources/Localization/AppStrings.resx`
+- `src/CipherNest.App/Resources/Localization/AppStrings.hi-IN.resx`
+
+The Hindi catalog includes reviewed values for all new keys, including funding-card accessibility descriptions and the local-only reminder/cache safety wording.
+
+### Regression protection
+
+Added:
+
+`tests/CipherNest.UiTests/SettingsSurfaceLocalizationSourceTests.cs`
+
+The test protects:
+
+- XAML usage of every newly added Settings resource key;
+- neutral/Hindi presence and non-empty values;
+- distinct reviewed Hindi values;
+- removal of selected hard-coded English Settings literals;
+- removal of hard-coded BMC semantic descriptions;
+- local-only reminder wording;
+- encrypted-vault non-deletion cache wording;
+- optional/equal-treatment funding wording.
+
+The existing global localization parity test continues to guard exact neutral/Hindi key parity.
+
+### Documentation and verification
+
+Updated:
+
+- `docs/architecture/LOCALIZATION.md`
+
+Added:
+
+- `docs/verification/SETTINGS_SURFACE_LOCALIZATION_2026_08_19.md`
+
+The documentation explicitly states that migrated fixed Settings text does not mean every dynamic Settings message or every other application screen is fully localized. Manual translated-layout, accessibility, funding-disabled build, target-platform, and exact-head release validation remain required.
+
+### Commits in this continuation
+
+- `11caa8571aa5c9720ddef33de54b2ff58ba2a3bb` — `feat(localization): add remaining Settings surface resources`
+- `fda7035012ebb151a0a741c3cc20cdabbd75b03e` — `feat(localization): add Hindi remaining Settings resources`
+- `858cfb968dcdccb867c4ae34c237b2a190a08d53` — `feat(ui): localize remaining Settings fixed text`
+- `e9e4ee80cb83dffde9ad695a824fa46e6ef2856d` — `test(settings): guard remaining localized Settings surface`
+- `48b9cd5e5966bc81b50b525de129c081a7778da3` — `docs(localization): document Settings surface migration`
+- `9f702f95ca852d87f41d5f8c2b7b3c8063c39355` — `docs(verification): add Settings surface localization contract`
+
+All commits use the requested sign-off identity `Sanskar <sanskarin@outlook.in>`.
+
+### Verification status
+
+No exact-head CI/build/test success is fabricated for this new head. Source-level regression coverage was added, but the final release candidate still requires observable configured automation plus the external/manual gates documented in the repository.
