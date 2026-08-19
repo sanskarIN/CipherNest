@@ -93,4 +93,9 @@
   <data name="OnboardingMasterRequirementsErrorFormat" xml:space="preserve"><value>मास्टर पासफ्रेज़ में {0:N0} से {1:N0} तक समर्थित अक्षर होने चाहिए और उसे मजबूती की आवश्यकता पूरी करनी चाहिए।</value></data>
   <data name="OnboardingVaultExistsError" xml:space="preserve"><value>स्थानीय वॉल्ट पहले से मौजूद है या उसे सुरक्षित रूप से प्रारंभ नहीं किया जा सका।</value></data>
   <data name="OnboardingCreateFailureError" xml:space="preserve"><value>स्थानीय वॉल्ट सुरक्षित रूप से नहीं बनाया जा सका। सफल सेटअप की झूठी सूचना नहीं दी जा रही है; स्थानीय स्टोरेज पहुँच जाँचें और फिर प्रयास करें।</value></data>
+  <data name="AboutSecurityStatusTitle" xml:space="preserve"><value>सुरक्षा स्थिति</value></data>
+  <data name="AboutSecurityStatusBody" xml:space="preserve"><value>CipherNest स्थापित क्रिप्टोग्राफिक प्रिमिटिव्स और स्थानीय-केवल स्टोरेज का उपयोग करता है, लेकिन इस रिलीज़ ने अभी तक स्वतंत्र पेशेवर सुरक्षा ऑडिट पूरा नहीं किया है। केवल ओपन सोर्स होना अपने-आप सुरक्षा की गारंटी नहीं देता।</value></data>
+  <data name="AboutSecurityPrivacyButton" xml:space="preserve"><value>सुरक्षा और गोपनीयता जानकारी पढ़ें</value></data>
+  <data name="AboutPrivacyTermsTitle" xml:space="preserve"><value>गोपनीयता और शर्तें</value></data>
+  <data name="AboutPrivacyTermsBody" xml:space="preserve"><value>वर्तमान रिलीज़ स्थानीय-केवल है और जानबूझकर वॉल्ट सामग्री, एनालिटिक्स या टेलीमेट्री किसी CipherNest सेवा को नहीं भेजती। उपयोगकर्ता द्वारा शुरू किया गया प्लेनटेक्स्ट निर्यात सुरक्षित वॉल्ट सीमा से बाहर जाता है। पूर्ण रिपॉज़िटरी सूचनाएँ PRIVACY.md और TERMS.md में हैं।</value></data>
 </root>
