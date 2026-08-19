@@ -19,7 +19,7 @@ For that exact implementation SHA:
 - 111 UI/source tests passed;
 - **555 total passed, 0 failed, 0 skipped**;
 - core analyzer builds completed with zero build warnings/errors;
-- core formatting passed;
+- configured core formatting passed;
 - Windows default Release passed;
 - Windows funding-disabled Release passed;
 - Android Release passed;
@@ -27,7 +27,7 @@ For that exact implementation SHA:
 - Mac Catalyst Release passed;
 - CodeQL v4 passed after analyzable core and MAUI application builds.
 
-The August 18 TOTP setup-URI implementation and August 19 TOTP workflow-localization continuation create a newer head, so the immediate task is:
+The August 18 TOTP setup-URI implementation and August 19 TOTP/authentication localization continuations create a newer head, so the immediate task is:
 
 1. finish source, tests, and documentation synchronization;
 2. stop changing the candidate;
@@ -39,7 +39,7 @@ The August 18 TOTP setup-URI implementation and August 19 TOTP workflow-localiza
 8. record the exact final SHA and run IDs;
 9. do not call that later SHA exact-head verified until all configured gates have finished successfully.
 
-See `verification/COMPLETE_DOCUMENTATION_2026_08_16.md`, the August 18 TOTP URI verification record, `verification/TOTP_LOCALIZATION_2026_08_19.md`, and `verification/CI_GATES.md`.
+See `verification/COMPLETE_DOCUMENTATION_2026_08_16.md`, the August 18 TOTP URI verification record, `verification/TOTP_LOCALIZATION_2026_08_19.md`, `verification/AUTHENTICATION_LOCALIZATION_2026_08_19.md`, and `verification/CI_GATES.md`.
 
 ## Priority 1 — physical-device and lifecycle security validation
 
@@ -228,13 +228,16 @@ Execute and record target checks for:
 - resizable desktop windows;
 - touch targets;
 - light/dark/system contrast/readability;
-- TOTP setup-URI import/copy controls without exposing actual URI/seed through semantic labels.
+- TOTP setup-URI import/copy controls without exposing actual URI/seed through semantic labels;
+- Unlock/onboarding recovery and biometric controls without exposing entered credentials or recovery material through semantic labels.
 
 Localization work:
 
 - verify the current reviewed `hi-IN` resource-backed catalog on devices;
-- verify the newly migrated TOTP fixed/dynamic/status strings in English, Hindi, and System modes;
-- continue migrating remaining literals outside the now-resource-backed TOTP workflow;
+- verify the migrated TOTP fixed/dynamic/status strings in English, Hindi, and System modes;
+- verify the migrated Unlock and onboarding/recovery security surfaces in English, Hindi, and System modes;
+- verify long translated recovery, biometric, and TOTP warnings at large text sizes and narrow widths;
+- continue migrating remaining literals outside the now-resource-backed TOTP/authentication/onboarding workflows;
 - review security warnings in every new translation;
 - do not claim full Hindi translation until every remaining user-facing literal is migrated/reviewed;
 - add additional languages only with complete security-sensitive wording review.
@@ -277,7 +280,7 @@ For the exact release candidate:
 - document accepted vulnerability/license exceptions with owner and expiry;
 - preserve CodeQL/application-build coverage.
 
-The TOTP URI continuation adds no third-party parser/QR/network dependency; preserve that property unless a reviewed dependency change is justified.
+The TOTP URI and localization continuations add no third-party parser/QR/network dependency; preserve that property unless a reviewed dependency change is justified.
 
 ## Priority 7 — release engineering
 
@@ -293,7 +296,7 @@ For each target distribution:
 - verify application ID, display version/build, permissions/capabilities, icons, splash, privacy declarations;
 - validate adaptive/monochrome/dark-surface branding;
 - use synthetic/demo vault content in screenshots;
-- never include a real TOTP setup URI/seed/code in screenshots or store media;
+- never include a real TOTP setup URI/seed/code, master passphrase, or recovery key in screenshots or store media;
 - verify store copy contains no unsupported security claims;
 - describe bounded setup-URI text interoperability accurately without claiming QR/camera/HOTP/provider enrollment;
 - verify current target-store/region policy for the BMC CTA;
