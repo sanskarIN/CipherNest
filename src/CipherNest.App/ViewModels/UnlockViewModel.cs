@@ -1,3 +1,4 @@
+using System.Globalization;
 using CipherNest.Application.Abstractions;
 using CipherNest.Application.Exceptions;
 using CipherNest.App.Services;
@@ -46,7 +47,7 @@ public partial class UnlockViewModel : ObservableObject
             && await _biometrics.IsAvailableAsync()
             && await _vault.IsSecondaryUnlockConfiguredAsync();
         if (masterRequired && preferences.BiometricUnlockEnabled)
-            ErrorMessage = "Enter the master passphrase to begin this security session. Biometric unlock becomes available for later locks during the configured period.";
+            ErrorMessage = UnlockText("UnlockMasterSessionRequired");
     }
 
     partial void OnMasterPassphraseChanged(string value) => UnlockCommand.NotifyCanExecuteChanged();
@@ -69,7 +70,7 @@ public partial class UnlockViewModel : ObservableObject
             var remaining = _limiter.GetRemainingDelay(DateTimeOffset.UtcNow);
             if (remaining > TimeSpan.Zero)
             {
-                ErrorMessage = $"Too many failed attempts. Try again in {Math.Ceiling(remaining.TotalSeconds)} seconds.";
+                ErrorMessage = UnlockFormat("UnlockRateLimitFormat", Math.Ceiling(remaining.TotalSeconds));
                 return;
             }
 
@@ -86,7 +87,7 @@ public partial class UnlockViewModel : ObservableObject
             catch (VaultAuthenticationException)
             {
                 _limiter.RegisterFailure(DateTimeOffset.UtcNow);
-                ErrorMessage = "The passphrase is incorrect or the vault cannot be authenticated.";
+                ErrorMessage = UnlockText("UnlockAuthenticationError");
             }
             finally
             {
@@ -108,12 +109,12 @@ public partial class UnlockViewModel : ObservableObject
             if (_sessionSecurity.RequiresMasterAuthentication(DateTimeOffset.UtcNow, maximumAge))
             {
                 BiometricUnlockAvailable = false;
-                ErrorMessage = "The periodic master-passphrase check is due. Unlock with the master passphrase first.";
+                ErrorMessage = UnlockText("UnlockPeriodicMasterDue");
                 return;
             }
-            if (!await _biometrics.AuthenticateAsync("Authenticate to unlock your local CipherNest vault."))
+            if (!await _biometrics.AuthenticateAsync(UnlockText("UnlockBiometricPrompt")))
             {
-                ErrorMessage = "Biometric authentication was cancelled or failed. Use the master passphrase instead.";
+                ErrorMessage = UnlockText("UnlockBiometricFailed");
                 return;
             }
 
@@ -121,7 +122,7 @@ public partial class UnlockViewModel : ObservableObject
             if (string.IsNullOrWhiteSpace(secret))
             {
                 BiometricUnlockAvailable = false;
-                ErrorMessage = "The protected biometric unlock secret is unavailable. Unlock with the master passphrase and re-enable biometrics in Settings.";
+                ErrorMessage = UnlockText("UnlockBiometricSecretUnavailable");
                 return;
             }
 
@@ -135,10 +136,16 @@ public partial class UnlockViewModel : ObservableObject
             {
                 await _biometrics.ClearSecondarySecretAsync();
                 BiometricUnlockAvailable = false;
-                ErrorMessage = "Biometric unlock data no longer matches this vault. Use the master passphrase and configure biometrics again.";
+                ErrorMessage = UnlockText("UnlockBiometricDataMismatch");
             }
             finally { secret = string.Empty; }
         }
         finally { IsBusy = false; }
     }
+
+    private static string UnlockText(string key) =>
+        ServiceProviderHelper.GetRequiredService<ILocalizationService>().Get(key);
+
+    private static string UnlockFormat(string key, params object[] args) =>
+        string.Format(CultureInfo.CurrentUICulture, UnlockText(key), args);
 }
