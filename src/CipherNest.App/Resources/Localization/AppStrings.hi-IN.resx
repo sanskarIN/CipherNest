@@ -19,4 +19,20 @@
   <data name="EnglishPreferenceSaved" xml:space="preserve"><value>अंग्रेज़ी भाषा की प्राथमिकता सहेज दी गई है।</value></data>
   <data name="HindiPreferenceSaved" xml:space="preserve"><value>समीक्षित रिसोर्स-आधारित इंटरफ़ेस के लिए हिन्दी भाषा की प्राथमिकता सहेज दी गई है। अभी तक माइग्रेट न किया गया इंटरफ़ेस टेक्स्ट अंग्रेज़ी में दिखाई दे सकता है।</value></data>
   <data name="SystemPreferenceSaved" xml:space="preserve"><value>सिस्टम भाषा की प्राथमिकता सहेज दी गई है। CipherNest उपलब्ध समीक्षित भाषा कैटलॉग का उपयोग करता है और अनुवाद उपलब्ध न होने पर अंग्रेज़ी पर वापस आता है।</value></data>
+  <data name="TotpHeading" xml:space="preserve"><value>समय-आधारित एक-बार पासवर्ड (TOTP)</value></data>
+  <data name="TotpSeedSummary" xml:space="preserve"><value>इस आइटम प्रकार में Secret, Base32 TOTP सीड है। सीड केवल एन्क्रिप्टेड वॉल्ट रिकॉर्ड के भीतर संग्रहीत होता है। जेनरेट किए गए कोड अनलॉक रहते समय स्थानीय रूप से बनाए जाते हैं और स्थायी रूप से सहेजे नहीं जाते।</value></data>
+  <data name="TotpImportHeading" xml:space="preserve"><value>TOTP सेटअप URI आयात करें</value></data>
+  <data name="TotpImportSummary" xml:space="preserve"><value>सीमित आकार वाला otpauth://totp/... URI पेस्ट करें। URI में सीड होता है, इसे स्थानीय रूप से प्रोसेस किया जाता है, आयात के बाद इस एडिटर से साफ कर दिया जाता है, और इसे सीड जितनी ही सावधानी से सुरक्षित रखना चाहिए। HOTP को जानबूझकर अस्वीकार किया जाता है।</value></data>
+  <data name="TotpImportPlaceholder" xml:space="preserve"><value>otpauth://totp/...</value></data>
+  <data name="TotpImportButton" xml:space="preserve"><value>URI आयात करें</value></data>
+  <data name="TotpCopySetupUriButton" xml:space="preserve"><value>सेटअप URI कॉपी करें</value></data>
+  <data name="TotpAlgorithmLabel" xml:space="preserve"><value>एल्गोरिदम</value></data>
+  <data name="TotpDigitsLabel" xml:space="preserve"><value>अंक</value></data>
+  <data name="TotpRefreshCodeButton" xml:space="preserve"><value>कोड रीफ़्रेश करें</value></data>
+  <data name="TotpCopyCodeButton" xml:space="preserve"><value>कोड कॉपी करें</value></data>
+  <data name="TotpImportSemanticDescription" xml:space="preserve"><value>स्थानीय रूप से आयात करने के लिए संवेदनशील TOTP सेटअप URI</value></data>
+  <data name="TotpCopySetupUriSemanticDescription" xml:space="preserve"><value>समयबद्ध क्लिपबोर्ड सफाई के साथ इस एन्क्रिप्टेड सीड वाला TOTP सेटअप URI कॉपी करें</value></data>
+  <data name="TotpCurrentCodeSemanticDescription" xml:space="preserve"><value>वर्तमान स्थानीय रूप से जेनरेट किया गया एक-बार पासवर्ड</value></data>
+  <data name="TotpCopyCodeSemanticDescription" xml:space="preserve"><value>वर्तमान एक-बार पासवर्ड को अस्थायी रूप से कॉपी करें</value></data>
+  <data name="TotpSafetyWarning" xml:space="preserve"><value>केवल वे TOTP सीड आयात करें जिनका उपयोग करने की आपको अनुमति है। किसी सीड, सेटअप URI या जेनरेट किए गए कोड को कॉपी करने से वह ऑपरेटिंग सिस्टम की क्लिपबोर्ड हिस्ट्री या सिंक्रोनाइज़ेशन में दिखाई दे सकता है; CipherNest अन्य सीक्रेट्स की तरह ही सर्वोत्तम-प्रयास वाली समयबद्ध क्लिपबोर्ड सफाई नीति लागू करता है।</value></data>
 </root>
