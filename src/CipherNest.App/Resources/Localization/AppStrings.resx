@@ -98,4 +98,32 @@
   <data name="AboutSecurityPrivacyButton" xml:space="preserve"><value>Read security &amp; privacy information</value></data>
   <data name="AboutPrivacyTermsTitle" xml:space="preserve"><value>Privacy &amp; terms</value></data>
   <data name="AboutPrivacyTermsBody" xml:space="preserve"><value>The current release is local-only and does not intentionally send vault contents, analytics, or telemetry to a CipherNest service. User-initiated plaintext export leaves the protected vault boundary. Full repository notices are in PRIVACY.md and TERMS.md.</value></data>
+  <data name="SettingsBiometricTitle" xml:space="preserve"><value>Biometric unlock</value></data>
+  <data name="SettingsBiometricSummary" xml:space="preserve"><value>Biometrics are optional and never replace your master passphrase or recovery key. Enabling creates a random secondary unlock secret protected by the operating system secure storage.</value></data>
+  <data name="SettingsRequireMasterAfterLabel" xml:space="preserve"><value>Require master passphrase again after (hours)</value></data>
+  <data name="SettingsRequireMasterRange" xml:space="preserve"><value>Range: 1–168 hours. A fresh app process always begins by requiring the master passphrase.</value></data>
+  <data name="SettingsCurrentMasterPlaceholder" xml:space="preserve"><value>Current master passphrase</value></data>
+  <data name="SettingsEnableBiometricsButton" xml:space="preserve"><value>Enable biometrics</value></data>
+  <data name="SettingsDisableBiometricsButton" xml:space="preserve"><value>Disable biometrics</value></data>
+  <data name="SettingsSecurityReviewTitle" xml:space="preserve"><value>Security review</value></data>
+  <data name="SettingsSecurityReviewSummary" xml:space="preserve"><value>Run the local weak/reused/duplicate/overdue audit or review CipherNest's privacy, threat-model, audit-status, and open-source information.</value></data>
+  <data name="SettingsRunSecurityAuditButton" xml:space="preserve"><value>Run security audit</value></data>
+  <data name="SettingsSecurityPrivacyInfoButton" xml:space="preserve"><value>Security &amp; privacy info</value></data>
+  <data name="SettingsBackupRestoreTitle" xml:space="preserve"><value>Encrypted backup &amp; restore</value></data>
+  <data name="SettingsBackupRestoreSummary" xml:space="preserve"><value>Use a separate strong backup passphrase. CipherNest locks before taking a consistent snapshot. Backups include the encrypted database and encrypted attachments.</value></data>
+  <data name="SettingsBackupPassphrasePlaceholder" xml:space="preserve"><value>Backup passphrase (12+ characters)</value></data>
+  <data name="SettingsCreateBackupButton" xml:space="preserve"><value>Create backup</value></data>
+  <data name="SettingsRestoreBackupButton" xml:space="preserve"><value>Restore backup</value></data>
+  <data name="SettingsImportExportTitle" xml:space="preserve"><value>Import &amp; export</value></data>
+  <data name="SettingsImportExportSummary" xml:space="preserve"><value>Encrypted backup is recommended. Generic CSV import and guarded plaintext CSV export are available for interoperability.</value></data>
+  <data name="SettingsOpenImportExportButton" xml:space="preserve"><value>Open import &amp; export</value></data>
+  <data name="SettingsChangeMasterTitle" xml:space="preserve"><value>Change master passphrase</value></data>
+  <data name="SettingsNewMasterPlaceholder" xml:space="preserve"><value>New strong master passphrase</value></data>
+  <data name="SettingsConfirmNewMasterPlaceholder" xml:space="preserve"><value>Confirm new master passphrase</value></data>
+  <data name="SettingsChangeMasterButton" xml:space="preserve"><value>Change master passphrase</value></data>
+  <data name="SettingsDangerZoneTitle" xml:space="preserve"><value>Danger zone</value></data>
+  <data name="SettingsDangerZoneBody" xml:space="preserve"><value>Deleting the local vault cannot guarantee physical erasure from flash storage, filesystem snapshots, backups, or copies outside CipherNest.</value></data>
+  <data name="SettingsDeletionPhrasePlaceholder" xml:space="preserve"><value>Type DELETE MY VAULT</value></data>
+  <data name="SettingsDeleteVaultButton" xml:space="preserve"><value>Delete local vault</value></data>
+  <data name="SettingsStatusSemanticDescription" xml:space="preserve"><value>Settings status</value></data>
 </root>
