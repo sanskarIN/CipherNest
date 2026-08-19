@@ -93,4 +93,9 @@
   <data name="OnboardingMasterRequirementsErrorFormat" xml:space="preserve"><value>Master passphrase must contain between {0:N0} and {1:N0} supported characters and satisfy the strength requirement.</value></data>
   <data name="OnboardingVaultExistsError" xml:space="preserve"><value>A local vault already exists or could not be initialized safely.</value></data>
   <data name="OnboardingCreateFailureError" xml:space="preserve"><value>The local vault could not be created safely. No successful setup is being reported; check local storage access and try again.</value></data>
+  <data name="AboutSecurityStatusTitle" xml:space="preserve"><value>Security status</value></data>
+  <data name="AboutSecurityStatusBody" xml:space="preserve"><value>CipherNest uses established cryptographic primitives and local-only storage, but this release has not completed an independent professional security audit. Open source does not itself guarantee security.</value></data>
+  <data name="AboutSecurityPrivacyButton" xml:space="preserve"><value>Read security &amp; privacy information</value></data>
+  <data name="AboutPrivacyTermsTitle" xml:space="preserve"><value>Privacy &amp; terms</value></data>
+  <data name="AboutPrivacyTermsBody" xml:space="preserve"><value>The current release is local-only and does not intentionally send vault contents, analytics, or telemetry to a CipherNest service. User-initiated plaintext export leaves the protected vault boundary. Full repository notices are in PRIVACY.md and TERMS.md.</value></data>
 </root>
