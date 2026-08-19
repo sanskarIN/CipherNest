@@ -7,6 +7,7 @@ public sealed class TranslationExtensionSourceTests
     {
         var source = File.ReadAllText(PathAt("src", "CipherNest.App", "Localization", "TranslateExtension.cs"));
 
+        Assert.Contains("AcceptEmptyServiceProvider", source, StringComparison.Ordinal);
         Assert.Contains("IMarkupExtension", source, StringComparison.Ordinal);
         Assert.Contains("ContentProperty(nameof(Key))", source, StringComparison.Ordinal);
         Assert.Contains("GetRequiredService<ILocalizationService>()", source, StringComparison.Ordinal);
