@@ -23,14 +23,14 @@
           <VerticalStackLayout><Label Text="{l10n:Translate TotpAlgorithmLabel}" FontAttributes="Bold"/><Picker ItemsSource="{Binding TotpAlgorithms}" SelectedItem="{Binding SelectedTotpAlgorithm}"/></VerticalStackLayout>
           <VerticalStackLayout Grid.Column="1"><Label Text="{l10n:Translate TotpDigitsLabel}" FontAttributes="Bold"/><Picker ItemsSource="{Binding TotpDigitOptions}" SelectedItem="{Binding TotpDigits}"/></VerticalStackLayout>
         </Grid>
-        <Label Text="{Binding TotpPeriodSeconds, StringFormat='Period: {0} seconds'}" FontAttributes="Bold"/>
+        <Label Text="{Binding TotpPeriodText}" FontAttributes="Bold"/>
         <Stepper Minimum="15" Maximum="120" Increment="15" Value="{Binding TotpPeriodSeconds}"/>
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
           <Label Text="{Binding CurrentTotpCode}" FontSize="28" FontAttributes="Bold" VerticalTextAlignment="Center" SemanticProperties.Description="{l10n:Translate TotpCurrentCodeSemanticDescription}"/>
           <Button Grid.Column="1" Text="{l10n:Translate TotpRefreshCodeButton}" Command="{Binding RefreshTotpCommand}" Style="{StaticResource SecondaryButton}"/>
           <Button Grid.Column="2" Text="{l10n:Translate TotpCopyCodeButton}" Command="{Binding CopyTotpCodeCommand}" Style="{StaticResource SecondaryButton}" SemanticProperties.Description="{l10n:Translate TotpCopyCodeSemanticDescription}"/>
         </Grid>
-        <Label Text="{Binding TotpSecondsRemaining, StringFormat='Valid for about {0} more seconds after refresh.'}" Style="{StaticResource SubtitleLabel}"/>
+        <Label Text="{Binding TotpValidityText}" Style="{StaticResource SubtitleLabel}"/>
         <Label Text="{l10n:Translate TotpSafetyWarning}" Style="{StaticResource SubtitleLabel}"/>
       </VerticalStackLayout></Frame>
       <Label Text="URL" FontAttributes="Bold"/><Entry Text="{Binding Url}" Keyboard="Url"/>
