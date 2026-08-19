@@ -126,4 +126,54 @@
   <data name="SettingsDeletionPhrasePlaceholder" xml:space="preserve"><value>Type DELETE MY VAULT</value></data>
   <data name="SettingsDeleteVaultButton" xml:space="preserve"><value>Delete local vault</value></data>
   <data name="SettingsStatusSemanticDescription" xml:space="preserve"><value>Settings status</value></data>
+  <data name="SettingsScreenshotSupported" xml:space="preserve"><value>Screenshot blocking is supported by the current platform implementation.</value></data>
+  <data name="SettingsScreenshotUnavailable" xml:space="preserve"><value>Reliable app-level screenshot blocking is not available through the current platform implementation; secret masking still applies.</value></data>
+  <data name="SettingsBiometricConfigured" xml:space="preserve"><value>Biometric unlock is configured. The master passphrase is still required for sensitive settings and periodically according to this security setting.</value></data>
+  <data name="SettingsBiometricAvailableNotConfigured" xml:space="preserve"><value>Biometric authentication is available on this device but is not configured for CipherNest.</value></data>
+  <data name="SettingsBiometricUnavailable" xml:space="preserve"><value>Biometric unlock is not available through the current platform/device implementation. Use the master passphrase.</value></data>
+  <data name="SettingsLoadFailure" xml:space="preserve"><value>Settings could not be loaded completely. CipherNest kept safe defaults where possible; return to the vault and retry.</value></data>
+  <data name="SettingsSavedStatus" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="SettingsSaveFailure" xml:space="preserve"><value>Settings could not be saved or applied completely. Review the values and try again.</value></data>
+  <data name="SettingsEnableBiometricMasterRequired" xml:space="preserve"><value>Enter the current master passphrase before enabling biometric unlock.</value></data>
+  <data name="SettingsBiometricUnavailableStatus" xml:space="preserve"><value>Biometric authentication is not available on this platform or device.</value></data>
+  <data name="SettingsMasterConfirmationFailed" xml:space="preserve"><value>Master-passphrase confirmation failed.</value></data>
+  <data name="SettingsEnableBiometricPrompt" xml:space="preserve"><value>Confirm your identity to enable biometric vault unlock.</value></data>
+  <data name="SettingsBiometricAuthenticationFailed" xml:space="preserve"><value>Biometric authentication was cancelled or failed.</value></data>
+  <data name="SettingsBiometricConfiguredSecureStorage" xml:space="preserve"><value>Biometric unlock is configured. CipherNest stores an independent random secondary secret in OS secure storage; it does not store the master passphrase.</value></data>
+  <data name="SettingsBiometricEnabledStatus" xml:space="preserve"><value>Biometric unlock enabled.</value></data>
+  <data name="SettingsBiometricEnableFailure" xml:space="preserve"><value>Biometric unlock could not be enabled safely. Use the master passphrase and try again after checking device biometric availability.</value></data>
+  <data name="SettingsDisableBiometricMasterRequired" xml:space="preserve"><value>Enter the current master passphrase before disabling biometric unlock.</value></data>
+  <data name="SettingsBiometricDisabledStatus" xml:space="preserve"><value>Biometric unlock disabled.</value></data>
+  <data name="SettingsBiometricDisableFailure" xml:space="preserve"><value>Biometric unlock could not be disabled completely. Keep using the master passphrase and retry after checking secure-storage access.</value></data>
+  <data name="SettingsBackupPassphraseRangeFormat" xml:space="preserve"><value>Use a backup passphrase between 12 and {0:N0} characters.</value></data>
+  <data name="SettingsBackupConfirmTitle" xml:space="preserve"><value>Create a consistent encrypted backup?</value></data>
+  <data name="SettingsBackupConfirmBody" xml:space="preserve"><value>CipherNest will lock the vault before taking the database and attachment snapshot so edits cannot race with the backup. You will unlock again afterward.</value></data>
+  <data name="SettingsBackupConfirmAccept" xml:space="preserve"><value>Lock and back up</value></data>
+  <data name="SettingsBackupCreatedStatus" xml:space="preserve"><value>Authenticated encrypted backup created, including encrypted attachments. The vault remains locked. Keep the backup passphrase separately and periodically test restore using disposable data.</value></data>
+  <data name="SettingsBackupShareTitle" xml:space="preserve"><value>CipherNest encrypted backup</value></data>
+  <data name="SettingsBackupFailure" xml:space="preserve"><value>Encrypted backup or sharing could not be completed safely. The vault remains protected; review storage access and try again.</value></data>
+  <data name="SettingsRestorePassphraseRangeFormat" xml:space="preserve"><value>Enter a backup passphrase between 12 and {0:N0} characters before restoring.</value></data>
+  <data name="SettingsRestorePickerTitle" xml:space="preserve"><value>Select a CipherNest encrypted backup</value></data>
+  <data name="SettingsRestoreConfirmTitle" xml:space="preserve"><value>Restore backup?</value></data>
+  <data name="SettingsRestoreConfirmBody" xml:space="preserve"><value>The current vault database and attachment set will be replaced only after the backup container is authenticated and staged. Keep a separate backup before replacing important data.</value></data>
+  <data name="SettingsRestoreConfirmAccept" xml:space="preserve"><value>Restore</value></data>
+  <data name="SettingsRestoreCleanupWarning" xml:space="preserve"><value>Backup restored and the vault remains locked. Biometric unlock was disabled in CipherNest settings, but OS secure-storage cleanup could not be confirmed; unlock with the restored master passphrase or recovery key and review biometric settings before continuing.</value></data>
+  <data name="SettingsRestoreSuccess" xml:space="preserve"><value>Backup restored. Unlock the restored vault with its master passphrase or recovery key. Biometric unlock was disabled locally because restored vault metadata may not match this device's secure-storage entry.</value></data>
+  <data name="SettingsRestorePostCleanupFailure" xml:space="preserve"><value>The backup was restored and the vault remains locked, but post-restore biometric or settings cleanup did not finish completely. Unlock with the restored master passphrase or recovery key and review biometric settings before continuing.</value></data>
+  <data name="SettingsRestoreFailure" xml:space="preserve"><value>Backup selection, confirmation, restore, or staging failed safely. The active vault was not intentionally replaced by this failed restore attempt.</value></data>
+  <data name="SettingsChangeMasterCurrentRequired" xml:space="preserve"><value>Enter the current master passphrase.</value></data>
+  <data name="SettingsChangeMasterMismatch" xml:space="preserve"><value>The new passphrase confirmation does not match.</value></data>
+  <data name="SettingsChangeMasterTooLongFormat" xml:space="preserve"><value>The new master passphrase cannot exceed {0:N0} characters.</value></data>
+  <data name="SettingsChangeMasterWeakFormat" xml:space="preserve"><value>Choose a stronger new master passphrase. Current estimate: {0}.</value></data>
+  <data name="SettingsChangeMasterSuccess" xml:space="preserve"><value>Master passphrase changed. CipherNest ended the current security session; unlock again with the new master passphrase before biometric convenience unlock can resume. Create a fresh encrypted backup after security-sensitive changes.</value></data>
+  <data name="SettingsChangeMasterAuthFailure" xml:space="preserve"><value>Master passphrase was not changed because current-master authentication failed.</value></data>
+  <data name="SettingsChangeMasterFailure" xml:space="preserve"><value>Master passphrase was not changed because the requested security transition could not be completed safely.</value></data>
+  <data name="SettingsDeleteExactPhraseFormat" xml:space="preserve"><value>Type exactly {0} before deleting the vault.</value></data>
+  <data name="SettingsDeleteMasterRequired" xml:space="preserve"><value>Confirm the current master passphrase. Recovery keys are not accepted for vault deletion.</value></data>
+  <data name="SettingsDeleteConfirmTitle" xml:space="preserve"><value>Permanently delete this local vault?</value></data>
+  <data name="SettingsDeleteConfirmBody" xml:space="preserve"><value>This removes CipherNest's local encrypted database and attachment files. Flash storage, filesystem snapshots, operating-system backups, shared exports, and forensic remnants can remain outside CipherNest's control. This action cannot be undone from the app.</value></data>
+  <data name="SettingsDeleteConfirmAccept" xml:space="preserve"><value>Delete local vault</value></data>
+  <data name="SettingsDeleteAuthFailure" xml:space="preserve"><value>Vault deletion was cancelled because master-passphrase confirmation failed.</value></data>
+  <data name="SettingsDeleteFailure" xml:space="preserve"><value>Vault deletion or local secure-storage cleanup could not finish safely. CipherNest did not report the operation as complete.</value></data>
+  <data name="SettingsDeleteConfirmFailure" xml:space="preserve"><value>Vault-deletion confirmation could not be shown safely. No deletion was started.</value></data>
 </root>
