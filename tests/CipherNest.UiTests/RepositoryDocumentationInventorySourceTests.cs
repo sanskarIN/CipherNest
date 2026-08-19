@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace CipherNest.UiTests;
 
 public sealed class RepositoryDocumentationInventorySourceTests
@@ -63,6 +65,40 @@ public sealed class RepositoryDocumentationInventorySourceTests
     }
 
     [Fact]
+    public void RepositoryInventories_ContainEveryTrackedFile()
+    {
+        var repositoryReference = File.ReadAllText(PathAt("docs", "REPOSITORY_FILE_REFERENCE.md"));
+        var sourceReference = File.ReadAllText(PathAt("docs", "SOURCE_CODE_REFERENCE.md"));
+        var testReference = File.ReadAllText(PathAt("docs", "TEST_SUITE_REFERENCE.md"));
+        var missing = new List<string>();
+
+        foreach (var trackedPath in TrackedFiles())
+        {
+            var inventoryName = "docs/REPOSITORY_FILE_REFERENCE.md";
+            var inventory = repositoryReference;
+
+            if (trackedPath.StartsWith("src/", StringComparison.Ordinal))
+            {
+                inventoryName = "docs/SOURCE_CODE_REFERENCE.md";
+                inventory = sourceReference;
+            }
+            else if (trackedPath.StartsWith("tests/", StringComparison.Ordinal))
+            {
+                inventoryName = "docs/TEST_SUITE_REFERENCE.md";
+                inventory = testReference;
+            }
+
+            if (!inventory.Contains(trackedPath, StringComparison.Ordinal))
+                missing.Add($"{trackedPath} -> {inventoryName}");
+        }
+
+        Assert.True(
+            missing.Count == 0,
+            "Every tracked file must be present in its canonical documentation inventory. Missing entries:\n" +
+            string.Join("\n", missing.Select(entry => $"- {entry}")));
+    }
+
+    [Fact]
     public void SourceAndTestReferences_ContainRepresentativeFilesFromEveryLayerAndSuite()
     {
         var sourceReference = File.ReadAllText(PathAt("docs", "SOURCE_CODE_REFERENCE.md"));
@@ -93,16 +129,49 @@ public sealed class RepositoryDocumentationInventorySourceTests
         }
     }
 
-    private static string PathAt(params string[] segments)
+    private static IReadOnlyList<string> TrackedFiles()
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "git",
+            WorkingDirectory = RepositoryRoot().FullName,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("ls-files");
+        startInfo.ArgumentList.Add("-z");
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Could not start git to enumerate tracked repository files.");
+
+        var output = process.StandardOutput.ReadToEnd();
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        Assert.True(process.ExitCode == 0, $"git ls-files failed: {error}");
+
+        return output
+            .Split('\0', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(path => path.Replace('\\', '/'))
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static DirectoryInfo RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CipherNest.slnx")))
             directory = directory.Parent;
 
-        if (directory is null)
-            throw new DirectoryNotFoundException("Could not locate the CipherNest repository root from the test output directory.");
+        return directory
+            ?? throw new DirectoryNotFoundException("Could not locate the CipherNest repository root from the test output directory.");
+    }
 
-        var path = directory.FullName;
+    private static string PathAt(params string[] segments)
+    {
+        var path = RepositoryRoot().FullName;
         foreach (var segment in segments)
             path = Path.Combine(path, segment);
         return path;
