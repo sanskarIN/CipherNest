@@ -98,4 +98,32 @@
   <data name="AboutSecurityPrivacyButton" xml:space="preserve"><value>सुरक्षा और गोपनीयता जानकारी पढ़ें</value></data>
   <data name="AboutPrivacyTermsTitle" xml:space="preserve"><value>गोपनीयता और शर्तें</value></data>
   <data name="AboutPrivacyTermsBody" xml:space="preserve"><value>वर्तमान रिलीज़ स्थानीय-केवल है और जानबूझकर वॉल्ट सामग्री, एनालिटिक्स या टेलीमेट्री किसी CipherNest सेवा को नहीं भेजती। उपयोगकर्ता द्वारा शुरू किया गया प्लेनटेक्स्ट निर्यात सुरक्षित वॉल्ट सीमा से बाहर जाता है। पूर्ण रिपॉज़िटरी सूचनाएँ PRIVACY.md और TERMS.md में हैं।</value></data>
+  <data name="SettingsBiometricTitle" xml:space="preserve"><value>बायोमेट्रिक अनलॉक</value></data>
+  <data name="SettingsBiometricSummary" xml:space="preserve"><value>बायोमेट्रिक्स वैकल्पिक हैं और आपके मास्टर पासफ्रेज़ या रिकवरी कुंजी का स्थान कभी नहीं लेते। इसे सक्षम करने पर ऑपरेटिंग सिस्टम के सुरक्षित स्टोरेज द्वारा संरक्षित एक यादृच्छिक सेकेंडरी अनलॉक सीक्रेट बनाया जाता है।</value></data>
+  <data name="SettingsRequireMasterAfterLabel" xml:space="preserve"><value>इतने समय बाद मास्टर पासफ्रेज़ फिर आवश्यक करें (घंटे)</value></data>
+  <data name="SettingsRequireMasterRange" xml:space="preserve"><value>सीमा: 1–168 घंटे। ऐप की नई प्रक्रिया हमेशा मास्टर पासफ्रेज़ की आवश्यकता से शुरू होती है।</value></data>
+  <data name="SettingsCurrentMasterPlaceholder" xml:space="preserve"><value>वर्तमान मास्टर पासफ्रेज़</value></data>
+  <data name="SettingsEnableBiometricsButton" xml:space="preserve"><value>बायोमेट्रिक्स सक्षम करें</value></data>
+  <data name="SettingsDisableBiometricsButton" xml:space="preserve"><value>बायोमेट्रिक्स अक्षम करें</value></data>
+  <data name="SettingsSecurityReviewTitle" xml:space="preserve"><value>सुरक्षा समीक्षा</value></data>
+  <data name="SettingsSecurityReviewSummary" xml:space="preserve"><value>स्थानीय कमजोर/दोबारा उपयोग किए गए/डुप्लिकेट/समय-पार ऑडिट चलाएँ या CipherNest की गोपनीयता, खतरा मॉडल, ऑडिट स्थिति और ओपन-सोर्स जानकारी की समीक्षा करें।</value></data>
+  <data name="SettingsRunSecurityAuditButton" xml:space="preserve"><value>सुरक्षा ऑडिट चलाएँ</value></data>
+  <data name="SettingsSecurityPrivacyInfoButton" xml:space="preserve"><value>सुरक्षा और गोपनीयता जानकारी</value></data>
+  <data name="SettingsBackupRestoreTitle" xml:space="preserve"><value>एन्क्रिप्टेड बैकअप और पुनर्स्थापना</value></data>
+  <data name="SettingsBackupRestoreSummary" xml:space="preserve"><value>एक अलग मजबूत बैकअप पासफ्रेज़ उपयोग करें। CipherNest एक सुसंगत स्नैपशॉट लेने से पहले वॉल्ट लॉक करता है। बैकअप में एन्क्रिप्टेड डेटाबेस और एन्क्रिप्टेड अटैचमेंट शामिल होते हैं।</value></data>
+  <data name="SettingsBackupPassphrasePlaceholder" xml:space="preserve"><value>बैकअप पासफ्रेज़ (12+ अक्षर)</value></data>
+  <data name="SettingsCreateBackupButton" xml:space="preserve"><value>बैकअप बनाएँ</value></data>
+  <data name="SettingsRestoreBackupButton" xml:space="preserve"><value>बैकअप पुनर्स्थापित करें</value></data>
+  <data name="SettingsImportExportTitle" xml:space="preserve"><value>आयात और निर्यात</value></data>
+  <data name="SettingsImportExportSummary" xml:space="preserve"><value>एन्क्रिप्टेड बैकअप की अनुशंसा की जाती है। इंटरऑपरेबिलिटी के लिए सामान्य CSV आयात और संरक्षित प्लेनटेक्स्ट CSV निर्यात उपलब्ध हैं।</value></data>
+  <data name="SettingsOpenImportExportButton" xml:space="preserve"><value>आयात और निर्यात खोलें</value></data>
+  <data name="SettingsChangeMasterTitle" xml:space="preserve"><value>मास्टर पासफ्रेज़ बदलें</value></data>
+  <data name="SettingsNewMasterPlaceholder" xml:space="preserve"><value>नया मजबूत मास्टर पासफ्रेज़</value></data>
+  <data name="SettingsConfirmNewMasterPlaceholder" xml:space="preserve"><value>नए मास्टर पासफ्रेज़ की पुष्टि करें</value></data>
+  <data name="SettingsChangeMasterButton" xml:space="preserve"><value>मास्टर पासफ्रेज़ बदलें</value></data>
+  <data name="SettingsDangerZoneTitle" xml:space="preserve"><value>खतरे का क्षेत्र</value></data>
+  <data name="SettingsDangerZoneBody" xml:space="preserve"><value>स्थानीय वॉल्ट हटाने से फ्लैश स्टोरेज, फाइलसिस्टम स्नैपशॉट, बैकअप या CipherNest के बाहर मौजूद प्रतियों से भौतिक मिटाव की गारंटी नहीं दी जा सकती।</value></data>
+  <data name="SettingsDeletionPhrasePlaceholder" xml:space="preserve"><value>DELETE MY VAULT टाइप करें</value></data>
+  <data name="SettingsDeleteVaultButton" xml:space="preserve"><value>स्थानीय वॉल्ट हटाएँ</value></data>
+  <data name="SettingsStatusSemanticDescription" xml:space="preserve"><value>सेटिंग्स स्थिति</value></data>
 </root>
