@@ -319,7 +319,7 @@ Deepen project documentation at the **tracked-file level** so maintainers can ac
 
 This work began from repository head:
 
-`7d046ab5c6dc15eec0f06599ed68317aa88d8967`
+`7d046ab5c6dc15eecf06599ed68317aa88d8967`
 
 That SHA is the inventory baseline for the file audit. It is not reused as an exact-head verification claim for the later documentation commits.
 
@@ -478,3 +478,65 @@ No new build/test/platform success is inferred from documentation changes. The h
 The connected workflow helper was queried for candidate `6501f2f2d3b7d3efd27d5e8d2bb99e4c14f7cfb1` and returned no associated runs. That helper is limited to pull-request-triggered runs, so the empty result is neither a pass nor a failure and does not prove whether push-triggered CI ran.
 
 The final head created by this continuation still requires observable exact-head workflow evidence before it can be described as fully CI-verified. Physical-device biometrics/secure storage/lifecycle/clipboard/screenshot behavior, assistive-technology and translated-layout validation, signing/notarization/store acceptance, representative third-party TOTP interoperability, dependency/license release review, and independent professional security review remain external/manual release gates.
+
+---
+
+## 2026-08-19 — Tracked-file documentation completeness hardening
+
+### Goal
+
+Close the remaining mismatch between the repository's claim of exhaustive tracked-file documentation and the automated guard that previously checked only representative paths.
+
+### Starting head
+
+This continuation started from:
+
+`ad97490c361fbe751eb58be7a6e3cfadfd56d95e`
+
+The starting head already contained the three canonical file inventories and the repository-wide documentation verification record. No previously completed implementation or documentation work was duplicated.
+
+### Exhaustive tracked-file gate
+
+Updated:
+
+`tests/CipherNest.UiTests/RepositoryDocumentationInventorySourceTests.cs`
+
+The test now executes `git ls-files -z` from the detected CipherNest repository root and treats the returned tracked-file set as the authoritative inventory input.
+
+Each tracked path is mapped to exactly one canonical inventory:
+
+- `src/...` -> `docs/SOURCE_CODE_REFERENCE.md`;
+- `tests/...` -> `docs/TEST_SUITE_REFERENCE.md`;
+- every other tracked path -> `docs/REPOSITORY_FILE_REFERENCE.md`.
+
+The test fails with the exact missing path and expected inventory when any tracked file is absent from its canonical reference. The previous representative layer/suite assertions remain as additional ownership/readability checks rather than being the only completeness mechanism.
+
+Using Git's tracked-file set deliberately avoids treating generated `bin`/`obj` output or unrelated untracked local files as documentation obligations.
+
+### Verification documentation hardening
+
+Updated:
+
+`docs/verification/REPOSITORY_WIDE_DOCUMENTATION_2026_08_19.md`
+
+The verification contract now records:
+
+- the `git ls-files -z` tracked-file source of truth;
+- the three-way inventory mapping;
+- the exact missing-path failure behavior;
+- why the gate requires Git/repository metadata;
+- the distinction between repository-documentation completeness and runtime/device validation;
+- the rule that adding the assertion is not itself evidence that a later candidate passed CI.
+
+### Commits in this continuation
+
+- `e915df167df4170be5642c9925bac881340a0cf0` — `test(docs): enforce every tracked file in documentation inventories`
+- `336b864fa20eee19e688d9677939eda72cc791af` — `docs(verification): strengthen tracked-file documentation contract`
+
+Both commit messages include `Signed-off-by: Sanskar <sanskarin@outlook.in>`.
+
+### Verification status
+
+No exact-head build/test/platform success is inferred from these changes. The current head still requires observable exact-SHA CI evidence before it can be described as release-candidate verified.
+
+The external/manual release gates remain unchanged: physical-device biometrics/secure storage/lifecycle/clipboard/screenshot behavior, accessibility and translated-layout validation, representative third-party TOTP interoperability, signing/notarization/store review, dependency/license release review, and independent professional security review cannot be completed by repository source edits alone.
