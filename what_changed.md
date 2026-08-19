@@ -308,3 +308,169 @@ All commits use the requested sign-off identity `Sanskar <sanskarin@outlook.in>`
 ### Verification status
 
 No exact-head CI/build/test success is fabricated for this new head. Source-level regression coverage was added, but the final release candidate still requires observable configured automation plus the external/manual gates documented in the repository.
+
+---
+
+## 2026-08-19 — Repository-wide exhaustive documentation continuation
+
+### Goal
+
+Deepen project documentation at the **tracked-file level** so maintainers can account for production source, tests, repository automation, platform resources, documentation/evidence, legal/support/status files, and verification history without silently skipping newly added files.
+
+This work began from repository head:
+
+`7d046ab5c6dc15eec0f06599ed68317aa88d8967`
+
+That SHA is the inventory baseline for the file audit. It is not reused as an exact-head verification claim for the later documentation commits.
+
+### Exhaustive production-source reference
+
+Added:
+
+`docs/SOURCE_CODE_REFERENCE.md`
+
+The source reference individually documents tracked production files across:
+
+- `CipherNest.App` application/Shell composition;
+- converters and reusable localization extension;
+- application services/interfaces;
+- every ViewModel and security-sensitive partial;
+- every XAML page and code-behind;
+- Android, iOS, Mac Catalyst, and Windows manifests/entry points;
+- icons, logos, BMC artwork, splash, styles, raw resources, neutral/Hindi localization catalogs;
+- Application abstractions, exceptions, models, policies, and validators;
+- Domain models/enums;
+- Infrastructure cryptography, SQLite/migrations, attachment/backup/CSV/settings/generator/audit/TOTP/header/session implementations;
+- Shared application constants and storage limits.
+
+Descriptions identify responsibility, trust boundary, and related canonical documentation instead of merely repeating paths.
+
+### Exhaustive test-suite reference
+
+Added:
+
+`docs/TEST_SUITE_REFERENCE.md`
+
+It documents:
+
+- `tests/Directory.Build.props`;
+- all three test project files;
+- every UnitTests source file;
+- every IntegrationTests source file;
+- every UiTests/source-contract file;
+- the behavioral/security contract each test file is intended to guard;
+- physical-device, accessibility, signing/store, representative TOTP-interoperability, and independent-review work that automated suites do not replace.
+
+The reference was synchronized after this continuation added `RepositoryDocumentationInventorySourceTests.cs`, preventing the new guard itself from becoming an undocumented file.
+
+### Complete repository-level file reference
+
+Added:
+
+`docs/REPOSITORY_FILE_REFERENCE.md`
+
+The repository reference accounts for the tracked surfaces outside production/test trees, including:
+
+- root solution/SDK/build/package/editor/git configuration;
+- README/license/conduct/contribution/security/privacy/terms/support/notices/status/decisions/ledger files;
+- `.github` funding, issue templates, PR template, Dependabot, and workflows;
+- local verification/build scripts;
+- all top-level documentation;
+- architecture, security, privacy, format, setup, release, operations, branding, changelog/history documentation;
+- every dated verification/evidence record through this repository-wide documentation continuation.
+
+The reference explicitly delegates `src/` and `tests/` to their dedicated exhaustive references so every file is documented without duplicating implementation descriptions in multiple places.
+
+### Documentation hub consolidation
+
+Reworked:
+
+`docs/README.md`
+
+The canonical hub now indexes:
+
+- the three exhaustive file-level references;
+- user/product documentation;
+- developer/maintainer documentation;
+- architecture;
+- security/privacy;
+- persisted/exported formats;
+- build/testing/troubleshooting;
+- historical exact baseline context;
+- historical verification records;
+- August 18/19 current continuation records;
+- release/operations;
+- branding/history/legal/status material;
+- documentation governance rules.
+
+The rewrite preserves required canonical paths already protected by `DocumentationCoverageSourceTests.cs` and retains the rule that historical 555-test/platform/CodeQL evidence belongs only to its immutable recorded SHA.
+
+### Repository-wide verification contract
+
+Added:
+
+`docs/verification/REPOSITORY_WIDE_DOCUMENTATION_2026_08_19.md`
+
+It records:
+
+- starting inventory head;
+- exact scope of all three file-level references;
+- completeness semantics;
+- security/non-claim wording;
+- automated documentation guard expectations;
+- exact-head CI requirements;
+- external/manual gates that repository documentation cannot complete.
+
+### Automated documentation regression guard
+
+Added and hardened:
+
+`tests/CipherNest.UiTests/RepositoryDocumentationInventorySourceTests.cs`
+
+The test requires current canonical artifacts to remain present/non-empty and verifies that the documentation hub links:
+
+- `REPOSITORY_FILE_REFERENCE.md`;
+- `SOURCE_CODE_REFERENCE.md`;
+- `TEST_SUITE_REFERENCE.md`;
+- August 18 TOTP URI verification;
+- August 19 TOTP, authentication, About/security, Settings localization verification;
+- the repository-wide documentation verification record.
+
+It also checks representative production layers, test suites, workflows/scripts, and current verification records are present in the correct inventories. Its repository-root path helper was normalized to the established explicit `foreach` path-building style already used by existing UI/source tests.
+
+### Documentation-maintenance hardening
+
+Expanded:
+
+`docs/DOCUMENTATION_MAINTENANCE.md`
+
+The maintenance contract now requires, in the same change series:
+
+- production file changes -> `SOURCE_CODE_REFERENCE.md`;
+- test file changes -> `TEST_SUITE_REFERENCE.md`;
+- root/GitHub/script/documentation file changes -> `REPOSITORY_FILE_REFERENCE.md`;
+- canonical new docs -> documentation hub links;
+- mandatory current verification records -> automated documentation-source guard updates.
+
+It also clarifies historical evidence preservation, safe ledger rollover, TOTP/localization non-claims, sensitive example restrictions, CI synchronization, and release documentation freeze requirements.
+
+### Commits in this continuation
+
+- `f2b4f4f580ab7ba83aee87888d2d0b808fc80afa` — `docs(source): add exhaustive source code reference`
+- `5820531ba322916adb49a17f71d0741dffc65572` — `docs(tests): add exhaustive test suite reference`
+- `ca0ce30468a5d2037b3c928143b39c79a8819bac` — `docs(repo): add complete repository file reference`
+- `cde7cf5204a0701ce86f339ba8c9710365a249de` — `docs(hub): index exhaustive repository documentation`
+- `b519c69d62d1870c244d223fb00ac976db8b6f06` — `docs(verification): add repository-wide documentation contract`
+- `fa62f90ca76eb80e2b1ed0059f55d9b881477858` — `test(docs): guard repository-wide documentation inventory`
+- `40ce682705970a52a81b1be6b09317879b3f1057` — `test(docs): use established repository path helper`
+- `c292dad9ab30bb7da42b5c887272255059262141` — `docs(tests): document repository inventory guard`
+- `86847ddecf6d693c0268efd86840acbdce039779` — `docs(repo): synchronize current documentation artifacts`
+- `22f02b67c001f2ce4ce036a14d4f83c766a0b82e` — `docs(maintenance): require exhaustive file inventory updates`
+
+This ledger commit follows those commits and therefore is not self-listed by SHA in its own pre-commit content.
+
+### Verification status and unchanged external gates
+
+No new build/test/platform success is inferred from documentation changes. The historical verified implementation baseline remains historical evidence only.
+
+The final head created by this continuation still requires observable exact-head workflow evidence before it can be described as fully CI-verified. Physical-device biometrics/secure storage/lifecycle/clipboard/screenshot behavior, assistive-technology and translated-layout validation, signing/notarization/store acceptance, representative third-party TOTP interoperability, dependency/license release review, and independent professional security review remain external/manual release gates.
