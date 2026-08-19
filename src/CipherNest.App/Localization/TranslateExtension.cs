@@ -3,6 +3,7 @@ using Microsoft.Maui.Controls.Xaml;
 
 namespace CipherNest.App.Localization;
 
+[AcceptEmptyServiceProvider]
 [ContentProperty(nameof(Key))]
 public sealed class TranslateExtension : IMarkupExtension
 {
