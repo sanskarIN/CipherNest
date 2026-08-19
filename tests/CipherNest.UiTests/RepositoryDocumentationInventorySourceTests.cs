@@ -102,6 +102,9 @@ public sealed class RepositoryDocumentationInventorySourceTests
         if (directory is null)
             throw new DirectoryNotFoundException("Could not locate the CipherNest repository root from the test output directory.");
 
-        return Path.Combine([directory.FullName, .. segments]);
+        var path = directory.FullName;
+        foreach (var segment in segments)
+            path = Path.Combine(path, segment);
+        return path;
     }
 }
