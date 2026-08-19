@@ -10,17 +10,19 @@ CipherNest ships a neutral English catalog and includes a reviewed Hindi (`hi-IN
 - `LocalizationService` owns UI-culture selection and `ResourceManager` lookup.
 - `Localization/TranslateExtension.cs` provides a reusable XAML markup extension so fixed page text and semantic/accessibility descriptions can resolve the active reviewed catalog without duplicating `ResourceManager` access in views.
 - `TranslateExtension` is marked `AcceptEmptyServiceProvider` because it does not consume XAML's supplied service-provider context; its lookup deliberately uses the registered application localization service instead.
-- Dynamic TOTP period/validity text and TOTP operation status/error messages resolve the same reviewed catalog from `ItemEditorViewModel.Totp.cs` and format values with `CultureInfo.CurrentUICulture`.
+- Dynamic TOTP period/validity text, TOTP operation status/error messages, Unlock workflow statuses, onboarding strength labels, and vault-creation statuses resolve the same reviewed catalog and use `CultureInfo.CurrentUICulture` for dynamic numeric formatting.
 - Explicit English maps to `en-US`; explicit Hindi maps to `hi-IN`; System preserves the process-start system UI culture.
 - The saved preference is applied at startup/resume and when the user changes it in Settings.
 - Missing culture-specific translations fall back to the neutral English resources through normal `ResourceManager` fallback.
 - Markup-extension values are resolved when the XAML element is constructed. A page that was already constructed before a language change can retain its existing fixed text until that page is reconstructed; do not claim live in-place translation for every existing visual tree.
 - `LocalizationSourceTests` requires key parity, non-empty Hindi values, security-critical translation coverage, runtime preference wiring, and documentation that does not overstate translation completeness.
-- Dedicated TOTP localization source tests guard catalog entries, translation-extension wiring, MAUI service-provider annotation, localized item-editor usage, localized dynamic formatting, localized TOTP operation statuses/errors, and removal of the prior hard-coded setup-URI security text.
+- Dedicated localization source tests guard TOTP, Unlock, and onboarding/recovery resource catalogs, XAML usage, dynamic/status formatting, fail-safe messages, and removal of selected previous hard-coded security copy.
 
 ## Reviewed Hindi scope
 
-The current Hindi catalog covers the resource-backed product/title/navigation controls already represented by `AppStrings` plus the security-sensitive local-only, audit-status, recovery-limitation, language-preference status messages, and the migrated TOTP item-editor security/workflow surface.
+The current Hindi catalog covers the resource-backed product/title/navigation controls already represented by `AppStrings` plus the security-sensitive local-only, audit-status, recovery-limitation, language-preference status messages, migrated TOTP workflow, initial Unlock workflow, and initial vault-onboarding/recovery workflow.
+
+### TOTP workflow
 
 The TOTP resource-backed surface includes:
 
@@ -33,15 +35,50 @@ The TOTP resource-backed surface includes:
 - generation/import/copy success and failure statuses;
 - the authorization/clipboard-history/synchronization warning.
 
-The wording intentionally preserves these security meanings:
+### Unlock workflow
+
+The resource-backed Unlock surface includes:
+
+- local-only/recovery limitation statements;
+- biometric action and accessibility description;
+- master-passphrase/recovery-key fallback labels and credential semantics;
+- periodic master-passphrase requirement status;
+- bounded failed-attempt delay formatting;
+- authentication failure status;
+- biometric prompt, cancellation/failure, protected-secret loss, and mismatch statuses.
+
+### Onboarding and recovery workflow
+
+The resource-backed onboarding surface includes:
+
+- local-vault setup title and local-only statement;
+- one-time recovery-key explanation and accessibility semantics;
+- explicit acknowledgement that the recovery key was stored separately;
+- unrecoverable-vault warning when both master passphrase and recovery material are lost;
+- master-passphrase and confirmation labels/placeholders;
+- optional recovery-key choice and recovery-limit acknowledgement;
+- onboarding password-strength presentation labels;
+- master-passphrase bound/requirement feedback;
+- vault-exists/initialization and unexpected setup-failure statuses.
+
+The authoritative password-strength score and setup eligibility remain application behavior; localization changes presentation labels, not the strength algorithm or authorization policy.
+
+## Security meaning requirements
+
+Translated security text must preserve these meanings:
 
 - the vault remains local to the device in ordinary operation;
 - CipherNest has not completed an independent professional security audit;
 - a forgotten master passphrase is not remotely recoverable and recovery depends on retained configured recovery material;
+- an optional recovery key is shown during setup and must be retained separately because CipherNest cannot later retrieve it for the user;
+- biometric unlock is convenience authentication and never removes the configured periodic master-passphrase requirement or recovery limitation;
+- biometric cancellation/failure, protected-secret loss, or pairing mismatch must fall back to the master-passphrase path rather than weakening authentication;
+- repeated failed interactive unlock attempts remain subject to the existing rate limiter;
+- failed vault creation must not be represented as successful;
 - TOTP setup URIs contain the seed and must be protected like the seed itself;
 - TOTP URI parsing/import remains local and bounded, while HOTP remains intentionally unsupported at this boundary;
 - clipboard history/synchronization can still expose copied secrets despite CipherNest's best-effort timed cleanup;
-- failed TOTP operations must not be described as successful and must preserve the documented unchanged-state guarantees;
+- failed TOTP operations must not be described as successful and must preserve documented unchanged-state guarantees;
 - untranslated or not-yet-migrated interface text elsewhere in CipherNest may still appear in English.
 
 Hindi is therefore a supported **resource-backed language preference**, not a claim that the complete application UI is fully translated today.
@@ -54,11 +91,12 @@ Hindi is therefore a supported **resource-backed language preference**, not a cl
 4. For fixed XAML text, prefer `TranslateExtension` instead of direct hard-coded security copy.
 5. Keep custom MAUI markup extensions explicit about XAML service-provider requirements (`RequireService` when consuming services supplied by XAML, or `AcceptEmptyServiceProvider` when the extension intentionally does not require that context).
 6. For dynamic formatted values or ViewModel operation messages, resolve reviewed resource keys and format with the active UI culture rather than embedding English-only `StringFormat` or status literals.
-7. Move remaining literal UI copy to resource-backed bindings/services screen by screen; do not mark a screen translated until every user-facing/security-sensitive literal on it has been reviewed.
-8. Keep resource keys language-neutral and stable. Do not encode a language into persistence, vault records, cryptographic associated data, or backup formats.
-9. Test long strings, formatting placeholders, pluralization, screen-reader pronunciation, keyboard navigation, layout at large text sizes, and right-to-left behavior for languages where it applies.
-10. Keep security warnings semantically equivalent; translations must not weaken recovery, export, audit, deletion, biometric, clipboard, TOTP, or platform-limit wording.
-11. Keep the neutral English value as the fallback so a missing satellite entry cannot produce a blank security warning.
+7. Keep authoritative validation/scoring/authorization logic language-neutral; translate presentation labels and messages rather than branching security policy by culture.
+8. Move remaining literal UI copy to resource-backed bindings/services screen by screen; do not mark a screen translated until every user-facing/security-sensitive literal on it has been reviewed.
+9. Keep resource keys language-neutral and stable. Do not encode a language into persistence, vault records, cryptographic associated data, or backup formats.
+10. Test long strings, formatting placeholders, pluralization, screen-reader pronunciation, keyboard navigation, layout at large text sizes, and right-to-left behavior for languages where it applies.
+11. Keep security warnings semantically equivalent; translations must not weaken recovery, export, audit, deletion, biometric, clipboard, TOTP, or platform-limit wording.
+12. Keep the neutral English value as the fallback so a missing satellite entry cannot produce a blank security warning.
 
 ## Release validation
 
@@ -66,11 +104,17 @@ For each language-enabled release candidate:
 
 - verify neutral/satellite key parity;
 - verify no blank translated values;
-- verify required format placeholders such as `{0}` remain present in every translated dynamic format;
+- verify required formatting placeholders remain present in every translated dynamic format;
 - exercise language selection, page reconstruction/navigation, app restart, suspend/resume, and fallback behavior on target platforms;
-- review every translated security warning and TOTP operation status against the canonical English security documentation;
+- review every translated recovery, biometric, TOTP, destructive-action, and audit warning against the canonical English security documentation;
+- test Unlock and onboarding/recovery flows with disposable synthetic vault credentials only;
 - test localized TOTP generation/setup-URI import/copy controls without placing real seeds, URIs, or codes in screenshots/logs/test artifacts;
 - test responsive layout and accessibility services with the translated strings;
 - keep any not-yet-migrated screens documented as potentially English.
+
+See:
+
+- `../verification/TOTP_LOCALIZATION_2026_08_19.md`;
+- `../verification/AUTHENTICATION_LOCALIZATION_2026_08_19.md`.
 
 Localization remains presentation-only and must not change vault data, crypto formats, database schema, backup compatibility, recovery behavior, authorization semantics, or security boundaries.
