@@ -1,3 +1,4 @@
+using System.Globalization;
 using CipherNest.Application.Abstractions;
 using CipherNest.Application.Models;
 using CipherNest.App.Services;
@@ -33,6 +34,18 @@ public partial class ItemEditorViewModel
     [ObservableProperty]
     public partial string TotpUriImportText { get; set; } = string.Empty;
 
+    public string TotpPeriodText => string.Format(
+        CultureInfo.CurrentUICulture,
+        TotpText("TotpPeriodFormat"),
+        TotpPeriodSeconds);
+
+    public string TotpValidityText => TotpSecondsRemaining <= 0
+        ? string.Empty
+        : string.Format(
+            CultureInfo.CurrentUICulture,
+            TotpText("TotpValidityFormat"),
+            TotpSecondsRemaining);
+
     partial void OnSelectedTypeChanged(VaultItemType value)
     {
         IsTotpItem = value == VaultItemType.OneTimePassword;
@@ -43,7 +56,14 @@ public partial class ItemEditorViewModel
     partial void OnSecretChanged(string value) => ClearTotpPresentation();
     partial void OnSelectedTotpAlgorithmChanged(TotpAlgorithm value) => ClearTotpPresentation();
     partial void OnTotpDigitsChanged(int value) => ClearTotpPresentation();
-    partial void OnTotpPeriodSecondsChanged(int value) => ClearTotpPresentation();
+
+    partial void OnTotpPeriodSecondsChanged(int value)
+    {
+        ClearTotpPresentation();
+        OnPropertyChanged(nameof(TotpPeriodText));
+    }
+
+    partial void OnTotpSecondsRemainingChanged(int value) => OnPropertyChanged(nameof(TotpValidityText));
 
     [RelayCommand]
     private void RefreshTotp()
@@ -69,13 +89,13 @@ public partial class ItemEditorViewModel
         catch (ArgumentException)
         {
             ClearTotpPresentation();
-            ErrorMessage = "The TOTP seed or settings are invalid. Use a Base32 seed, 6 or 8 digits, and a period from 15 to 120 seconds.";
+            ErrorMessage = TotpText("TotpInvalidSeedSettingsError");
         }
         catch (Exception ex)
         {
             ClearTotpPresentation();
             _exceptions.Report("ItemEditor.RefreshTotp", ex);
-            ErrorMessage = "The one-time code could not be generated safely. The encrypted seed remains unchanged.";
+            ErrorMessage = TotpText("TotpGenerateError");
         }
     }
 
@@ -94,7 +114,7 @@ public partial class ItemEditorViewModel
         catch (Exception ex)
         {
             _exceptions.Report("ItemEditor.CopyTotp", ex);
-            ErrorMessage = "The one-time code could not be copied safely. You can still read it directly while the vault remains unlocked.";
+            ErrorMessage = TotpText("TotpCopyCodeError");
         }
     }
 
@@ -106,7 +126,7 @@ public partial class ItemEditorViewModel
         if (!IsTotpItem || IsReauthenticationRequired) return;
         if (string.IsNullOrWhiteSpace(uriText))
         {
-            ErrorMessage = "Paste an otpauth://totp/... setup URI before importing.";
+            ErrorMessage = TotpText("TotpImportMissingUriError");
             return;
         }
 
@@ -119,16 +139,16 @@ public partial class ItemEditorViewModel
             TotpPeriodSeconds = profile.PeriodSeconds;
             Username = profile.AccountName;
             Title = string.IsNullOrWhiteSpace(profile.Issuer) ? profile.AccountName : profile.Issuer;
-            ErrorMessage = "TOTP setup URI imported locally. Review the account, issuer, algorithm, digits, and period before saving.";
+            ErrorMessage = TotpText("TotpImportSuccess");
         }
         catch (ArgumentException)
         {
-            ErrorMessage = "The TOTP setup URI is invalid or unsupported. CipherNest accepts bounded otpauth://totp/... URIs only; HOTP and ambiguous parameters or labels are rejected.";
+            ErrorMessage = TotpText("TotpImportInvalidError");
         }
         catch (Exception ex)
         {
             _exceptions.Report("ItemEditor.ImportTotpUri", ex);
-            ErrorMessage = "The TOTP setup URI could not be imported safely. Existing item fields were not intentionally changed after the failure.";
+            ErrorMessage = TotpText("TotpImportFailureError");
         }
         finally
         {
@@ -155,16 +175,16 @@ public partial class ItemEditorViewModel
             uriText = ServiceProviderHelper.GetRequiredService<ITotpUriCodec>().Format(profile);
             var preferences = await _settings.LoadAsync();
             await _clipboard.CopySecretAsync(uriText, TimeSpan.FromSeconds(preferences.ClipboardClearSeconds));
-            ErrorMessage = "TOTP setup URI copied with timed clipboard cleanup where supported. The URI contains the seed and must be protected like the seed itself.";
+            ErrorMessage = TotpText("TotpCopyUriSuccess");
         }
         catch (ArgumentException)
         {
-            ErrorMessage = "A TOTP setup URI could not be created. Enter a valid Base32 seed and account name, then review the algorithm, digits, and period.";
+            ErrorMessage = TotpText("TotpCopyUriInvalidError");
         }
         catch (Exception ex)
         {
             _exceptions.Report("ItemEditor.CopyTotpUri", ex);
-            ErrorMessage = "The TOTP setup URI could not be copied safely. The encrypted vault item remains unchanged.";
+            ErrorMessage = TotpText("TotpCopyUriFailureError");
         }
         finally
         {
@@ -194,4 +214,7 @@ public partial class ItemEditorViewModel
         CurrentTotpCode = string.Empty;
         TotpSecondsRemaining = 0;
     }
+
+    private static string TotpText(string key) =>
+        ServiceProviderHelper.GetRequiredService<ILocalizationService>().Get(key);
 }
