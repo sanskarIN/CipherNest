@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 namespace CipherNest.UiTests;
 
 public sealed class OnboardingFailureContainmentSourceTests
@@ -6,10 +8,24 @@ public sealed class OnboardingFailureContainmentSourceTests
     public void VaultCreation_ReportsUnexpectedFailuresWithoutClaimingSuccess()
     {
         var source = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "OnboardingViewModel.cs"));
+        var neutral = ReadCatalog("AppStrings.resx");
 
         Assert.Contains("IPrivacySafeExceptionReporter _exceptions", source, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Onboarding.CreateVault\", ex);", source, StringComparison.Ordinal);
-        Assert.Contains("No successful setup is being reported", source, StringComparison.Ordinal);
+        Assert.Contains("OnboardingText(\"OnboardingCreateFailureError\")", source, StringComparison.Ordinal);
+        Assert.Contains("No successful setup is being reported", neutral["OnboardingCreateFailureError"], StringComparison.Ordinal);
+        Assert.DoesNotContain("ErrorMessage = ex.Message", source, StringComparison.Ordinal);
+    }
+
+    private static Dictionary<string, string> ReadCatalog(string fileName)
+    {
+        var document = XDocument.Load(PathAt("src", "CipherNest.App", "Resources", "Localization", fileName));
+        return document.Root!
+            .Elements("data")
+            .ToDictionary(
+                element => (string)element.Attribute("name")!,
+                element => element.Element("value")?.Value ?? string.Empty,
+                StringComparer.Ordinal);
     }
 
     private static string PathAt(params string[] segments)
