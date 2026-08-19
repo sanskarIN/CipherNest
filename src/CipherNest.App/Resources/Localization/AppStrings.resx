@@ -19,4 +19,20 @@
   <data name="EnglishPreferenceSaved" xml:space="preserve"><value>English language preference saved.</value></data>
   <data name="HindiPreferenceSaved" xml:space="preserve"><value>Hindi language preference saved for the reviewed resource-backed interface. Unmigrated interface text may still appear in English.</value></data>
   <data name="SystemPreferenceSaved" xml:space="preserve"><value>System language preference saved. CipherNest uses an available reviewed catalog and falls back to English when a translation is unavailable.</value></data>
+  <data name="TotpHeading" xml:space="preserve"><value>Time-based one-time password (TOTP)</value></data>
+  <data name="TotpSeedSummary" xml:space="preserve"><value>For this item type, Secret is the Base32 TOTP seed. The seed is stored only inside the encrypted vault record. Generated codes are computed locally while unlocked and are not persisted.</value></data>
+  <data name="TotpImportHeading" xml:space="preserve"><value>Import a TOTP setup URI</value></data>
+  <data name="TotpImportSummary" xml:space="preserve"><value>Paste a bounded otpauth://totp/... URI. The URI contains the seed, is processed locally, is cleared from this editor after import, and must be protected like the seed itself. HOTP is intentionally rejected.</value></data>
+  <data name="TotpImportPlaceholder" xml:space="preserve"><value>otpauth://totp/...</value></data>
+  <data name="TotpImportButton" xml:space="preserve"><value>Import URI</value></data>
+  <data name="TotpCopySetupUriButton" xml:space="preserve"><value>Copy setup URI</value></data>
+  <data name="TotpAlgorithmLabel" xml:space="preserve"><value>Algorithm</value></data>
+  <data name="TotpDigitsLabel" xml:space="preserve"><value>Digits</value></data>
+  <data name="TotpRefreshCodeButton" xml:space="preserve"><value>Refresh code</value></data>
+  <data name="TotpCopyCodeButton" xml:space="preserve"><value>Copy code</value></data>
+  <data name="TotpImportSemanticDescription" xml:space="preserve"><value>Sensitive TOTP setup URI to import locally</value></data>
+  <data name="TotpCopySetupUriSemanticDescription" xml:space="preserve"><value>Copy a TOTP setup URI containing this encrypted seed using timed clipboard cleanup</value></data>
+  <data name="TotpCurrentCodeSemanticDescription" xml:space="preserve"><value>Current locally generated one-time password</value></data>
+  <data name="TotpCopyCodeSemanticDescription" xml:space="preserve"><value>Copy the current one-time password temporarily</value></data>
+  <data name="TotpSafetyWarning" xml:space="preserve"><value>Only import TOTP seeds you are authorized to use. Copying a seed, setup URI, or generated code can expose it through operating-system clipboard history or synchronization; CipherNest applies the same best-effort timed clipboard cleanup policy used for other secrets.</value></data>
 </root>
