@@ -29,11 +29,14 @@ Historical evidence must remain attached to that historical SHA.
 Required properties:
 
 - implements MAUI `IMarkupExtension`;
+- is annotated with `AcceptEmptyServiceProvider` because it intentionally does not consume XAML's supplied service-provider context;
 - exposes a required localization resource key;
 - rejects blank markup keys;
 - resolves the registered `ILocalizationService`;
 - delegates value lookup to the canonical localization service;
 - does not introduce persistence, network, telemetry, or cryptographic behavior.
+
+The MAUI service-provider annotation is part of the source contract. A later refactor that consumes XAML-provided services must replace the empty-provider declaration with an appropriate `RequireService` declaration rather than leaving the dependency implicit.
 
 ### Resource catalogs
 
@@ -114,7 +117,8 @@ This migration still intentionally does **not** claim that the whole Item Editor
 Guards:
 
 - markup-extension contract;
-- service resolution;
+- `AcceptEmptyServiceProvider` annotation;
+- application localization-service resolution;
 - localization lookup;
 - fail-closed blank-key behavior.
 
@@ -145,6 +149,14 @@ Guards:
 - property-change notifications for dynamic labels;
 - resource-backed TOTP operation messages;
 - removal of prior hard-coded dynamic `StringFormat` values and selected operation messages.
+
+### `LocalizationRoadmapSourceTests.cs`
+
+Guards:
+
+- the current roadmap links this verification record;
+- TOTP fixed/dynamic/status localization is treated as implemented current source;
+- the obsolete instruction to migrate the new TOTP URI UI strings is not reintroduced.
 
 The pre-existing neutral/Hindi catalog-parity source test remains an additional global guard.
 
