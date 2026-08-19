@@ -47,4 +47,50 @@
   <data name="TotpCopyUriSuccess" xml:space="preserve"><value>जहाँ समर्थित है वहाँ समयबद्ध क्लिपबोर्ड सफाई के साथ TOTP सेटअप URI कॉपी किया गया। URI में सीड होता है और इसे सीड की तरह ही सुरक्षित रखना चाहिए।</value></data>
   <data name="TotpCopyUriInvalidError" xml:space="preserve"><value>TOTP सेटअप URI नहीं बनाया जा सका। मान्य Base32 सीड और अकाउंट नाम दर्ज करें, फिर एल्गोरिदम, अंकों और अवधि की समीक्षा करें।</value></data>
   <data name="TotpCopyUriFailureError" xml:space="preserve"><value>TOTP सेटअप URI सुरक्षित रूप से कॉपी नहीं किया जा सका। एन्क्रिप्टेड वॉल्ट आइटम अपरिवर्तित है।</value></data>
+  <data name="CipherNestLogoSemanticDescription" xml:space="preserve"><value>CipherNest लोगो</value></data>
+  <data name="UnlockTitle" xml:space="preserve"><value>CipherNest अनलॉक करें</value></data>
+  <data name="BiometricUnlockButton" xml:space="preserve"><value>बायोमेट्रिक्स से अनलॉक करें</value></data>
+  <data name="BiometricUnlockSemanticDescription" xml:space="preserve"><value>CipherNest अनलॉक करने के लिए डिवाइस की बायोमेट्रिक प्रणाली से प्रमाणीकरण करें</value></data>
+  <data name="UnlockAlternativeLabel" xml:space="preserve"><value>या अपना मास्टर पासफ्रेज़ / रिकवरी कुंजी उपयोग करें</value></data>
+  <data name="UnlockCredentialPlaceholder" xml:space="preserve"><value>मास्टर पासफ्रेज़ या रिकवरी कुंजी</value></data>
+  <data name="UnlockCredentialSemanticDescription" xml:space="preserve"><value>मास्टर पासफ्रेज़ या रिकवरी कुंजी</value></data>
+  <data name="UnlockErrorSemanticDescription" xml:space="preserve"><value>अनलॉक त्रुटि स्थिति</value></data>
+  <data name="UnlockButton" xml:space="preserve"><value>अनलॉक करें</value></data>
+  <data name="UnlockRecoveryWarning" xml:space="preserve"><value>भूला हुआ पासफ्रेज़ पुनर्प्राप्त नहीं किया जा सकता, जब तक आपने सेटअप के समय वैकल्पिक रिकवरी कुंजी सुरक्षित न की हो। बायोमेट्रिक अनलॉक इस रिकवरी सीमा का विकल्प नहीं है।</value></data>
+  <data name="UnlockMasterSessionRequired" xml:space="preserve"><value>इस सुरक्षा सत्र को शुरू करने के लिए मास्टर पासफ्रेज़ दर्ज करें। कॉन्फ़िगर की गई अवधि के दौरान बाद के लॉक के लिए बायोमेट्रिक अनलॉक उपलब्ध हो सकता है।</value></data>
+  <data name="UnlockRateLimitFormat" xml:space="preserve"><value>बहुत अधिक असफल प्रयास हुए। {0} सेकंड बाद फिर प्रयास करें।</value></data>
+  <data name="UnlockAuthenticationError" xml:space="preserve"><value>पासफ्रेज़ गलत है या वॉल्ट को प्रमाणित नहीं किया जा सकता।</value></data>
+  <data name="UnlockPeriodicMasterDue" xml:space="preserve"><value>आवधिक मास्टर-पासफ्रेज़ जाँच का समय हो गया है। पहले मास्टर पासफ्रेज़ से अनलॉक करें।</value></data>
+  <data name="UnlockBiometricPrompt" xml:space="preserve"><value>अपने स्थानीय CipherNest वॉल्ट को अनलॉक करने के लिए प्रमाणीकरण करें।</value></data>
+  <data name="UnlockBiometricFailed" xml:space="preserve"><value>बायोमेट्रिक प्रमाणीकरण रद्द हो गया या विफल रहा। इसके बजाय मास्टर पासफ्रेज़ का उपयोग करें।</value></data>
+  <data name="UnlockBiometricSecretUnavailable" xml:space="preserve"><value>सुरक्षित बायोमेट्रिक अनलॉक सीक्रेट उपलब्ध नहीं है। मास्टर पासफ्रेज़ से अनलॉक करें और सेटिंग्स में बायोमेट्रिक्स फिर सक्षम करें।</value></data>
+  <data name="UnlockBiometricDataMismatch" xml:space="preserve"><value>बायोमेट्रिक अनलॉक डेटा अब इस वॉल्ट से मेल नहीं खाता। मास्टर पासफ्रेज़ का उपयोग करें और बायोमेट्रिक्स फिर कॉन्फ़िगर करें।</value></data>
+  <data name="OnboardingCreateVaultTitle" xml:space="preserve"><value>अपना स्थानीय वॉल्ट बनाएँ</value></data>
+  <data name="OnboardingLocalSummary" xml:space="preserve"><value>CipherNest की वर्तमान रिलीज़ का डेटा पूरी तरह इसी डिवाइस पर रहता है। किसी अकाउंट या क्लाउड सेवा की आवश्यकता नहीं है।</value></data>
+  <data name="OnboardingSaveRecoveryKeyTitle" xml:space="preserve"><value>अपनी रिकवरी कुंजी अभी सुरक्षित करें</value></data>
+  <data name="OnboardingRecoveryKeyExplanation" xml:space="preserve"><value>यदि आप मास्टर पासफ्रेज़ भूल जाते हैं तो यह कुंजी आपका वॉल्ट अनलॉक कर सकती है। यह केवल सेटअप के दौरान दिखाई जाती है; CipherNest इसे बाद में वापस नहीं ला सकता। इसे इस डिवाइस से अलग सुरक्षित स्थान पर रखें।</value></data>
+  <data name="OnboardingRecoveryKeySemanticDescription" xml:space="preserve"><value>रिकवरी कुंजी केवल एक बार दिखाई जाती है</value></data>
+  <data name="OnboardingRecoveryKeySavedAcknowledgement" xml:space="preserve"><value>मैंने रिकवरी कुंजी को अलग सुरक्षित स्थान पर सहेज लिया है।</value></data>
+  <data name="OnboardingContinueButton" xml:space="preserve"><value>वॉल्ट पर जाएँ</value></data>
+  <data name="OnboardingRecoveryLimitationTitle" xml:space="preserve"><value>रिकवरी सीमा</value></data>
+  <data name="OnboardingRecoveryLimitationBody" xml:space="preserve"><value>यदि आप मास्टर पासफ्रेज़ और किसी भी वैकल्पिक रिकवरी कुंजी दोनों खो देते हैं, तो CipherNest इस स्थानीय वॉल्ट को पुनर्प्राप्त नहीं कर सकता।</value></data>
+  <data name="MasterPassphraseLabel" xml:space="preserve"><value>मास्टर पासफ्रेज़</value></data>
+  <data name="MasterPassphrasePlaceholder" xml:space="preserve"><value>लंबा, विशिष्ट और मजबूत</value></data>
+  <data name="OnboardingStrengthInitial" xml:space="preserve"><value>एक लंबा और विशिष्ट मास्टर पासफ्रेज़ दर्ज करें।</value></data>
+  <data name="OnboardingMasterTooLongFormat" xml:space="preserve"><value>मास्टर पासफ्रेज़ {0:N0} अक्षरों से अधिक नहीं हो सकता।</value></data>
+  <data name="PasswordStrengthEmpty" xml:space="preserve"><value>खाली</value></data>
+  <data name="PasswordStrengthVeryWeak" xml:space="preserve"><value>बहुत कमजोर</value></data>
+  <data name="PasswordStrengthWeak" xml:space="preserve"><value>कमजोर</value></data>
+  <data name="PasswordStrengthFair" xml:space="preserve"><value>ठीक</value></data>
+  <data name="PasswordStrengthStrong" xml:space="preserve"><value>मजबूत</value></data>
+  <data name="PasswordStrengthVeryStrong" xml:space="preserve"><value>बहुत मजबूत</value></data>
+  <data name="ConfirmMasterPassphraseLabel" xml:space="preserve"><value>मास्टर पासफ्रेज़ की पुष्टि करें</value></data>
+  <data name="ConfirmMasterPassphrasePlaceholder" xml:space="preserve"><value>पासफ्रेज़ फिर दर्ज करें</value></data>
+  <data name="OnboardingGenerateRecoveryOption" xml:space="preserve"><value>वैकल्पिक स्थानीय रिकवरी कुंजी बनाएँ और उसे एक बार दिखाएँ</value></data>
+  <data name="OnboardingRecoveryAcknowledgement" xml:space="preserve"><value>मैं रिकवरी सीमाओं को समझता/समझती हूँ।</value></data>
+  <data name="OnboardingErrorSemanticDescription" xml:space="preserve"><value>वॉल्ट निर्माण त्रुटि स्थिति</value></data>
+  <data name="OnboardingCreateButton" xml:space="preserve"><value>वॉल्ट बनाएँ</value></data>
+  <data name="OnboardingMasterRequirementsErrorFormat" xml:space="preserve"><value>मास्टर पासफ्रेज़ में {0:N0} से {1:N0} तक समर्थित अक्षर होने चाहिए और उसे मजबूती की आवश्यकता पूरी करनी चाहिए।</value></data>
+  <data name="OnboardingVaultExistsError" xml:space="preserve"><value>स्थानीय वॉल्ट पहले से मौजूद है या उसे सुरक्षित रूप से प्रारंभ नहीं किया जा सका।</value></data>
+  <data name="OnboardingCreateFailureError" xml:space="preserve"><value>स्थानीय वॉल्ट सुरक्षित रूप से नहीं बनाया जा सका। सफल सेटअप की झूठी सूचना नहीं दी जा रही है; स्थानीय स्टोरेज पहुँच जाँचें और फिर प्रयास करें।</value></data>
 </root>
