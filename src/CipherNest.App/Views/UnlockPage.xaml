@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="CipherNest.App.Views.UnlockPage">
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:l10n="clr-namespace:CipherNest.App.Localization" x:Class="CipherNest.App.Views.UnlockPage">
   <Grid Padding="24">
     <VerticalStackLayout Spacing="16" VerticalOptions="Center" MaximumWidthRequest="520" HorizontalOptions="Center">
-      <Image Source="ciphernest_logo.svg" HeightRequest="96" SemanticProperties.Description="CipherNest logo"/>
-      <Label Text="Unlock CipherNest" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center"/>
-      <Label Text="Your encrypted vault remains on this device." Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center"/>
-      <Button Text="Unlock with biometrics" Command="{Binding BiometricUnlockCommand}" IsVisible="{Binding BiometricUnlockAvailable}" SemanticProperties.Description="Authenticate with the device biometric system to unlock CipherNest"/>
-      <Label Text="or use your master passphrase / recovery key" Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center" IsVisible="{Binding BiometricUnlockAvailable}"/>
-      <Entry Text="{Binding MasterPassphrase}" IsPassword="True" Placeholder="Master passphrase or recovery key" ReturnType="Done" SemanticProperties.Description="Master passphrase or recovery key"/>
-      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" SemanticProperties.Description="Unlock error status"/>
-      <Button Text="Unlock" Command="{Binding UnlockCommand}"/>
+      <Image Source="ciphernest_logo.svg" HeightRequest="96" SemanticProperties.Description="{l10n:Translate CipherNestLogoSemanticDescription}"/>
+      <Label Text="{l10n:Translate UnlockTitle}" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center"/>
+      <Label Text="{l10n:Translate LocalOnlySummary}" Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center"/>
+      <Button Text="{l10n:Translate BiometricUnlockButton}" Command="{Binding BiometricUnlockCommand}" IsVisible="{Binding BiometricUnlockAvailable}" SemanticProperties.Description="{l10n:Translate BiometricUnlockSemanticDescription}"/>
+      <Label Text="{l10n:Translate UnlockAlternativeLabel}" Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center" IsVisible="{Binding BiometricUnlockAvailable}"/>
+      <Entry Text="{Binding MasterPassphrase}" IsPassword="True" Placeholder="{l10n:Translate UnlockCredentialPlaceholder}" ReturnType="Done" SemanticProperties.Description="{l10n:Translate UnlockCredentialSemanticDescription}"/>
+      <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" SemanticProperties.Description="{l10n:Translate UnlockErrorSemanticDescription}"/>
+      <Button Text="{l10n:Translate UnlockButton}" Command="{Binding UnlockCommand}"/>
       <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
-      <Label Text="Forgotten passphrases cannot be recovered unless you saved the optional recovery key during setup. Biometric unlock never replaces that recovery limitation." Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center"/>
+      <Label Text="{l10n:Translate UnlockRecoveryWarning}" Style="{StaticResource SubtitleLabel}" HorizontalTextAlignment="Center"/>
     </VerticalStackLayout>
   </Grid>
 </ContentPage>
