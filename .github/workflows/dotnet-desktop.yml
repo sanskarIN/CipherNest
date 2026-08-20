@@ -58,7 +58,7 @@ jobs:
       - name: Build, format, and smoke-test local Web/Linux host
         run: bash scripts/verify-web.sh
       - name: Publish Linux x64 local host
-        run: dotnet publish src/CipherNest.Web/CipherNest.Web.csproj -c Release -r linux-x64 --self-contained false --no-restore
+        run: dotnet publish src/CipherNest.Web/CipherNest.Web.csproj -c Release -r linux-x64 --self-contained false
 
   build-windows:
     runs-on: windows-latest
