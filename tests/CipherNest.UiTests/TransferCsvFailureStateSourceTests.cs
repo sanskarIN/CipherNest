@@ -9,7 +9,7 @@ public sealed class TransferCsvFailureStateSourceTests
 
         Assert.Contains("ResetCsvSelection();", source, StringComparison.Ordinal);
         Assert.Contains("private void ResetCsvSelection()", source, StringComparison.Ordinal);
-        Assert.Contains("SelectedFileName = \"No CSV selected.\";", source, StringComparison.Ordinal);
+        Assert.Contains("SelectedFileName = Text(\"TransferNoCsvSelected\");", source, StringComparison.Ordinal);
         Assert.Contains("TitleColumn = null;", source, StringComparison.Ordinal);
         Assert.Contains("TypeColumn = null;", source, StringComparison.Ordinal);
 
