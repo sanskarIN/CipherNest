@@ -7,22 +7,22 @@ CipherNest ships neutral English resources and reviewed Hindi (`hi-IN`) satellit
 - `AppLanguagePreference` persists `System`, `English`, or `Hindi`.
 - `Resources/Localization/AppStrings.resx` is the primary neutral English catalog for shared and previously migrated strings.
 - `Resources/Localization/AppStrings.hi-IN.resx` is the reviewed Hindi satellite catalog for the same primary-catalog keys.
-- Feature catalogs can keep a complete screen/workflow migration cohesive without turning `AppStrings` into an unbounded single file. The first feature catalog pair is `TrashStrings.resx` / `TrashStrings.hi-IN.resx`.
+- Feature catalogs keep cohesive workflows maintainable without turning `AppStrings` into one unbounded file. Current feature pairs are `TrashStrings.resx` / `TrashStrings.hi-IN.resx` and `TransferStrings.resx` / `TransferStrings.hi-IN.resx`.
 - `LocalizationService` owns UI-culture selection and ordered resource lookup: the primary `AppStrings` catalog is checked first, then registered feature catalogs. If no catalog contains a key, the service returns the key name so missing resources remain visible during development instead of becoming blank text.
-- Each culture-specific feature catalog must retain exact key parity with its neutral feature catalog; focused source tests enforce this for Trash.
+- Each culture-specific feature catalog must retain exact key parity with its neutral feature catalog; focused source tests enforce this for Trash and Transfer.
 - `Localization/TranslateExtension.cs` provides a reusable XAML markup extension so fixed page text and semantic/accessibility descriptions can resolve the active reviewed catalog without duplicating `ResourceManager` access in views.
 - `TranslateExtension` is marked `AcceptEmptyServiceProvider` because it does not consume XAML's supplied service-provider context; its lookup deliberately uses the registered application localization service instead.
-- Dynamic TOTP period/validity text, TOTP operation status/error messages, Unlock workflow statuses, onboarding strength labels, vault-creation statuses, Settings security-operation statuses, and Trash runtime/destructive-action statuses resolve reviewed resources and use `CultureInfo.CurrentUICulture` where formatting is required.
+- Dynamic TOTP period/validity text, TOTP operation status/error messages, Unlock workflow statuses, onboarding strength labels, vault-creation statuses, Settings security-operation statuses, Trash destructive-action statuses, and Transfer import/plaintext-export statuses resolve reviewed resources and use `CultureInfo.CurrentUICulture` where formatting is required.
 - Explicit English maps to `en-US`; explicit Hindi maps to `hi-IN`; System preserves the process-start system UI culture.
 - The saved preference is applied at startup/resume and when the user changes it in Settings.
 - Missing culture-specific translations fall back to neutral English through normal `ResourceManager` fallback within the catalog that owns the key.
 - Markup-extension values are resolved when the XAML element is constructed. A page that was already constructed before a language change can retain its existing fixed text until that page is reconstructed; do not claim live in-place translation for every existing visual tree.
 - `LocalizationSourceTests` protects primary-catalog parity, preference wiring, fallback behavior, and honest completeness wording.
-- Dedicated localization source tests guard TOTP, Unlock, onboarding/recovery, About security/privacy, Settings, and Trash resource catalogs, XAML usage, dynamic/status formatting, fail-safe messages, and removal of selected previous hard-coded security copy.
+- Dedicated localization source tests guard TOTP, Unlock, onboarding/recovery, About security/privacy, Settings, Trash, and Transfer resource catalogs, XAML usage, dynamic/status formatting, fail-safe messages, required tokens/placeholders, and removal of selected previous hard-coded security copy.
 
 ## Reviewed Hindi scope
 
-The reviewed Hindi resources cover the resource-backed product/title/navigation controls already represented by `AppStrings` plus the security-sensitive local-only, audit-status, recovery-limitation, language-preference status messages, migrated TOTP workflow, initial Unlock workflow, initial vault-onboarding/recovery workflow, About security/privacy claims, migrated Settings fixed surface/security operations, and the complete fixed/runtime Trash permanent-deletion surface.
+The reviewed Hindi resources cover the resource-backed product/title/navigation controls already represented by `AppStrings` plus the security-sensitive local-only, audit-status, recovery-limitation, language-preference status messages, migrated TOTP workflow, initial Unlock workflow, initial vault-onboarding/recovery workflow, About security/privacy claims, migrated Settings fixed surface/security operations, the complete fixed/runtime Trash permanent-deletion surface, and the generic CSV/plaintext Transfer boundary.
 
 ### TOTP workflow
 
@@ -98,7 +98,22 @@ Some Settings values are generated dynamically at runtime (for example measured 
 - missing-master and failed-master-confirmation statuses;
 - completed empty-trash status.
 
-The empty-trash command now publishes its completed success status after clearing the in-memory Trash list instead of immediately calling the general reload path that would overwrite the success message with `Trash is empty.`. This is a presentation-state fix only; permanent deletion still depends on the existing master re-authentication and vault-service deletion behavior.
+The empty-trash command publishes its completed success status after clearing the in-memory Trash list instead of immediately calling the general reload path that would overwrite the success message with `Trash is empty.`. This is a presentation-state fix only; permanent deletion still depends on the existing master re-authentication and vault-service deletion behavior.
+
+### Transfer and plaintext CSV workflow
+
+`TransferStrings.resx` and `TransferStrings.hi-IN.resx` own the generic CSV import and guarded plaintext-export presentation boundary. The migrated surface includes:
+
+- page title, Back action, generic CSV heading/explanation, CSV picker action, every explicit column-mapping label, and mapped-import action;
+- plaintext-export heading, encrypted-backup recommendation, master-passphrase input, exact acknowledgement guidance, export action, cache-cleanup action, and accessibility descriptions for the sensitive controls;
+- localized file-picker title, no-selection state, mapping-review status, selection/open failure, missing-title-map status, import confirmation, import failure, and imported/skipped result formats;
+- localized current-master confirmation failure and authentication failure while preserving the rule that recovery keys are not accepted for plaintext-export confirmation;
+- localized plaintext-export confirmation, temporary-share status, share title, export/share failure, temporary-staging cleanup warning, cache-clean success, and cache-clean failure;
+- explicit warnings that the source CSV remains plaintext outside CipherNest, that exported readable vault fields can be copied by share targets/backups/search indexing/antivirus/the operating system, and that external copies or filesystem snapshots remain outside CipherNest's control.
+
+The authorization token `EXPORT PLAINTEXT` is a control value, not natural-language prose. It remains exactly identical in all languages and remains the string compared by `TransferViewModel`; only the surrounding instruction is translated. Focused source tests protect this token and all required `{0}` / `{1}` formatting placeholders so a translation cannot silently alter the acknowledgement contract or break runtime formatting.
+
+The import completion surface no longer concatenates raw `CsvTransferService` warning strings into the localized status line. It reports localized imported/skipped counts and, when warnings exist, a generic localized statement that some skipped rows did not satisfy local CSV or vault-item validation. Detailed parser/validator behavior remains enforced below the presentation layer; this change avoids mixing English infrastructure text into a translated user-facing result and reduces unnecessary exposure of row-specific diagnostic detail in the main status surface.
 
 ## Security meaning requirements
 
@@ -120,6 +135,10 @@ Translated security text must preserve these meanings:
 - cache cleanup must not be described as deleting the encrypted vault database, encrypted attachment store, or app-data backups;
 - Trash permanent deletion requires current-master re-authentication and must not imply that a recovery key is accepted for that destructive confirmation;
 - deleting CipherNest-managed encrypted records/attachments must not be described as guaranteed physical erasure because filesystem, flash-storage, backup, snapshot, shared-copy, or forensic remnants can remain outside application control;
+- generic CSV source files remain plaintext outside CipherNest even after their mapped fields are encrypted into the vault;
+- plaintext CSV export requires the exact `EXPORT PLAINTEXT` acknowledgement plus current-master re-authentication; recovery keys are not accepted for that confirmation;
+- a shared/exported plaintext file can be copied/indexed/scanned/backed up outside CipherNest, and cleanup of CipherNest's temporary staging/cache cannot guarantee removal of copies, backups, snapshots, or share-target data outside application control;
+- translated prose must not translate, normalize, case-fold, or otherwise alter exact control/protocol tokens such as `EXPORT PLAINTEXT` or protocol skeletons such as `otpauth://totp/...` where application behavior depends on their exact value;
 - optional funding must not imply different product rights, security, privacy, licensing, recovery, or support priority;
 - untranslated or not-yet-migrated interface text elsewhere in CipherNest may still appear in English.
 
@@ -135,12 +154,14 @@ Hindi is therefore a supported **resource-backed language preference**, not a cl
 6. For fixed XAML text, prefer `TranslateExtension` instead of direct hard-coded security copy.
 7. Keep custom MAUI markup extensions explicit about XAML service-provider requirements (`RequireService` when consuming services supplied by XAML, or `AcceptEmptyServiceProvider` when the extension intentionally does not require that context).
 8. For dynamic formatted values or ViewModel operation messages, resolve reviewed resource keys and format with the active UI culture rather than embedding English-only `StringFormat` or status literals.
-9. Keep authoritative validation/scoring/authorization logic language-neutral; translate presentation labels and messages rather than branching security policy by culture.
-10. Move remaining literal UI copy to resource-backed bindings/services screen by screen; do not mark a screen translated until every user-facing/security-sensitive literal on it has been reviewed.
-11. Keep resource keys language-neutral and stable. Do not encode a language into persistence, vault records, cryptographic associated data, or backup formats.
-12. Test long strings, formatting placeholders, pluralization, screen-reader pronunciation, keyboard navigation, layout at large text sizes, and right-to-left behavior for languages where it applies.
-13. Keep security warnings semantically equivalent; translations must not weaken recovery, export, audit, deletion, biometric, clipboard, TOTP, funding, storage/cache, or platform-limit wording.
-14. Keep neutral English values as fallback so a missing satellite entry cannot produce a blank security warning.
+9. Keep exact control/protocol values outside translation semantics when application behavior depends on exact equality; translate surrounding instructions but regression-test the unchanged token/skeleton and required formatting placeholders.
+10. Keep authoritative validation/scoring/authorization logic language-neutral; translate presentation labels and messages rather than branching security policy by culture.
+11. Do not surface infrastructure/parser exception or warning text merely to make a localized presentation complete; publish reviewed user-facing messages and keep lower-level detail inside the appropriate test/diagnostic boundary.
+12. Move remaining literal UI copy to resource-backed bindings/services screen by screen; do not mark a screen translated until every user-facing/security-sensitive literal on it has been reviewed.
+13. Keep resource keys language-neutral and stable. Do not encode a language into persistence, vault records, cryptographic associated data, or backup formats.
+14. Test long strings, formatting placeholders, pluralization, screen-reader pronunciation, keyboard navigation, layout at large text sizes, and right-to-left behavior for languages where it applies.
+15. Keep security warnings semantically equivalent; translations must not weaken recovery, export, audit, deletion, biometric, clipboard, TOTP, funding, storage/cache, or platform-limit wording.
+16. Keep neutral English values as fallback so a missing satellite entry cannot produce a blank security warning.
 
 ## Release validation
 
@@ -149,12 +170,15 @@ For each language-enabled release candidate:
 - verify neutral/satellite key parity in every primary/feature catalog pair;
 - verify no blank translated values;
 - verify required formatting placeholders remain present in every translated dynamic format;
+- verify exact behavioral tokens/protocol skeletons required by the application remain byte-for-byte unchanged where the contract requires it;
 - exercise language selection, page reconstruction/navigation, app restart, suspend/resume, and fallback behavior on target platforms;
-- review every translated recovery, biometric, TOTP, Trash/destructive-action, funding, storage/cache, and audit warning against the canonical English security documentation;
+- review every translated recovery, biometric, TOTP, Trash/destructive-action, Transfer/plaintext-export, funding, storage/cache, and audit warning against the canonical English security documentation;
 - test Unlock and onboarding/recovery flows with disposable synthetic vault credentials only;
 - test localized TOTP generation/setup-URI import/copy controls without placing real seeds, URIs, or codes in screenshots/logs/test artifacts;
 - test Settings language switching, fixed-text reconstruction, funding-disabled builds, reminder/privacy copy, and cache/storage layouts;
 - test Trash retention presentation, current-master destructive confirmation, per-item deletion, empty-trash confirmation, success-state visibility, and storage-remnant caveats using disposable synthetic vault data only;
+- test Transfer with synthetic CSV data: file picker, mapping labels/layout, import confirmation/result, exact `EXPORT PLAINTEXT` token behavior, current-master rejection/failure, plaintext export/share confirmation, share-return staging cleanup, cache cleanup, and external-copy warnings;
+- confirm translated Transfer layouts do not expose raw parser/validator warnings in the main localized result surface;
 - test responsive layout and accessibility services with the translated strings;
 - keep any not-yet-migrated screens documented as potentially English.
 
