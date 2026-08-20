@@ -1,0 +1,387 @@
+@page "/"
+@inject IVaultService Vault
+
+<PageTitle>CipherNest</PageTitle>
+
+<section class="hero">
+    <div>
+        <p class="eyebrow">Cross-platform local vault</p>
+        <h1>CipherNest</h1>
+        <p>Use the same encrypted vault core from a local browser UI on Linux, Windows, or macOS.</p>
+    </div>
+    @if (_isUnlocked)
+    {
+        <button class="secondary" @onclick="LockAsync">Lock vault</button>
+    }
+</section>
+
+@if (!string.IsNullOrWhiteSpace(_status))
+{
+    <div class="status" role="status">@_status</div>
+}
+
+@if (!_initialized)
+{
+    <section class="card"><p>Loading local vault state…</p></section>
+}
+else if (!_hasVault)
+{
+    <section class="card narrow">
+        <h2>Create your local vault</h2>
+        <p>The master passphrase is processed locally and is not sent to a CipherNest service.</p>
+        <label>Master passphrase</label>
+        <input type="password" autocomplete="new-password" @bind="_masterPassphrase" />
+        <label>Confirm master passphrase</label>
+        <input type="password" autocomplete="new-password" @bind="_confirmPassphrase" />
+        <label class="check-row">
+            <input type="checkbox" @bind="_createRecoveryKey" />
+            Create one-time recovery material
+        </label>
+        <button @onclick="CreateVaultAsync" disabled="@_busy">Create vault</button>
+    </section>
+}
+else if (!_isUnlocked)
+{
+    <section class="card narrow">
+        <h2>Unlock vault</h2>
+        <p>Enter the master passphrase or valid recovery material for this local vault.</p>
+        <label>Passphrase or recovery material</label>
+        <input type="password" autocomplete="current-password" @bind="_unlockSecret" @onkeydown="HandleUnlockKeyAsync" />
+        <button @onclick="UnlockAsync" disabled="@_busy">Unlock</button>
+    </section>
+}
+else
+{
+    @if (!string.IsNullOrWhiteSpace(_recoveryMaterial))
+    {
+        <section class="card warning">
+            <h2>Save your recovery material now</h2>
+            <p>This value is shown after vault creation so you can store it separately and safely. CipherNest cannot recover it from a server.</p>
+            <code class="recovery">@_recoveryMaterial</code>
+            <button class="secondary" @onclick="DismissRecoveryMaterial">I saved it</button>
+        </section>
+    }
+
+    <div class="workspace">
+        <section class="card">
+            <div class="section-heading">
+                <div>
+                    <h2>Vault items</h2>
+                    <p>@_items.Count item(s) shown</p>
+                </div>
+                <button class="secondary" @onclick="RefreshItemsAsync" disabled="@_busy">Refresh</button>
+            </div>
+
+            <div class="search-row">
+                <input aria-label="Search vault" placeholder="Search while unlocked" @bind="_searchQuery" @onkeydown="HandleSearchKeyAsync" />
+                <button class="secondary" @onclick="SearchAsync" disabled="@_busy">Search</button>
+                <button class="ghost" @onclick="ClearSearchAsync" disabled="@_busy">Clear</button>
+            </div>
+
+            @if (_items.Count == 0)
+            {
+                <div class="empty-state">No matching vault items.</div>
+            }
+            else
+            {
+                <div class="item-list">
+                    @foreach (var item in _items)
+                    {
+                        <article class="item-row" @key="item.Id">
+                            <div>
+                                <strong>@(string.IsNullOrWhiteSpace(item.Title) ? "Untitled" : item.Title)</strong>
+                                <div class="muted">@item.Type · @item.Username</div>
+                            </div>
+                            <button class="danger-link" @onclick="() => MoveToTrashAsync(item.Id)" disabled="@_busy">Move to Trash</button>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="card">
+            <h2>Add encrypted item</h2>
+            <label>Type</label>
+            <select @bind="_itemType">
+                @foreach (var value in Enum.GetValues<VaultItemType>())
+                {
+                    <option value="@value">@value</option>
+                }
+            </select>
+            <label>Title</label>
+            <input maxlength="512" @bind="_itemTitle" />
+            <label>Username / account</label>
+            <input maxlength="4096" autocomplete="off" @bind="_itemUsername" />
+            <label>Secret</label>
+            <input type="password" autocomplete="off" @bind="_itemSecret" />
+            <label>URL</label>
+            <input maxlength="8192" inputmode="url" @bind="_itemUrl" />
+            <label>Notes</label>
+            <textarea rows="5" @bind="_itemNotes"></textarea>
+            <button @onclick="SaveItemAsync" disabled="@_busy">Encrypt and save</button>
+        </section>
+    </div>
+}
+
+@code {
+    private bool _initialized;
+    private bool _hasVault;
+    private bool _isUnlocked;
+    private bool _busy;
+    private bool _createRecoveryKey = true;
+    private string _masterPassphrase = string.Empty;
+    private string _confirmPassphrase = string.Empty;
+    private string _unlockSecret = string.Empty;
+    private string _recoveryMaterial = string.Empty;
+    private string _status = string.Empty;
+    private string _searchQuery = string.Empty;
+    private VaultItemType _itemType = VaultItemType.Login;
+    private string _itemTitle = string.Empty;
+    private string _itemUsername = string.Empty;
+    private string _itemSecret = string.Empty;
+    private string _itemUrl = string.Empty;
+    private string _itemNotes = string.Empty;
+    private IReadOnlyList<VaultItem> _items = Array.Empty<VaultItem>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _hasVault = await Vault.HasVaultAsync();
+            _isUnlocked = Vault.IsUnlocked;
+            if (_isUnlocked)
+            {
+                await RefreshItemsAsync();
+            }
+        }
+        catch
+        {
+            _status = "CipherNest could not read the local vault state.";
+        }
+        finally
+        {
+            _initialized = true;
+        }
+    }
+
+    private async Task CreateVaultAsync()
+    {
+        if (_busy)
+        {
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_masterPassphrase))
+        {
+            _status = "Enter a master passphrase.";
+            return;
+        }
+        if (!string.Equals(_masterPassphrase, _confirmPassphrase, StringComparison.Ordinal))
+        {
+            _status = "The passphrase confirmation does not match.";
+            return;
+        }
+
+        _busy = true;
+        _status = string.Empty;
+        try
+        {
+            _recoveryMaterial = await Vault.CreateAsync(_masterPassphrase, _createRecoveryKey) ?? string.Empty;
+            _hasVault = true;
+            _isUnlocked = true;
+            _masterPassphrase = string.Empty;
+            _confirmPassphrase = string.Empty;
+            await RefreshItemsAsync();
+            _status = "Vault created and unlocked locally.";
+        }
+        catch
+        {
+            _status = "CipherNest could not create the vault. Review the passphrase requirements and local storage permissions.";
+        }
+        finally
+        {
+            _masterPassphrase = string.Empty;
+            _confirmPassphrase = string.Empty;
+            _busy = false;
+        }
+    }
+
+    private async Task UnlockAsync()
+    {
+        if (_busy || string.IsNullOrWhiteSpace(_unlockSecret))
+        {
+            return;
+        }
+
+        _busy = true;
+        _status = string.Empty;
+        try
+        {
+            await Vault.UnlockAsync(_unlockSecret);
+            _isUnlocked = true;
+            await RefreshItemsAsync();
+            _status = "Vault unlocked.";
+        }
+        catch
+        {
+            _status = "Unlock failed.";
+        }
+        finally
+        {
+            _unlockSecret = string.Empty;
+            _busy = false;
+        }
+    }
+
+    private async Task LockAsync()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await Vault.LockAsync();
+            _isUnlocked = false;
+            _items = Array.Empty<VaultItem>();
+            ClearSensitiveEditorState();
+            _status = "Vault locked.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RefreshItemsAsync()
+    {
+        if (!Vault.IsUnlocked)
+        {
+            _items = Array.Empty<VaultItem>();
+            return;
+        }
+
+        _items = await Vault.GetItemsAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        if (_busy || !Vault.IsUnlocked)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            _items = string.IsNullOrWhiteSpace(_searchQuery)
+                ? await Vault.GetItemsAsync()
+                : await Vault.SearchAsync(_searchQuery);
+        }
+        catch
+        {
+            _status = "Search could not be completed.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task ClearSearchAsync()
+    {
+        _searchQuery = string.Empty;
+        await RefreshItemsAsync();
+    }
+
+    private async Task SaveItemAsync()
+    {
+        if (_busy || !Vault.IsUnlocked)
+        {
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_itemTitle))
+        {
+            _status = "Enter a title for the item.";
+            return;
+        }
+
+        _busy = true;
+        _status = string.Empty;
+        try
+        {
+            await Vault.SaveItemAsync(new VaultItem
+            {
+                Type = _itemType,
+                Title = _itemTitle,
+                Username = _itemUsername,
+                Secret = _itemSecret,
+                Url = _itemUrl,
+                Notes = _itemNotes
+            });
+            ClearSensitiveEditorState();
+            await RefreshItemsAsync();
+            _status = "Item encrypted and saved.";
+        }
+        catch
+        {
+            _status = "CipherNest could not save the item. Review the field limits and try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task MoveToTrashAsync(Guid id)
+    {
+        if (_busy || !Vault.IsUnlocked)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await Vault.MoveToTrashAsync(id);
+            await RefreshItemsAsync();
+            _status = "Item moved to Trash.";
+        }
+        catch
+        {
+            _status = "CipherNest could not move the item to Trash.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task HandleUnlockKeyAsync(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
+        {
+            await UnlockAsync();
+        }
+    }
+
+    private async Task HandleSearchKeyAsync(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
+        {
+            await SearchAsync();
+        }
+    }
+
+    private void DismissRecoveryMaterial() => _recoveryMaterial = string.Empty;
+
+    private void ClearSensitiveEditorState()
+    {
+        _itemTitle = string.Empty;
+        _itemUsername = string.Empty;
+        _itemSecret = string.Empty;
+        _itemUrl = string.Empty;
+        _itemNotes = string.Empty;
+    }
+}
