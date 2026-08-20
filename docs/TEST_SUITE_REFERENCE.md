@@ -2,7 +2,7 @@
 
 This is the canonical file-by-file map of the automated test projects under `tests/`. It records what each test source protects and how unit, integration, and UI/source-contract coverage divide responsibility.
 
-Inventory baseline: `7d046ab5c6dc15eecf06599ed68317aa88d8967` on 2026-08-19, synchronized through the repository-wide documentation continuation. New test files must be added here in the same change series.
+Inventory baseline: Trash localization regression head `142ce6125a8f893701857680a99d01b78f860feb` on 2026-08-20. New test files must be added here in the same change series.
 
 > A test file documents intended regression coverage. Its presence is not evidence that a later commit passed. Exact-head pass claims require observable execution for that immutable SHA.
 
@@ -119,7 +119,7 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/LifecycleFailClosedSourceTests.cs` — fail-closed lifecycle behavior if secondary cleanup fails.
 - `tests/CipherNest.UiTests/LifecycleTransitionSerializationSourceTests.cs` — lifecycle security transitions stay serialized.
 - `tests/CipherNest.UiTests/LocalizationRoadmapSourceTests.cs` — localization implementation/deferred wording stays honest.
-- `tests/CipherNest.UiTests/LocalizationSourceTests.cs` — neutral/Hindi parity, preference wiring, fallback contract.
+- `tests/CipherNest.UiTests/LocalizationSourceTests.cs` — neutral/Hindi primary-catalog parity, preference wiring, fallback contract.
 - `tests/CipherNest.UiTests/MasterAuthorizationSessionSourceTests.cs` — master-only actions remain tied to live authorization.
 - `tests/CipherNest.UiTests/MauiApiSourceTests.cs` — target/source MAUI API contract.
 - `tests/CipherNest.UiTests/OnboardingFailureContainmentSourceTests.cs` — onboarding failure containment/sensitive-state cleanup.
@@ -145,6 +145,7 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/TotpUiSourceTests.cs` — TOTP editor controls/bindings/workflow structure.
 - `tests/CipherNest.UiTests/TransferCsvFailureStateSourceTests.cs` — CSV failure/cancellation cannot leave false success state.
 - `tests/CipherNest.UiTests/TranslationExtensionSourceTests.cs` — registered localization-service resolution and missing-key behavior.
+- `tests/CipherNest.UiTests/TrashLocalizationSourceTests.cs` — Trash fixed/runtime destructive-action localization, feature-catalog registration/parity, safety caveat preservation, and empty-trash success-state regression.
 - `tests/CipherNest.UiTests/UnlockCapabilityFailureContainmentSourceTests.cs` — biometric/capability failures safely fall back to master auth.
 - `tests/CipherNest.UiTests/UnlockLocalizationSourceTests.cs` — unlock/recovery/biometric security localization.
 - `tests/CipherNest.UiTests/VaultDeletionOrderingSourceTests.cs` — record deletion, attachment cleanup, and authorization ordering.
