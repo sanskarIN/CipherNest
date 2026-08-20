@@ -13,7 +13,7 @@ public sealed class SensitiveCredentialLifetimeSourceTests
         AssertBefore(onboarding, "Confirmation = string.Empty;", "await _vault.CreateAsync(passphrase");
 
         var transfer = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "TransferViewModel.cs"));
-        AssertBefore(transfer, "ExportMasterPassphrase = string.Empty;", "DisplayAlertAsync(\"Create plaintext export?");
+        AssertBefore(transfer, "ExportMasterPassphrase = string.Empty;", "Text(\"TransferExportConfirmTitle\")");
 
         var trash = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "TrashViewModel.cs"));
         AssertBefore(trash, "DeletionPassphrase = string.Empty;", "return true;");
