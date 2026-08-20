@@ -101,6 +101,20 @@ public sealed class TrashLocalizationSourceTests
         Assert.Contains("फॉरेंसिक", hindi["TrashDeleteConfirmBody"], StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrashCatalogs_PreserveRequiredFormatPlaceholders()
+    {
+        var neutral = ReadCatalog("TrashStrings.resx");
+        var hindi = ReadCatalog("TrashStrings.hi-IN.resx");
+
+        foreach (var catalog in new[] { neutral, hindi })
+        {
+            Assert.Contains("{0}", catalog["TrashStatusFormat"], StringComparison.Ordinal);
+            Assert.Contains("{1}", catalog["TrashStatusFormat"], StringComparison.Ordinal);
+            Assert.Contains("{0}", catalog["TrashEmptyConfirmBodyFormat"], StringComparison.Ordinal);
+        }
+    }
+
     private static Dictionary<string, string> ReadCatalog(string fileName)
     {
         var document = XDocument.Load(PathAt("src", "CipherNest.App", "Resources", "Localization", fileName));
