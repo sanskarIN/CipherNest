@@ -1,5 +1,6 @@
 @page "/"
 @inject IVaultService Vault
+@inject WebVaultCreationCoordinator CreationCoordinator
 
 <PageTitle>CipherNest</PageTitle>
 
@@ -185,7 +186,8 @@ else
         _status = string.Empty;
         try
         {
-            _recoveryMaterial = await Vault.CreateAsync(_masterPassphrase, _createRecoveryKey) ?? string.Empty;
+            _recoveryMaterial = await CreationCoordinator.RunAsync(
+                () => Vault.CreateAsync(_masterPassphrase, _createRecoveryKey)) ?? string.Empty;
             _hasVault = true;
             _isUnlocked = true;
             _masterPassphrase = string.Empty;
@@ -195,7 +197,10 @@ else
         }
         catch
         {
-            _status = "CipherNest could not create the vault. Review the passphrase requirements and local storage permissions.";
+            _hasVault = await SafeHasVaultAsync();
+            _status = _hasVault
+                ? "A local vault already exists. Unlock it with the master passphrase or recovery material."
+                : "CipherNest could not create the vault. Review the passphrase requirements and local storage permissions.";
         }
         finally
         {
@@ -355,6 +360,18 @@ else
         finally
         {
             _busy = false;
+        }
+    }
+
+    private async Task<bool> SafeHasVaultAsync()
+    {
+        try
+        {
+            return await Vault.HasVaultAsync();
+        }
+        catch
+        {
+            return false;
         }
     }
 
