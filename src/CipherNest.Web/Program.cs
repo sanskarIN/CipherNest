@@ -41,7 +41,9 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddSingleton<ICryptoService, CryptoService>();
 builder.Services.AddSingleton<IVaultStore>(_ => new SqliteVaultStore(databasePath));
-builder.Services.AddSingleton<IVaultService, VaultService>();
+// VaultService owns decrypted session key state. In an Interactive Server host it must
+// be scoped to the browser circuit so another tab/client cannot inherit an unlocked key.
+builder.Services.AddScoped<IVaultService, VaultService>();
 builder.Services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
 builder.Services.AddSingleton<ITotpService, TotpService>();
 builder.Services.AddSingleton<ITotpUriCodec, TotpUriCodec>();
