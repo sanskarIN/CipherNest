@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="TransferTitle" xml:space="preserve"><value>Import &amp; plaintext export</value></data>
+  <data name="TransferImportHeading" xml:space="preserve"><value>Import generic CSV</value></data>
+  <data name="TransferImportSummary" xml:space="preserve"><value>Select a CSV, then explicitly map its columns. The source CSV remains plaintext outside CipherNest.</value></data>
+  <data name="TransferSelectCsvButton" xml:space="preserve"><value>Select CSV</value></data>
+  <data name="TransferTitleColumnRequiredLabel" xml:space="preserve"><value>Title column (required)</value></data>
+  <data name="TransferUsernameColumnLabel" xml:space="preserve"><value>Username column</value></data>
+  <data name="TransferSecretColumnLabel" xml:space="preserve"><value>Password / secret column</value></data>
+  <data name="TransferUrlColumnLabel" xml:space="preserve"><value>URL column</value></data>
+  <data name="TransferNotesColumnLabel" xml:space="preserve"><value>Notes column</value></data>
+  <data name="TransferTagsColumnLabel" xml:space="preserve"><value>Tags column</value></data>
+  <data name="TransferCollectionColumnLabel" xml:space="preserve"><value>Collection / folder column</value></data>
+  <data name="TransferTypeColumnLabel" xml:space="preserve"><value>Item type column</value></data>
+  <data name="TransferImportMappingsButton" xml:space="preserve"><value>Import with these mappings</value></data>
+  <data name="TransferPlaintextExportHeading" xml:space="preserve"><value>Plaintext CSV export</value></data>
+  <data name="TransferPlaintextExportWarning" xml:space="preserve"><value>Encrypted backup is recommended. Plaintext export exposes readable usernames, secrets, URLs, notes, tags and collections. Attachments are deliberately excluded.</value></data>
+  <data name="TransferMasterPlaceholder" xml:space="preserve"><value>Confirm master passphrase</value></data>
+  <data name="TransferConfirmationPlaceholder" xml:space="preserve"><value>Type EXPORT PLAINTEXT</value></data>
+  <data name="TransferExportButton" xml:space="preserve"><value>Export plaintext CSV</value></data>
+  <data name="TransferCleanCacheButton" xml:space="preserve"><value>Clean plaintext export cache</value></data>
+  <data name="TransferExportMasterSemanticDescription" xml:space="preserve"><value>Master passphrase confirmation for plaintext export</value></data>
+  <data name="TransferExportPhraseSemanticDescription" xml:space="preserve"><value>Required acknowledgement phrase for plaintext export</value></data>
+  <data name="TransferExportButtonSemanticDescription" xml:space="preserve"><value>Create a sensitive plaintext CSV and open the operating-system share flow</value></data>
+  <data name="TransferCleanCacheSemanticDescription" xml:space="preserve"><value>Delete CipherNest's temporary plaintext export cache</value></data>
+  <data name="TransferNoCsvSelected" xml:space="preserve"><value>No CSV selected.</value></data>
+  <data name="TransferFilePickerTitle" xml:space="preserve"><value>Select a CSV file to map and import</value></data>
+  <data name="TransferReviewMappingsStatus" xml:space="preserve"><value>Review every mapping before importing. Unmapped columns are ignored.</value></data>
+  <data name="TransferCsvSelectFailureStatus" xml:space="preserve"><value>CSV could not be selected or opened safely. Check file access and format, then try again.</value></data>
+  <data name="TransferSelectAndMapTitleStatus" xml:space="preserve"><value>Select a CSV and map its title column first.</value></data>
+  <data name="TransferImportConfirmTitle" xml:space="preserve"><value>Import plaintext CSV?</value></data>
+  <data name="TransferImportConfirmBody" xml:space="preserve"><value>The selected CSV is plaintext outside CipherNest. Imported fields will be encrypted in the vault, but CipherNest cannot remove the original source file. Review the mappings first.</value></data>
+  <data name="TransferImportConfirmAccept" xml:space="preserve"><value>Import</value></data>
+  <data name="TransferImportConfirmFailureStatus" xml:space="preserve"><value>Import confirmation could not be shown safely. No import was started.</value></data>
+  <data name="TransferImportResultFormat" xml:space="preserve"><value>Imported {0} item(s); skipped {1}.</value></data>
+  <data name="TransferImportResultWithWarningsFormat" xml:space="preserve"><value>Imported {0} item(s); skipped {1}. Some skipped rows did not satisfy local CSV or vault-item validation rules.</value></data>
+  <data name="TransferImportFailureStatus" xml:space="preserve"><value>Import stopped safely. No additional rows will be imported from this file until you retry.</value></data>
+  <data name="TransferExportPhraseRequiredFormat" xml:space="preserve"><value>Type exactly {0} to acknowledge that the export will contain plaintext secrets.</value></data>
+  <data name="TransferMasterConfirmFailureStatus" xml:space="preserve"><value>Master-passphrase confirmation could not be completed safely. The plaintext export was not started.</value></data>
+  <data name="TransferMasterFailedStatus" xml:space="preserve"><value>Master-passphrase confirmation failed. Recovery keys are not accepted for plaintext export confirmation.</value></data>
+  <data name="TransferExportConfirmTitle" xml:space="preserve"><value>Create plaintext export?</value></data>
+  <data name="TransferExportConfirmBody" xml:space="preserve"><value>This file will contain readable vault fields and may be copied by the share target, backups, search indexing, antivirus, or the operating system. Encrypted backup is safer. Continue only if you need plaintext interoperability.</value></data>
+  <data name="TransferExportConfirmAccept" xml:space="preserve"><value>Export plaintext</value></data>
+  <data name="TransferExportConfirmFailureStatus" xml:space="preserve"><value>Plaintext-export confirmation could not be shown safely. No plaintext file was created.</value></data>
+  <data name="TransferExportTemporaryStatus" xml:space="preserve"><value>Plaintext CSV was created temporarily for the operating-system share flow. CipherNest will attempt to delete its staging copy as soon as sharing returns. Copies created by the receiving app remain outside CipherNest's control.</value></data>
+  <data name="TransferShareTitle" xml:space="preserve"><value>CipherNest plaintext export — sensitive</value></data>
+  <data name="TransferExportFailureStatus" xml:space="preserve"><value>Plaintext export or sharing failed safely. Use encrypted backup unless plaintext interoperability is required.</value></data>
+  <data name="TransferCleanupWarningSuffix" xml:space="preserve"><value> CipherNest could not confirm removal of its temporary plaintext staging file; use 'Clean plaintext export cache' before sensitive work continues.</value></data>
+  <data name="TransferCacheCleanedStatus" xml:space="preserve"><value>CipherNest's plaintext export cache was removed. Copies created by other apps, backups, filesystem snapshots, or share targets remain outside CipherNest's control.</value></data>
+  <data name="TransferCacheCleanFailureStatus" xml:space="preserve"><value>CipherNest could not confirm complete removal of its plaintext export cache. Avoid sensitive work until storage access can be checked.</value></data>
+</root>
