@@ -153,7 +153,8 @@ The focused test guards:
 - exact neutral/Hindi feature-catalog key parity;
 - non-empty values;
 - distinct reviewed Hindi values;
-- preservation of recovery-key and filesystem/forensic-remnant safety language.
+- preservation of recovery-key and filesystem/forensic-remnant safety language;
+- preservation of `{0}`/`{1}` placeholders in the translated Trash-count format and `{0}` in the translated empty-trash confirmation format.
 
 ### Exhaustive documentation inventory synchronization
 
@@ -197,7 +198,7 @@ Before rolling the live ledger forward, the previous `what_changed.md` blob was 
 
 This avoids rewriting or dropping the detailed August 19 continuation record while keeping the live ledger focused on current work.
 
-### Commits in this continuation before this ledger commit
+### Commits in this continuation before this ledger refinement
 
 - `7ec54f97cea5e835064407e7f4325a65995f2470` — `feat(localization): support feature resource catalogs`
 - `74c3635844645fa6281235115e9d622785eedbf7` — `feat(localization): add Trash neutral resource catalog`
@@ -210,14 +211,18 @@ This avoids rewriting or dropping the detailed August 19 continuation record whi
 - `64294d3529777d51a891b40ea19f4f359c6abaa0` — `docs(localization): document feature catalogs and Trash migration`
 - `c74fd2c0114b8c6420dc3790d49d1d2d4ae1d597` — `docs(history): preserve August 19 live change ledger`
 - `d434ff1df4a0cc7a148e9959d0dfc7560d78fbfc` — `docs(repo): map August 19 ledger archive`
+- `abaa3a42c72c35247f5d14b1e41f19c1533fa68d` — `docs(ledger): record August 20 Trash localization continuation`
+- `56cdc78e29cd4db4cb4c6474ffffb84bad3d4de7` — `test(localization): protect Trash format placeholders`
 
 All commits in this continuation use the sign-off identity `Sanskar <sanskarin@outlook.in>`.
 
-### Verification status at ledger publication
+### Verification status at ledger refinement
 
 No exact-head build/test/platform pass claim is made merely because code, tests, and documentation were committed.
 
-The final immutable head created by this ledger update must be checked separately through observable GitHub status/workflow evidence. Historical 555-test/platform/CodeQL results remain attached only to their documented historical SHA.
+For the prior ledger head `abaa3a42c72c35247f5d14b1e41f19c1533fa68d`, the GitHub combined-status lookup exposed no status checks and the available commit-workflow lookup exposed no runs. The repository CI workflow is configured for pushes to `main`, but the available commit-workflow helper is limited to pull-request-triggered runs; therefore the empty lookup is **not** interpreted as either a pass or a failure.
+
+The final immutable head created by this ledger refinement must likewise be checked separately through observable exact-SHA evidence. Historical 555-test/platform/CodeQL results remain attached only to their documented historical SHA.
 
 Physical-device lifecycle, biometrics, secure storage, clipboard-history/synchronization, screenshot/task-preview behavior, accessibility/translated-layout validation, representative third-party TOTP interoperability, signing/notarization/store acceptance, dependency/license release review, and independent professional security review remain external/manual gates.
 
