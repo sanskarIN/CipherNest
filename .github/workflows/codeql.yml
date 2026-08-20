@@ -34,6 +34,8 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build analyzable core
         run: dotnet build tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj -c Release
+      - name: Build analyzable local Web/Linux host
+        run: dotnet build src/CipherNest.Web/CipherNest.Web.csproj -c Release
       - name: Install .NET MAUI Android workload
         run: dotnet workload install maui-android --skip-manifest-update
       - name: Build analyzable MAUI application

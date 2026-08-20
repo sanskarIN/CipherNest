@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>CipherNest.Web</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CipherNest.Application/CipherNest.Application.csproj" />
+    <ProjectReference Include="../CipherNest.Domain/CipherNest.Domain.csproj" />
+    <ProjectReference Include="../CipherNest.Infrastructure/CipherNest.Infrastructure.csproj" />
+    <ProjectReference Include="../CipherNest.Shared/CipherNest.Shared.csproj" />
+  </ItemGroup>
+</Project>
