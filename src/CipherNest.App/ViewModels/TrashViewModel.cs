@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CipherNest.Application.Abstractions;
 using CipherNest.Application.Services;
+using CipherNest.App.Services;
 using CipherNest.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -43,7 +45,9 @@ public partial class TrashViewModel : ObservableObject
             var trash = (await _vault.GetItemsAsync(includeTrash: true)).Where(static item => item.DeletedUtc is not null).OrderByDescending(static item => item.DeletedUtc).ToArray();
             Items.Clear();
             foreach (var item in trash) Items.Add(item);
-            StatusMessage = trash.Length == 0 ? "Trash is empty." : $"{trash.Length} item(s) in trash. Items older than {preferences.TrashRetentionDays} days are removed automatically when vault maintenance runs.";
+            StatusMessage = trash.Length == 0
+                ? TrashText("TrashEmptyStatus")
+                : TrashFormat("TrashStatusFormat", trash.Length, preferences.TrashRetentionDays);
         }
         finally { IsBusy = false; }
     }
@@ -61,7 +65,11 @@ public partial class TrashViewModel : ObservableObject
     {
         if (item is null) return;
         if (!await ConfirmMasterPassphraseAsync()) return;
-        var confirm = await Shell.Current.DisplayAlertAsync("Delete permanently?", "CipherNest will remove the encrypted record and attachment files. Filesystem or flash-storage remnants may still be recoverable by the operating system or forensic tools.", "Delete permanently", "Cancel");
+        var confirm = await Shell.Current.DisplayAlertAsync(
+            TrashText("TrashDeleteConfirmTitle"),
+            TrashText("TrashDeleteConfirmBody"),
+            TrashText("TrashDeleteConfirmAccept"),
+            TrashText("CancelButton"));
         if (!confirm) return;
         await _vault.DeletePermanentlyAsync(item.Id);
         await LoadAsync();
@@ -70,17 +78,21 @@ public partial class TrashViewModel : ObservableObject
     [RelayCommand]
     private async Task EmptyTrashAsync()
     {
-        if (Items.Count == 0) { StatusMessage = "Trash is already empty."; return; }
+        if (Items.Count == 0) { StatusMessage = TrashText("TrashAlreadyEmptyStatus"); return; }
         if (!await ConfirmMasterPassphraseAsync()) return;
-        var confirm = await Shell.Current.DisplayAlertAsync("Empty trash permanently?", $"Permanently remove all {Items.Count} encrypted trash item(s) and their CipherNest-managed attachment files? Filesystem remnants may remain outside CipherNest's control.", "Empty trash", "Cancel");
+        var confirm = await Shell.Current.DisplayAlertAsync(
+            TrashText("TrashEmptyConfirmTitle"),
+            TrashFormat("TrashEmptyConfirmBodyFormat", Items.Count),
+            TrashText("TrashEmptyConfirmAccept"),
+            TrashText("CancelButton"));
         if (!confirm) return;
 
         IsBusy = true;
         try
         {
             foreach (var id in Items.Select(static item => item.Id).ToArray()) await _vault.DeletePermanentlyAsync(id);
-            StatusMessage = "Trash emptied. CipherNest removed its encrypted records and attachment containers; physical storage remnants may remain outside application control.";
-            await LoadAsync();
+            Items.Clear();
+            StatusMessage = TrashText("TrashEmptiedStatus");
         }
         finally { IsBusy = false; }
     }
@@ -93,7 +105,7 @@ public partial class TrashViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(DeletionPassphrase))
         {
-            StatusMessage = "Enter the current master passphrase before permanent deletion. Recovery keys are not accepted for this destructive confirmation.";
+            StatusMessage = TrashText("TrashMasterRequiredStatus");
             return false;
         }
 
@@ -101,10 +113,16 @@ public partial class TrashViewModel : ObservableObject
         DeletionPassphrase = string.Empty;
         if (!authenticated)
         {
-            StatusMessage = "Master-passphrase confirmation failed. Nothing was permanently deleted.";
+            StatusMessage = TrashText("TrashMasterConfirmationFailedStatus");
             return false;
         }
 
         return true;
     }
+
+    private static string TrashText(string key) =>
+        ServiceProviderHelper.GetRequiredService<ILocalizationService>().Get(key);
+
+    private static string TrashFormat(string key, params object[] args) =>
+        string.Format(CultureInfo.CurrentUICulture, TrashText(key), args);
 }
