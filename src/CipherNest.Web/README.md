@@ -81,7 +81,7 @@ bash scripts/verify-web.sh
 
 The verification script restores, builds, checks formatting, launches against a temporary data directory, and requires the loopback `/healthz` probe to succeed.
 
-GitHub Actions additionally builds this host on Linux, Windows, and macOS and publishes a Linux x64 framework-dependent output.
+GitHub Actions additionally builds this host on Linux, Windows, and macOS, runs the loopback runtime smoke probe on Linux, and publishes framework-dependent Linux outputs for both `linux-x64` and `linux-arm64`.
 
 ## Complete source inventory for this host
 
