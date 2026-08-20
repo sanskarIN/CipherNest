@@ -2,7 +2,7 @@
 
 This is the canonical file-by-file map of the automated test projects under `tests/`. It records what each test source protects and how unit, integration, and UI/source-contract coverage divide responsibility.
 
-Inventory baseline: Trash localization regression head `142ce6125a8f893701857680a99d01b78f860feb` on 2026-08-20. New test files must be added here in the same change series.
+Inventory baseline: Transfer localization regression head `0eec0f1e60de5ecf4576820935b8684ead42574b` on 2026-08-20. New test files must be added here in the same change series.
 
 > A test file documents intended regression coverage. Its presence is not evidence that a later commit passed. Exact-head pass claims require observable execution for that immutable SHA.
 
@@ -143,9 +143,10 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/TotpLocalizedStatusSourceTests.cs` — TOTP dynamic/status/error localization resources.
 - `tests/CipherNest.UiTests/TotpSafetySourceTests.cs` — TOTP seed/code clipboard/persistence safety invariants.
 - `tests/CipherNest.UiTests/TotpUiSourceTests.cs` — TOTP editor controls/bindings/workflow structure.
-- `tests/CipherNest.UiTests/TransferCsvFailureStateSourceTests.cs` — CSV failure/cancellation cannot leave false success state.
+- `tests/CipherNest.UiTests/TransferCsvFailureStateSourceTests.cs` — CSV selection failure resets localized no-selection state and stale mappings; import faults remain contained without false success.
+- `tests/CipherNest.UiTests/TransferLocalizationSourceTests.cs` — Transfer fixed/runtime plaintext-boundary localization, feature-catalog registration/parity, exact `EXPORT PLAINTEXT` token and format-placeholder preservation, security caveats, semantic metadata, and suppression of raw infrastructure warning strings from localized import-result status.
 - `tests/CipherNest.UiTests/TranslationExtensionSourceTests.cs` — registered localization-service resolution and missing-key behavior.
-- `tests/CipherNest.UiTests/TrashLocalizationSourceTests.cs` — Trash fixed/runtime destructive-action localization, feature-catalog registration/parity, safety caveat preservation, and empty-trash success-state regression.
+- `tests/CipherNest.UiTests/TrashLocalizationSourceTests.cs` — Trash fixed/runtime destructive-action localization, feature-catalog registration/parity, safety caveat and format-placeholder preservation, and empty-trash success-state regression.
 - `tests/CipherNest.UiTests/UnlockCapabilityFailureContainmentSourceTests.cs` — biometric/capability failures safely fall back to master auth.
 - `tests/CipherNest.UiTests/UnlockLocalizationSourceTests.cs` — unlock/recovery/biometric security localization.
 - `tests/CipherNest.UiTests/VaultDeletionOrderingSourceTests.cs` — record deletion, attachment cleanup, and authorization ordering.
