@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="TrashTitle" xml:space="preserve"><value>ट्रैश</value></data>
+  <data name="TrashStatusSemanticDescription" xml:space="preserve"><value>ट्रैश स्थिति</value></data>
+  <data name="TrashPermanentDeletionTitle" xml:space="preserve"><value>स्थायी हटाना</value></data>
+  <data name="TrashPermanentDeletionSummary" xml:space="preserve"><value>मैन्युअल स्थायी हटाने के लिए वर्तमान मास्टर पासफ्रेज़ आवश्यक है। इस विनाशकारी पुष्टि के लिए रिकवरी कुंजियाँ स्वीकार नहीं की जातीं।</value></data>
+  <data name="TrashCurrentMasterPlaceholder" xml:space="preserve"><value>वर्तमान मास्टर पासफ्रेज़</value></data>
+  <data name="TrashEmptyButton" xml:space="preserve"><value>ट्रैश खाली करें</value></data>
+  <data name="TrashEmptyView" xml:space="preserve"><value>ट्रैश खाली है।</value></data>
+  <data name="TrashDeletedLabel" xml:space="preserve"><value>हटाया गया:</value></data>
+  <data name="TrashRestoreButton" xml:space="preserve"><value>पुनर्स्थापित करें</value></data>
+  <data name="TrashDeleteButton" xml:space="preserve"><value>हटाएँ</value></data>
+  <data name="TrashEmptyStatus" xml:space="preserve"><value>ट्रैश खाली है।</value></data>
+  <data name="TrashStatusFormat" xml:space="preserve"><value>ट्रैश में {0} आइटम हैं। {1} दिनों से पुराने आइटम वॉल्ट रखरखाव चलने पर स्वतः स्थायी रूप से हटा दिए जाते हैं।</value></data>
+  <data name="TrashAlreadyEmptyStatus" xml:space="preserve"><value>ट्रैश पहले से खाली है।</value></data>
+  <data name="TrashDeleteConfirmTitle" xml:space="preserve"><value>स्थायी रूप से हटाएँ?</value></data>
+  <data name="TrashDeleteConfirmBody" xml:space="preserve"><value>CipherNest एन्क्रिप्टेड रिकॉर्ड और अटैचमेंट फ़ाइलें हटाएगा। फ़ाइलसिस्टम या फ्लैश-स्टोरेज के अवशेष ऑपरेटिंग सिस्टम या फॉरेंसिक टूल से अभी भी पुनर्प्राप्त किए जा सकते हैं।</value></data>
+  <data name="TrashDeleteConfirmAccept" xml:space="preserve"><value>स्थायी रूप से हटाएँ</value></data>
+  <data name="TrashEmptyConfirmTitle" xml:space="preserve"><value>ट्रैश स्थायी रूप से खाली करें?</value></data>
+  <data name="TrashEmptyConfirmBodyFormat" xml:space="preserve"><value>ट्रैश के सभी {0} एन्क्रिप्टेड आइटम और उनकी CipherNest-प्रबंधित अटैचमेंट फ़ाइलें स्थायी रूप से हटाएँ? फ़ाइलसिस्टम के अवशेष CipherNest के नियंत्रण से बाहर रह सकते हैं।</value></data>
+  <data name="TrashEmptyConfirmAccept" xml:space="preserve"><value>ट्रैश खाली करें</value></data>
+  <data name="TrashEmptiedStatus" xml:space="preserve"><value>ट्रैश खाली कर दिया गया। CipherNest ने अपने एन्क्रिप्टेड रिकॉर्ड और अटैचमेंट कंटेनर हटा दिए; भौतिक स्टोरेज के अवशेष ऐप के नियंत्रण से बाहर रह सकते हैं।</value></data>
+  <data name="TrashMasterRequiredStatus" xml:space="preserve"><value>स्थायी रूप से हटाने से पहले वर्तमान मास्टर पासफ्रेज़ दर्ज करें। इस विनाशकारी पुष्टि के लिए रिकवरी कुंजियाँ स्वीकार नहीं की जातीं।</value></data>
+  <data name="TrashMasterConfirmationFailedStatus" xml:space="preserve"><value>मास्टर-पासफ्रेज़ पुष्टि विफल रही। कुछ भी स्थायी रूप से नहीं हटाया गया।</value></data>
+</root>
