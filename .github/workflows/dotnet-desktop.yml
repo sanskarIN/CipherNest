@@ -47,6 +47,19 @@ jobs:
           dotnet format tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj --verify-no-changes --no-restore
           dotnet format tests/CipherNest.UiTests/CipherNest.UiTests.csproj --verify-no-changes --no-restore
 
+  build-web-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build, format, and smoke-test local Web/Linux host
+        run: bash scripts/verify-web.sh
+      - name: Publish Linux x64 local host
+        run: dotnet publish src/CipherNest.Web/CipherNest.Web.csproj -c Release -r linux-x64 --self-contained false --no-restore
+
   build-windows:
     runs-on: windows-latest
     timeout-minutes: 35
@@ -61,6 +74,8 @@ jobs:
         run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestTargetFrameworks=net10.0-windows10.0.19041.0 -f net10.0-windows10.0.19041.0 -r win-x64 -p:WindowsPackageType=None
       - name: Build Windows app with in-app funding disabled
         run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestTargetFrameworks=net10.0-windows10.0.19041.0 -f net10.0-windows10.0.19041.0 -r win-x64 --no-restore -p:WindowsPackageType=None -p:CipherNestEnableFundingLink=false
+      - name: Build local Web host on Windows
+        run: dotnet build src/CipherNest.Web/CipherNest.Web.csproj -c Release
 
   build-android:
     runs-on: ubuntu-latest
@@ -91,3 +106,5 @@ jobs:
         run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestTargetFrameworks=net10.0-ios -f net10.0-ios -r iossimulator-arm64
       - name: Build Mac Catalyst app with analyzers
         run: dotnet build src/CipherNest.App/CipherNest.App.csproj -c Release -p:CipherNestTargetFrameworks=net10.0-maccatalyst -f net10.0-maccatalyst -r maccatalyst-arm64
+      - name: Build local Web host on macOS
+        run: dotnet build src/CipherNest.Web/CipherNest.Web.csproj -c Release
