@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="TrashTitle" xml:space="preserve"><value>Trash</value></data>
+  <data name="TrashStatusSemanticDescription" xml:space="preserve"><value>Trash status</value></data>
+  <data name="TrashPermanentDeletionTitle" xml:space="preserve"><value>Permanent deletion</value></data>
+  <data name="TrashPermanentDeletionSummary" xml:space="preserve"><value>Manual permanent deletion requires the current master passphrase. Recovery keys are not accepted for this destructive confirmation.</value></data>
+  <data name="TrashCurrentMasterPlaceholder" xml:space="preserve"><value>Current master passphrase</value></data>
+  <data name="TrashEmptyButton" xml:space="preserve"><value>Empty trash</value></data>
+  <data name="TrashEmptyView" xml:space="preserve"><value>Trash is empty.</value></data>
+  <data name="TrashDeletedLabel" xml:space="preserve"><value>Deleted:</value></data>
+  <data name="TrashRestoreButton" xml:space="preserve"><value>Restore</value></data>
+  <data name="TrashDeleteButton" xml:space="preserve"><value>Delete</value></data>
+  <data name="TrashEmptyStatus" xml:space="preserve"><value>Trash is empty.</value></data>
+  <data name="TrashStatusFormat" xml:space="preserve"><value>{0} item(s) in trash. Items older than {1} days are removed automatically when vault maintenance runs.</value></data>
+  <data name="TrashAlreadyEmptyStatus" xml:space="preserve"><value>Trash is already empty.</value></data>
+  <data name="TrashDeleteConfirmTitle" xml:space="preserve"><value>Delete permanently?</value></data>
+  <data name="TrashDeleteConfirmBody" xml:space="preserve"><value>CipherNest will remove the encrypted record and attachment files. Filesystem or flash-storage remnants may still be recoverable by the operating system or forensic tools.</value></data>
+  <data name="TrashDeleteConfirmAccept" xml:space="preserve"><value>Delete permanently</value></data>
+  <data name="TrashEmptyConfirmTitle" xml:space="preserve"><value>Empty trash permanently?</value></data>
+  <data name="TrashEmptyConfirmBodyFormat" xml:space="preserve"><value>Permanently remove all {0} encrypted trash item(s) and their CipherNest-managed attachment files? Filesystem remnants may remain outside CipherNest's control.</value></data>
+  <data name="TrashEmptyConfirmAccept" xml:space="preserve"><value>Empty trash</value></data>
+  <data name="TrashEmptiedStatus" xml:space="preserve"><value>Trash emptied. CipherNest removed its encrypted records and attachment containers; physical storage remnants may remain outside application control.</value></data>
+  <data name="TrashMasterRequiredStatus" xml:space="preserve"><value>Enter the current master passphrase before permanent deletion. Recovery keys are not accepted for this destructive confirmation.</value></data>
+  <data name="TrashMasterConfirmationFailedStatus" xml:space="preserve"><value>Master-passphrase confirmation failed. Nothing was permanently deleted.</value></data>
+</root>
