@@ -1,4 +1,5 @@
 using CipherNest.Application.Abstractions;
+using CipherNest.Application.Services;
 using CipherNest.Infrastructure.Crypto;
 using CipherNest.Infrastructure.Persistence;
 using CipherNest.Infrastructure.Services;
