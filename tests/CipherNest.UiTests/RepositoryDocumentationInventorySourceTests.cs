@@ -78,6 +78,7 @@ public sealed class RepositoryDocumentationInventorySourceTests
                      "src/CipherNest.Web/README.md",
                      "src/CipherNest.Web/CipherNest.Web.csproj",
                      "src/CipherNest.Web/Program.cs",
+                     "src/CipherNest.Web/Services/WebVaultCreationCoordinator.cs",
                      "src/CipherNest.Web/Components/Pages/Home.razor",
                      "src/CipherNest.Web/wwwroot/app.css"
                  })
@@ -96,6 +97,30 @@ public sealed class RepositoryDocumentationInventorySourceTests
         {
             Assert.Contains(expected, scriptsReference, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void CrossPlatformWebHost_PreservesLocalSecurityAndVerificationBoundaries()
+    {
+        var program = File.ReadAllText(PathAt("src", "CipherNest.Web", "Program.cs"));
+        var home = File.ReadAllText(PathAt("src", "CipherNest.Web", "Components", "Pages", "Home.razor"));
+        var coordinator = File.ReadAllText(PathAt("src", "CipherNest.Web", "Services", "WebVaultCreationCoordinator.cs"));
+        var workflow = File.ReadAllText(PathAt(".github", "workflows", "dotnet-desktop.yml"));
+        var linuxLauncher = File.ReadAllText(PathAt("scripts", "run-linux.sh"));
+        var verification = File.ReadAllText(PathAt("scripts", "verify-web.sh"));
+
+        Assert.Contains("ListenLocalhost(configuredPort)", program, StringComparison.Ordinal);
+        Assert.Contains("AddScoped<IVaultService, VaultService>()", program, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddSingleton<IVaultService, VaultService>()", program, StringComparison.Ordinal);
+        Assert.Contains("AddSingleton<WebVaultCreationCoordinator>()", program, StringComparison.Ordinal);
+        Assert.Contains("Cache-Control", program, StringComparison.Ordinal);
+        Assert.Contains("Content-Security-Policy", program, StringComparison.Ordinal);
+        Assert.Contains("CreationCoordinator.RunAsync", home, StringComparison.Ordinal);
+        Assert.Contains("_gate.WaitAsync", coordinator, StringComparison.Ordinal);
+        Assert.Contains("build-web-linux", workflow, StringComparison.Ordinal);
+        Assert.Contains("linux-x64", workflow, StringComparison.Ordinal);
+        Assert.Contains("127.0.0.1", linuxLauncher, StringComparison.Ordinal);
+        Assert.Contains("/healthz", verification, StringComparison.Ordinal);
     }
 
     [Fact]
