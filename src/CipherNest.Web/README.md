@@ -30,11 +30,12 @@ The first host surface intentionally covers the common core required to make the
 - loopback health probe for packaging/CI;
 - responsive keyboard-friendly browser layout.
 
-The host reuses the same `CryptoService`, `SqliteVaultStore`, `VaultService`, password generator, TOTP service/URI codec, audit service, and safe-note service registrations as the shared implementation. Native-only convenience integrations such as platform biometric prompts, MAUI secure storage, screenshot APIs, and OS share/picker surfaces are not falsely claimed for the browser host.
+The host reuses the same `CryptoService`, `SqliteVaultStore`, `VaultService`, password generator, TOTP service/URI codec, audit service, and safe-note service implementations as the shared implementation. `IVaultService` is registered per Interactive Server circuit because it owns decrypted session-key state; a separate browser circuit therefore does not inherit another circuit's unlocked key. Native-only convenience integrations such as platform biometric prompts, MAUI secure storage, screenshot APIs, and OS share/picker surfaces are not falsely claimed for the browser host.
 
 ## Security boundaries
 
 - Listener: loopback only.
+- Vault session: per Interactive Server circuit; decrypted session-key state is not application-global.
 - Cache policy: `no-store` and `no-cache` response headers.
 - Framing: denied with CSP `frame-ancestors 'none'` and `X-Frame-Options: DENY`.
 - Referrer policy: `no-referrer`.
@@ -86,7 +87,7 @@ GitHub Actions additionally builds this host on Linux, Windows, and macOS and pu
 This section is the delegated exhaustive inventory for `src/CipherNest.Web/`. `tests/CipherNest.UiTests/RepositoryDocumentationInventorySourceTests.cs` combines it with the main `docs/SOURCE_CODE_REFERENCE.md` inventory.
 
 - `src/CipherNest.Web/CipherNest.Web.csproj` — .NET 10 ASP.NET Core Web project referencing the existing Application, Domain, Infrastructure, and Shared layers.
-- `src/CipherNest.Web/Program.cs` — loopback-only host composition, local data-directory resolution, existing encrypted-core DI wiring, response hardening, health probe, and Razor component endpoint mapping.
+- `src/CipherNest.Web/Program.cs` — loopback-only host composition, local data-directory resolution, existing encrypted-core DI wiring, per-circuit vault session isolation, response hardening, health probe, and Razor component endpoint mapping.
 - `src/CipherNest.Web/Components/_Imports.razor` — shared Razor imports for domain/application types and Blazor primitives.
 - `src/CipherNest.Web/Components/App.razor` — HTML document shell, local stylesheet, global Interactive Server routing, and Blazor bootstrap script.
 - `src/CipherNest.Web/Components/Routes.razor` — application router, not-found surface, and default layout selection.
