@@ -2,7 +2,7 @@
 
 This file is the canonical **production-source and application-asset file reference** for CipherNest. It is intentionally path-oriented so a maintainer can map a repository file to its responsibility, security boundary, and deeper documentation without reverse-engineering the solution first.
 
-Baseline used for this inventory: Trash localization implementation head `142ce6125a8f893701857680a99d01b78f860feb` on 2026-08-20. Later files must be added here in the same change that adds them.
+Baseline used for this inventory: Transfer localization implementation head `0eec0f1e60de5ecf4576820935b8684ead42574b` on 2026-08-20. Later files must be added here in the same change that adds them.
 
 > This is a source map, not an audit certificate. CipherNest has not completed an independent professional security audit. Current executable source and focused tests remain authoritative when prose and implementation disagree.
 
@@ -42,7 +42,7 @@ The intended dependency direction is documented in `architecture/ARCHITECTURE.md
 - `src/CipherNest.App/Services/IPrivacySafeExceptionReporter.cs` — diagnostic reporting contract that avoids raw sensitive exception content.
 - `src/CipherNest.App/Services/IScreenshotProtectionService.cs` — platform screenshot/task-preview mitigation abstraction.
 - `src/CipherNest.App/Services/IStorageMaintenanceService.cs` — local cache/storage inspection and safe-maintenance abstraction.
-- `src/CipherNest.App/Services/LocalizationService.cs` — neutral English / reviewed Hindi culture application plus ordered primary/feature resource-catalog resolution; missing keys still fail visibly by returning the key name instead of silently inventing text.
+- `src/CipherNest.App/Services/LocalizationService.cs` — neutral English / reviewed Hindi culture application plus ordered primary/feature resource-catalog resolution, currently including Trash and Transfer feature catalogs; missing keys fail visibly by returning the key name.
 - `src/CipherNest.App/Services/PrivacySafeExceptionReporter.cs` — redacted/fixed diagnostic reporting implementation; raw paths, vault data, credentials, and exception details must not become user-facing telemetry.
 - `src/CipherNest.App/Services/ScreenshotProtectionService.cs` — target-specific screenshot/privacy-control implementation with honest unsupported-target behavior.
 - `src/CipherNest.App/Services/ServiceProviderHelper.cs` — controlled access helper for application service resolution where XAML/application integration requires it.
@@ -67,7 +67,7 @@ The intended dependency direction is documented in `architecture/ARCHITECTURE.md
 - `src/CipherNest.App/ViewModels/SettingsViewModel.Localization.cs` — localized settings/status helpers and culture-sensitive presentation.
 - `src/CipherNest.App/ViewModels/SettingsViewModel.Navigation.cs` — settings navigation to transfer, security, legal, generator-default, and related screens.
 - `src/CipherNest.App/ViewModels/SettingsViewModel.Security.cs` — master-passphrase rotation, biometric enable/disable, backup/restore, destructive vault deletion, security confirmations, and related authorization-sensitive operations.
-- `src/CipherNest.App/ViewModels/TransferViewModel.cs` — CSV import/export and encrypted-backup transfer orchestration.
+- `src/CipherNest.App/ViewModels/TransferViewModel.cs` — generic CSV import and guarded plaintext CSV export orchestration, reviewed localized fixed/runtime safety text, exact `EXPORT PLAINTEXT` acknowledgement handling, current-master confirmation, privacy-safe result publication, temporary-share cleanup, and localized cache-removal status.
 - `src/CipherNest.App/ViewModels/TransferViewModel.Security.cs` — current-master/plaintext-export authorization, confirmation, and sensitive transfer state handling.
 - `src/CipherNest.App/ViewModels/TrashViewModel.cs` — trash listing, restore, retention cleanup, permanent deletion, empty-trash authorization, reviewed localized destructive-action text, and success-state publication without immediately overwriting the completed empty-trash message.
 - `src/CipherNest.App/ViewModels/UnlockViewModel.cs` — master/recovery/secondary unlock orchestration and startup unlock state.
@@ -98,7 +98,7 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 - `src/CipherNest.App/Views/SettingsPage.xaml.cs` — settings lifecycle/glue.
 - `src/CipherNest.App/Views/StartupPage.xaml` — startup routing/initialization surface.
 - `src/CipherNest.App/Views/StartupPage.xaml.cs` — startup navigation glue.
-- `src/CipherNest.App/Views/TransferPage.xaml` — encrypted backup/restore and CSV interoperability UI.
+- `src/CipherNest.App/Views/TransferPage.xaml` — generic CSV import mapping plus guarded plaintext-export UI with reviewed resource-backed fixed text, translated semantic descriptions, current-master input, exact acknowledgement phrase guidance, and explicit sensitive-data warnings.
 - `src/CipherNest.App/Views/TransferPage.xaml.cs` — transfer lifecycle/glue.
 - `src/CipherNest.App/Views/TrashPage.xaml` — trash/restore/permanent-delete UI with reviewed resource-backed fixed text and semantic labels for the destructive-action surface.
 - `src/CipherNest.App/Views/TrashPage.xaml.cs` — Trash page glue.
@@ -133,7 +133,9 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 - `src/CipherNest.App/Resources/Localization/AppStrings.resx` — neutral English primary localization catalog for shared and previously migrated UI surfaces.
 - `src/CipherNest.App/Resources/Localization/AppStrings.hi-IN.resx` — reviewed Hindi primary catalog; primary-catalog key parity is regression-tested, but complete translation of every application literal is not claimed.
 - `src/CipherNest.App/Resources/Localization/TrashStrings.resx` — neutral English feature catalog for Trash listing/permanent-deletion fixed text, confirmations, status formats, and safety wording.
-- `src/CipherNest.App/Resources/Localization/TrashStrings.hi-IN.resx` — reviewed Hindi Trash feature catalog with exact key parity and distinct-value regression coverage.
+- `src/CipherNest.App/Resources/Localization/TrashStrings.hi-IN.resx` — reviewed Hindi Trash feature catalog with exact key parity, distinct-value, placeholder, and security-meaning regression coverage.
+- `src/CipherNest.App/Resources/Localization/TransferStrings.resx` — neutral English feature catalog for generic CSV mapping and the guarded plaintext import/export boundary, including confirmation/status formats and accessibility descriptions.
+- `src/CipherNest.App/Resources/Localization/TransferStrings.hi-IN.resx` — reviewed Hindi Transfer feature catalog with exact key parity, exact `EXPORT PLAINTEXT` token preservation, dynamic-placeholder coverage, and plaintext/security-limit wording.
 - `src/CipherNest.App/Resources/Raw/wordlist_notice.txt` — notice accompanying the bundled local passphrase word-list resource path.
 - `src/CipherNest.App/Resources/Splash/splash.svg` — application splash vector.
 - `src/CipherNest.App/Resources/Strings/AppResources.resx` — MAUI/general resource string container retained by the application resource structure.
