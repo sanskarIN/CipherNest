@@ -4,6 +4,7 @@ using CipherNest.Infrastructure.Persistence;
 using CipherNest.Infrastructure.Services;
 using CipherNest.Shared;
 using CipherNest.Web.Components;
+using CipherNest.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,7 @@ builder.Services.AddSingleton<IVaultStore>(_ => new SqliteVaultStore(databasePat
 // VaultService owns decrypted session key state. In an Interactive Server host it must
 // be scoped to the browser circuit so another tab/client cannot inherit an unlocked key.
 builder.Services.AddScoped<IVaultService, VaultService>();
+builder.Services.AddSingleton<WebVaultCreationCoordinator>();
 builder.Services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
 builder.Services.AddSingleton<ITotpService, TotpService>();
 builder.Services.AddSingleton<ITotpUriCodec, TotpUriCodec>();
