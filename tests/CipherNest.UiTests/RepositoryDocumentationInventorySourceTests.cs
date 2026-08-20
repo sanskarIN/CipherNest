@@ -28,6 +28,9 @@ public sealed class RepositoryDocumentationInventorySourceTests
             Assert.True(File.Exists(path), $"Required current documentation file is missing: {string.Join("/", segments)}");
             Assert.False(string.IsNullOrWhiteSpace(File.ReadAllText(path)));
         }
+
+        Assert.False(string.IsNullOrWhiteSpace(File.ReadAllText(PathAt("src", "CipherNest.Web", "README.md"))));
+        Assert.False(string.IsNullOrWhiteSpace(File.ReadAllText(PathAt("scripts", "README.md"))));
     }
 
     [Fact]
@@ -65,11 +68,44 @@ public sealed class RepositoryDocumentationInventorySourceTests
     }
 
     [Fact]
+    public void DelegatedCrossPlatformInventories_AreExplicitAndSelfDocumenting()
+    {
+        var webReference = File.ReadAllText(PathAt("src", "CipherNest.Web", "README.md"));
+        var scriptsReference = File.ReadAllText(PathAt("scripts", "README.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "src/CipherNest.Web/README.md",
+                     "src/CipherNest.Web/CipherNest.Web.csproj",
+                     "src/CipherNest.Web/Program.cs",
+                     "src/CipherNest.Web/Components/Pages/Home.razor",
+                     "src/CipherNest.Web/wwwroot/app.css"
+                 })
+        {
+            Assert.Contains(expected, webReference, StringComparison.Ordinal);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "scripts/README.md",
+                     "scripts/run-linux.sh",
+                     "scripts/verify-web.sh",
+                     "scripts/verify-core.sh",
+                     "scripts/verify-windows.ps1"
+                 })
+        {
+            Assert.Contains(expected, scriptsReference, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void RepositoryInventories_ContainEveryTrackedFile()
     {
         var repositoryReference = File.ReadAllText(PathAt("docs", "REPOSITORY_FILE_REFERENCE.md"));
         var sourceReference = File.ReadAllText(PathAt("docs", "SOURCE_CODE_REFERENCE.md"));
         var testReference = File.ReadAllText(PathAt("docs", "TEST_SUITE_REFERENCE.md"));
+        var webReference = File.ReadAllText(PathAt("src", "CipherNest.Web", "README.md"));
+        var scriptsReference = File.ReadAllText(PathAt("scripts", "README.md"));
         var missing = new List<string>();
 
         foreach (var trackedPath in TrackedFiles())
@@ -77,7 +113,12 @@ public sealed class RepositoryDocumentationInventorySourceTests
             var inventoryName = "docs/REPOSITORY_FILE_REFERENCE.md";
             var inventory = repositoryReference;
 
-            if (trackedPath.StartsWith("src/", StringComparison.Ordinal))
+            if (trackedPath.StartsWith("src/CipherNest.Web/", StringComparison.Ordinal))
+            {
+                inventoryName = "docs/SOURCE_CODE_REFERENCE.md + src/CipherNest.Web/README.md";
+                inventory = sourceReference + Environment.NewLine + webReference;
+            }
+            else if (trackedPath.StartsWith("src/", StringComparison.Ordinal))
             {
                 inventoryName = "docs/SOURCE_CODE_REFERENCE.md";
                 inventory = sourceReference;
@@ -86,6 +127,11 @@ public sealed class RepositoryDocumentationInventorySourceTests
             {
                 inventoryName = "docs/TEST_SUITE_REFERENCE.md";
                 inventory = testReference;
+            }
+            else if (trackedPath.StartsWith("scripts/", StringComparison.Ordinal))
+            {
+                inventoryName = "docs/REPOSITORY_FILE_REFERENCE.md + scripts/README.md";
+                inventory = repositoryReference + Environment.NewLine + scriptsReference;
             }
 
             if (!inventory.Contains(trackedPath, StringComparison.Ordinal))
@@ -102,6 +148,7 @@ public sealed class RepositoryDocumentationInventorySourceTests
     public void SourceAndTestReferences_ContainRepresentativeFilesFromEveryLayerAndSuite()
     {
         var sourceReference = File.ReadAllText(PathAt("docs", "SOURCE_CODE_REFERENCE.md"));
+        var webReference = File.ReadAllText(PathAt("src", "CipherNest.Web", "README.md"));
         var testReference = File.ReadAllText(PathAt("docs", "TEST_SUITE_REFERENCE.md"));
 
         foreach (var expected in new[]
@@ -116,6 +163,9 @@ public sealed class RepositoryDocumentationInventorySourceTests
         {
             Assert.Contains(expected, sourceReference, StringComparison.Ordinal);
         }
+
+        Assert.Contains("src/CipherNest.Web/CipherNest.Web.csproj", webReference, StringComparison.Ordinal);
+        Assert.Contains("src/CipherNest.Web/Program.cs", webReference, StringComparison.Ordinal);
 
         foreach (var expected in new[]
                  {
