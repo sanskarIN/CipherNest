@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CipherNest.Application.Abstractions;
 using CipherNest.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,6 +13,7 @@ public partial class TransferViewModel : ObservableObject
     private readonly IPlaintextTransferService _transfer;
     private readonly IVaultService _vault;
     private readonly IPrivacySafeExceptionReporter _exceptions;
+    private readonly ILocalizationService _localization;
     private FileResult? _selectedCsv;
 
     public ObservableCollection<string> Headers { get; } = [];
@@ -41,7 +43,7 @@ public partial class TransferViewModel : ObservableObject
     public partial string? TypeColumn { get; set; }
 
     [ObservableProperty]
-    public partial string SelectedFileName { get; set; } = "No CSV selected.";
+    public partial string SelectedFileName { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string ExportMasterPassphrase { get; set; } = string.Empty;
@@ -55,11 +57,13 @@ public partial class TransferViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
 
-    public TransferViewModel(IPlaintextTransferService transfer, IVaultService vault, IPrivacySafeExceptionReporter exceptions)
+    public TransferViewModel(IPlaintextTransferService transfer, IVaultService vault, IPrivacySafeExceptionReporter exceptions, ILocalizationService localization)
     {
         _transfer = transfer;
         _vault = vault;
         _exceptions = exceptions;
+        _localization = localization;
+        SelectedFileName = Text("TransferNoCsvSelected");
     }
 
     [RelayCommand]
@@ -68,7 +72,7 @@ public partial class TransferViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select a CSV file to map and import" });
+            var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = Text("TransferFilePickerTitle") });
             if (result is null) return;
             await using var stream = await result.OpenReadAsync();
             var headers = await _transfer.ReadHeadersAsync(stream);
@@ -84,13 +88,13 @@ public partial class TransferViewModel : ObservableObject
             TagsColumn = Guess(headers, "tags", "tag");
             CollectionColumn = Guess(headers, "collection", "folder");
             TypeColumn = Guess(headers, "type");
-            StatusMessage = "Review every mapping before importing. Unmapped columns are ignored.";
+            StatusMessage = Text("TransferReviewMappingsStatus");
         }
         catch (Exception ex)
         {
             _exceptions.Report("Transfer.PickCsv", ex);
             ResetCsvSelection();
-            StatusMessage = "CSV could not be selected or opened safely. Check file access and format, then try again.";
+            StatusMessage = Text("TransferCsvSelectFailureStatus");
         }
         finally
         {
@@ -103,19 +107,23 @@ public partial class TransferViewModel : ObservableObject
     {
         if (_selectedCsv is null || string.IsNullOrWhiteSpace(TitleColumn))
         {
-            StatusMessage = "Select a CSV and map its title column first.";
+            StatusMessage = Text("TransferSelectAndMapTitleStatus");
             return;
         }
 
         bool confirmed;
         try
         {
-            confirmed = await Shell.Current.DisplayAlertAsync("Import plaintext CSV?", "The selected CSV is plaintext outside CipherNest. Imported fields will be encrypted in the vault, but CipherNest cannot remove the original source file. Review the mappings first.", "Import", "Cancel");
+            confirmed = await Shell.Current.DisplayAlertAsync(
+                Text("TransferImportConfirmTitle"),
+                Text("TransferImportConfirmBody"),
+                Text("TransferImportConfirmAccept"),
+                Text("CancelButton"));
         }
         catch (Exception ex)
         {
             _exceptions.Report("Transfer.ImportConfirm", ex);
-            StatusMessage = "Import confirmation could not be shown safely. No import was started.";
+            StatusMessage = Text("TransferImportConfirmFailureStatus");
             return;
         }
         if (!confirmed) return;
@@ -125,12 +133,14 @@ public partial class TransferViewModel : ObservableObject
         {
             await using var stream = await _selectedCsv.OpenReadAsync();
             var result = await _transfer.ImportCsvAsync(stream, new CsvImportMapping(TitleColumn!, UsernameColumn, SecretColumn, UrlColumn, NotesColumn, TagsColumn, CollectionColumn, TypeColumn));
-            StatusMessage = $"Imported {result.Imported} item(s); skipped {result.Skipped}. " + (result.Warnings.Count == 0 ? string.Empty : string.Join(" ", result.Warnings.Take(3)));
+            StatusMessage = result.Warnings.Count == 0
+                ? Format("TransferImportResultFormat", result.Imported, result.Skipped)
+                : Format("TransferImportResultWithWarningsFormat", result.Imported, result.Skipped);
         }
         catch (Exception ex)
         {
             _exceptions.Report("Transfer.ImportCsv", ex);
-            StatusMessage = "Import stopped safely. No additional rows will be imported from this file until you retry.";
+            StatusMessage = Text("TransferImportFailureStatus");
         }
         finally
         {
@@ -143,7 +153,7 @@ public partial class TransferViewModel : ObservableObject
     {
         if (!string.Equals(ExportConfirmationPhrase.Trim(), ExportPhrase, StringComparison.Ordinal))
         {
-            StatusMessage = $"Type exactly {ExportPhrase} to acknowledge that the export will contain plaintext secrets.";
+            StatusMessage = Format("TransferExportPhraseRequiredFormat", ExportPhrase);
             return;
         }
 
@@ -155,7 +165,7 @@ public partial class TransferViewModel : ObservableObject
         catch (Exception ex)
         {
             _exceptions.Report("Transfer.ExportPlaintext.Reauthenticate", ex);
-            StatusMessage = "Master-passphrase confirmation could not be completed safely. The plaintext export was not started.";
+            StatusMessage = Text("TransferMasterConfirmFailureStatus");
             return;
         }
         finally
@@ -165,19 +175,23 @@ public partial class TransferViewModel : ObservableObject
 
         if (!authenticated)
         {
-            StatusMessage = "Master-passphrase confirmation failed. Recovery keys are not accepted for plaintext export confirmation.";
+            StatusMessage = Text("TransferMasterFailedStatus");
             return;
         }
 
         bool confirmed;
         try
         {
-            confirmed = await Shell.Current.DisplayAlertAsync("Create plaintext export?", "This file will contain readable vault fields and may be copied by the share target, backups, search indexing, antivirus, or the operating system. Encrypted backup is safer. Continue only if you need plaintext interoperability.", "Export plaintext", "Cancel");
+            confirmed = await Shell.Current.DisplayAlertAsync(
+                Text("TransferExportConfirmTitle"),
+                Text("TransferExportConfirmBody"),
+                Text("TransferExportConfirmAccept"),
+                Text("CancelButton"));
         }
         catch (Exception ex)
         {
             _exceptions.Report("Transfer.ExportPlaintext.Confirm", ex);
-            StatusMessage = "Plaintext-export confirmation could not be shown safely. No plaintext file was created.";
+            StatusMessage = Text("TransferExportConfirmFailureStatus");
             return;
         }
         if (!confirmed)
@@ -198,13 +212,13 @@ public partial class TransferViewModel : ObservableObject
             {
                 await _transfer.ExportCsvAsync(stream);
             }
-            StatusMessage = "Plaintext CSV was created temporarily for the operating-system share flow. CipherNest will attempt to delete its staging copy as soon as sharing returns. Copies created by the receiving app remain outside CipherNest's control.";
-            await Share.Default.RequestAsync(new ShareFileRequest("CipherNest plaintext export — sensitive", new ShareFile(plaintextPath)));
+            StatusMessage = Text("TransferExportTemporaryStatus");
+            await Share.Default.RequestAsync(new ShareFileRequest(Text("TransferShareTitle"), new ShareFile(plaintextPath)));
         }
         catch (Exception ex)
         {
             _exceptions.Report("Transfer.ExportPlaintext", ex);
-            StatusMessage = "Plaintext export or sharing failed safely. Use encrypted backup unless plaintext interoperability is required.";
+            StatusMessage = Text("TransferExportFailureStatus");
         }
         finally
         {
@@ -217,7 +231,7 @@ public partial class TransferViewModel : ObservableObject
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     _exceptions.Report("Transfer.ExportPlaintext.TempCleanup", ex);
-                    StatusMessage += " CipherNest could not confirm removal of its temporary plaintext staging file; use 'Clean plaintext export cache' before sensitive work continues.";
+                    StatusMessage += Text("TransferCleanupWarningSuffix");
                 }
             }
             IsBusy = false;
@@ -231,12 +245,12 @@ public partial class TransferViewModel : ObservableObject
         try
         {
             if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
-            StatusMessage = "CipherNest's plaintext export cache was removed. Copies created by other apps, backups, filesystem snapshots, or share targets remain outside CipherNest's control.";
+            StatusMessage = Text("TransferCacheCleanedStatus");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _exceptions.Report("Transfer.CleanPlaintextCache", ex);
-            StatusMessage = "CipherNest could not confirm complete removal of its plaintext export cache. Avoid sensitive work until storage access can be checked.";
+            StatusMessage = Text("TransferCacheCleanFailureStatus");
         }
         return Task.CompletedTask;
     }
@@ -247,7 +261,7 @@ public partial class TransferViewModel : ObservableObject
     {
         _selectedCsv = null;
         Headers.Clear();
-        SelectedFileName = "No CSV selected.";
+        SelectedFileName = Text("TransferNoCsvSelected");
         TitleColumn = null;
         UsernameColumn = null;
         SecretColumn = null;
@@ -257,6 +271,11 @@ public partial class TransferViewModel : ObservableObject
         CollectionColumn = null;
         TypeColumn = null;
     }
+
+    private string Text(string key) => _localization.Get(key);
+
+    private string Format(string key, params object[] args) =>
+        string.Format(CultureInfo.CurrentUICulture, Text(key), args);
 
     private static string? Guess(IReadOnlyList<string> headers, params string[] names) => headers.FirstOrDefault(h => names.Any(n => h.Equals(n, StringComparison.OrdinalIgnoreCase)));
 }
