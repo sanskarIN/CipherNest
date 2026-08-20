@@ -2,7 +2,7 @@
 
 This is the canonical repository-level file map for CipherNest. Together with [`SOURCE_CODE_REFERENCE.md`](SOURCE_CODE_REFERENCE.md) and [`TEST_SUITE_REFERENCE.md`](TEST_SUITE_REFERENCE.md), it documents every tracked file class without forcing production implementation details, test intent, and repository operations into one unreadable artifact.
 
-Inventory baseline: `7d046ab5c6dc15eecf06599ed68317aa88d8967` on 2026-08-19, synchronized through the repository-wide documentation continuation. Later files must be added to the appropriate inventory in the same change series.
+Inventory baseline: Trash localization continuation on 2026-08-20, synchronized through the August 19 ledger archive. Later files must be added to the appropriate inventory in the same change series.
 
 > Historical verification records belong to their recorded immutable candidates. Their pass counts/run IDs never transfer automatically to a newer head.
 
@@ -12,7 +12,7 @@ Every tracked file belongs to exactly one of these documentation inventories:
 
 1. **This file** — root files, GitHub/community automation, verification scripts, documentation, legal/support/status/history material.
 2. **`SOURCE_CODE_REFERENCE.md`** — every tracked production file below `src/`, including project files, C#, XAML, manifests, localization, styles, icons/images/splash/raw resources.
-3. **`TEST_SUITE_REFERENCE.md`** — `tests/Directory.Build.props`, all test project files, and every unit/integration/UI-source test file, including `RepositoryDocumentationInventorySourceTests.cs` added by this continuation.
+3. **`TEST_SUITE_REFERENCE.md`** — `tests/Directory.Build.props`, all test project files, and every unit/integration/UI-source test file, including `RepositoryDocumentationInventorySourceTests.cs`.
 
 Directories are organizational containers, not omitted files.
 
@@ -73,7 +73,7 @@ Canonical command/evidence explanations live in `docs/setup/BUILD.md`, `docs/TES
 
 Every tracked `src/` file is individually documented in [`SOURCE_CODE_REFERENCE.md`](SOURCE_CODE_REFERENCE.md). It covers application composition, pages/ViewModels/services, all Application/Domain/Infrastructure/Shared files, platform manifests/entry points, localization catalogs, styles, logos/icons/splash and raw resources.
 
-Every tracked `tests/` file is individually documented in [`TEST_SUITE_REFERENCE.md`](TEST_SUITE_REFERENCE.md). It covers shared test configuration, all three test projects, all unit/integration/UI-source tests, and the repository-documentation inventory guard added during this continuation.
+Every tracked `tests/` file is individually documented in [`TEST_SUITE_REFERENCE.md`](TEST_SUITE_REFERENCE.md). It covers shared test configuration, all three test projects, all unit/integration/UI-source tests, and the repository-documentation inventory guard.
 
 # 6. Top-level documentation
 
@@ -108,7 +108,7 @@ Every tracked `tests/` file is individually documented in [`TEST_SUITE_REFERENCE
 - `docs/architecture/DATA_FLOW.md` — sensitive data/key/attachment/backup/CSV/TOTP URI/clipboard/share flows.
 - `docs/architecture/SESSION_AND_CONCURRENCY.md` — transition gate, key leases, cancellation, destructive authorization/order.
 - `docs/architecture/DATABASE.md` — SQLite schema/migration/replacement/validation/recovery.
-- `docs/architecture/LOCALIZATION.md` — System/English/Hindi resources and localization migration rules.
+- `docs/architecture/LOCALIZATION.md` — System/English/Hindi primary-plus-feature resources and localization migration rules.
 
 # 8. Security/privacy documentation
 
@@ -149,6 +149,7 @@ Every tracked `tests/` file is individually documented in [`TEST_SUITE_REFERENCE
 - `docs/changelog/2026-08-13-post-baseline.md` — preserved August 13 post-baseline change record.
 - `docs/history/what_changed_through_2026_08_15.md` — archived chronological ledger through August 15.
 - `docs/history/what_changed_through_2026_08_18.md` — archived live ledger through August 18.
+- `docs/history/what_changed_through_2026_08_19.md` — byte-identical archive of the live ledger through the August 19 tracked-file documentation hardening continuation, preserved before the August 20 ledger rollover.
 
 Historical files remain historical; they are not rewritten to impersonate current evidence.
 
@@ -182,7 +183,7 @@ Historical files remain historical; they are not rewritten to impersonate curren
 - `docs/verification/AUTHENTICATION_LOCALIZATION_2026_08_19.md` — Unlock/onboarding/recovery authentication localization.
 - `docs/verification/ABOUT_SECURITY_LOCALIZATION_2026_08_19.md` — About/security/privacy localization.
 - `docs/verification/SETTINGS_SURFACE_LOCALIZATION_2026_08_19.md` — remaining fixed Settings localization.
-- `docs/verification/REPOSITORY_WIDE_DOCUMENTATION_2026_08_19.md` — this continuation's exhaustive file-inventory/documentation verification contract.
+- `docs/verification/REPOSITORY_WIDE_DOCUMENTATION_2026_08_19.md` — exhaustive file-inventory/documentation verification contract.
 
 # 13. Completeness maintenance contract
 
