@@ -236,3 +236,213 @@ This continuation does **not** claim:
 - signing/notarization/store acceptance;
 - absence of unknown defects;
 - completion of an independent professional security audit.
+
+---
+
+## 2026-08-20 — Transfer plaintext-boundary localization continuation
+
+### Goal and starting point
+
+After completing the Trash/permanent-deletion localization pass, the next repository-completable high-risk English-only surface was the generic CSV import and plaintext CSV export workflow.
+
+This second August 20 phase started from:
+
+`9828c4cc7576245b313bb90caf082185f4ac36fb`
+
+The goal was to translate the user-facing Transfer boundary without changing CSV parsing limits, vault encryption, current-master authorization, the exact plaintext-export acknowledgement contract, or the documented limitations of temporary/plaintext cleanup.
+
+### Transfer feature catalog registration
+
+Updated:
+
+`src/CipherNest.App/Services/LocalizationService.cs`
+
+The ordered feature resource list now includes both:
+
+- `TrashStrings`;
+- `TransferStrings`.
+
+The primary `AppStrings` lookup remains first, each feature catalog retains normal neutral-English satellite fallback, and missing keys remain visible by returning the key name.
+
+### Neutral English and reviewed Hindi Transfer catalogs
+
+Added:
+
+- `src/CipherNest.App/Resources/Localization/TransferStrings.resx`
+- `src/CipherNest.App/Resources/Localization/TransferStrings.hi-IN.resx`
+
+The feature catalogs contain exact key parity for the complete migrated Transfer surface, including:
+
+- page/import/plaintext-export headings and explanations;
+- CSV picker and every explicit column-mapping label;
+- encrypted-backup recommendation;
+- current-master and plaintext acknowledgement inputs;
+- export/cache actions and accessibility descriptions;
+- picker/no-selection/mapping-review/failure states;
+- import confirmation, localized imported/skipped result formats, and failure states;
+- current-master/recovery-key plaintext-export security messages;
+- plaintext-export confirmation and share warnings;
+- temporary share staging, cleanup, and cache-removal messages.
+
+The reviewed Hindi text preserves the same security meaning as neutral English.
+
+### Exact `EXPORT PLAINTEXT` contract preserved
+
+The literal acknowledgement token:
+
+`EXPORT PLAINTEXT`
+
+remains unchanged in `TransferViewModel.ExportPhrase` and remains visibly embedded unchanged in both language catalogs where the user is instructed what to type.
+
+The surrounding instruction is translated, but localization cannot translate, normalize, case-fold, or replace the control token that the authorization path compares with exact ordinal equality.
+
+### Transfer XAML migration and accessibility
+
+Updated:
+
+`src/CipherNest.App/Views/TransferPage.xaml`
+
+The fixed Transfer UI now uses `l10n:Translate` for:
+
+- page title and Back action;
+- CSV import heading/summary/picker;
+- all mapping labels;
+- mapped-import action;
+- plaintext-export heading/warning;
+- master-passphrase and acknowledgement placeholders;
+- export and cache-clean actions.
+
+Localized semantic descriptions were also added for the sensitive master confirmation, acknowledgement input, plaintext-export action, and plaintext-cache cleanup action.
+
+### Transfer runtime and confirmation localization
+
+Updated:
+
+`src/CipherNest.App/ViewModels/TransferViewModel.cs`
+
+`ILocalizationService` is now constructor-injected through the existing MAUI dependency-injection graph. `ILocalizationService` was already registered as a singleton before the transient `TransferViewModel`, so no new service-registration dependency was required.
+
+Runtime localization now covers:
+
+- no-CSV-selected state;
+- file picker title;
+- mapping-review guidance;
+- CSV selection/open failures;
+- missing title mapping;
+- import confirmation and failure;
+- import result counts;
+- exact acknowledgement guidance;
+- master-confirmation exception/failure states;
+- plaintext-export confirmation/failure;
+- temporary-share status/title;
+- best-effort staging cleanup warning;
+- plaintext export-cache cleanup success/failure.
+
+Dynamic result text uses `CultureInfo.CurrentUICulture` formatting.
+
+### Privacy-safe localized import result
+
+Previously the successful import result appended up to three raw `CsvTransferService` warning strings through:
+
+`string.Join(" ", result.Warnings.Take(3))`
+
+That mixed English infrastructure/parser/validator text into a localized presentation surface and exposed row-specific diagnostic wording directly in the main status line.
+
+The ViewModel now publishes:
+
+- localized imported/skipped counts when there are no warnings;
+- localized imported/skipped counts plus a generic reviewed statement that some skipped rows did not satisfy local CSV or vault-item validation rules when warnings exist.
+
+The underlying parser/validator behavior and warning collection remain available to their implementation/tests; the presentation change does not weaken validation or alter which rows import.
+
+### Regression coverage
+
+Added:
+
+`tests/CipherNest.UiTests/TransferLocalizationSourceTests.cs`
+
+The test protects:
+
+- `TransferStrings` registration;
+- XAML use of all migrated fixed/semantic resource keys;
+- removal of selected old English literals;
+- ViewModel use of every migrated runtime/confirmation key;
+- `ILocalizationService` injection and active-UI-culture formatting;
+- use of the shared localized Cancel action;
+- suppression of raw `result.Warnings` concatenation in the localized result surface;
+- exact neutral/Hindi feature-catalog parity;
+- non-empty and distinct reviewed Hindi values;
+- preservation of recovery-key, backup/share/antivirus/OS, and filesystem-snapshot security meanings;
+- required `{0}` / `{1}` formatting placeholders;
+- exact preservation of the `EXPORT PLAINTEXT` acknowledgement token.
+
+### Existing security test compatibility fix
+
+Updated:
+
+`tests/CipherNest.UiTests/SensitiveCredentialLifetimeSourceTests.cs`
+
+The production ViewModel now obtains the plaintext-export confirmation title from the resource catalog, so the existing credential-lifetime source test could no longer use the removed English literal as its ordering marker.
+
+The test now verifies that `ExportMasterPassphrase` is cleared before the localized `TransferExportConfirmTitle` is resolved/displayed. This preserves the original security invariant while allowing translated confirmation copy.
+
+`TransferCsvFailureStateSourceTests.cs` was also aligned with the localized `TransferNoCsvSelected` reset state.
+
+### Documentation synchronization
+
+Updated:
+
+- `docs/SOURCE_CODE_REFERENCE.md`
+- `docs/TEST_SUITE_REFERENCE.md`
+- `docs/architecture/LOCALIZATION.md`
+
+The exhaustive source inventory now maps the two new Transfer resource files and the updated Transfer ViewModel/page responsibilities.
+
+The exhaustive test inventory now maps `TransferLocalizationSourceTests.cs`, so the tracked-file documentation gate has a canonical owner for the new test path.
+
+The localization architecture now documents:
+
+- Trash and Transfer as current feature catalogs;
+- exact feature-catalog parity requirements;
+- the complete generic CSV/plaintext Transfer migration scope;
+- the unchanged exact acknowledgement token;
+- current-master/recovery-key rules;
+- source/plaintext/share/backup/search/antivirus/OS/snapshot limitations;
+- the generic localized import-result policy instead of raw infrastructure warning concatenation;
+- release validation for translated Transfer layouts, semantics, token behavior, share-return cleanup, and cache cleanup.
+
+### Commits in this Transfer phase before this ledger commit
+
+- `a711410c17ae36d63af15fd6ffa10812837bafca` — `feat(localization): register Transfer feature catalog`
+- `3aba3a01b3b1b99455741e215e2b3bd73d263a9b` — `feat(localization): add Transfer neutral resource catalog`
+- `e85de46015c142636b650afbf1156d9f64e44cf7` — `feat(localization): add reviewed Hindi Transfer catalog`
+- `751cb80a53191176ed9e5efb5b2cf97971ea4e90` — `feat(transfer): localize import and plaintext export runtime text`
+- `c6bf6666818fd3c6e6f91e25f74f252edf60b60c` — `feat(ui): localize Transfer plaintext boundary surface`
+- `7de4cdf0168b9ec1bde44d3373a9b1e08be119cb` — `test(localization): guard Transfer plaintext boundary translations`
+- `0eec0f1e60de5ecf4576820935b8684ead42574b` — `test(transfer): align reset guard with localized status`
+- `e40e0dc07babec6fbb5bb39e769645959ed380bc` — `docs(source): map Transfer localization resources and behavior`
+- `0f1730f585a3bfccad9934670cc002770c1e454f` — `docs(tests): map Transfer localization regression coverage`
+- `b7077f5a141d70e08f57f97abe5d1f967795541a` — `docs(localization): document Transfer plaintext boundary migration`
+- `b890cda67a00dfdfc6718e7e037efb20833ac230` — `test(security): align Transfer credential lifetime guard with localization`
+
+All commits use the sign-off identity `Sanskar <sanskarin@outlook.in>`.
+
+### Verification status at publication
+
+This source/documentation phase does not itself prove that the new immutable head passes build, test, target-platform, or CodeQL gates.
+
+The final head created by this ledger commit must be inspected separately through observable exact-SHA GitHub evidence. If the available connector exposes no statuses/runs, that will be reported as unavailable evidence rather than interpreted as success or failure.
+
+Historical **555-test**, Windows, Android, iOS simulator, Mac Catalyst, and CodeQL success remains evidence only for the previously documented immutable baseline that actually produced those results.
+
+External/manual gates remain unchanged: physical-device lifecycle/biometrics/secure storage/clipboard/screenshot behavior, translated-layout and assistive-technology validation, real file-picker/share-sheet behavior, representative third-party TOTP interoperability, signing/notarization/store acceptance, dependency/license release review, and independent professional security review.
+
+### Security/release claims intentionally unchanged
+
+This Transfer localization phase does **not** claim:
+
+- that plaintext CSV becomes protected outside CipherNest;
+- that temporary-cache deletion removes copies created by share targets, backups, snapshots, indexing, antivirus, or the operating system;
+- that recovery keys can authorize plaintext export;
+- that every remaining CipherNest screen is fully translated;
+- that external/device/release/security-review gates are complete.
