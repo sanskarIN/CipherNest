@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="TransferTitle" xml:space="preserve"><value>आयात और प्लेनटेक्स्ट निर्यात</value></data>
+  <data name="TransferImportHeading" xml:space="preserve"><value>सामान्य CSV आयात करें</value></data>
+  <data name="TransferImportSummary" xml:space="preserve"><value>एक CSV चुनें, फिर उसके कॉलम स्पष्ट रूप से मैप करें। स्रोत CSV CipherNest के बाहर प्लेनटेक्स्ट ही रहता है।</value></data>
+  <data name="TransferSelectCsvButton" xml:space="preserve"><value>CSV चुनें</value></data>
+  <data name="TransferTitleColumnRequiredLabel" xml:space="preserve"><value>शीर्षक कॉलम (आवश्यक)</value></data>
+  <data name="TransferUsernameColumnLabel" xml:space="preserve"><value>उपयोगकर्ता नाम कॉलम</value></data>
+  <data name="TransferSecretColumnLabel" xml:space="preserve"><value>पासवर्ड / सीक्रेट कॉलम</value></data>
+  <data name="TransferUrlColumnLabel" xml:space="preserve"><value>URL कॉलम</value></data>
+  <data name="TransferNotesColumnLabel" xml:space="preserve"><value>नोट्स कॉलम</value></data>
+  <data name="TransferTagsColumnLabel" xml:space="preserve"><value>टैग कॉलम</value></data>
+  <data name="TransferCollectionColumnLabel" xml:space="preserve"><value>कलेक्शन / फ़ोल्डर कॉलम</value></data>
+  <data name="TransferTypeColumnLabel" xml:space="preserve"><value>आइटम प्रकार कॉलम</value></data>
+  <data name="TransferImportMappingsButton" xml:space="preserve"><value>इन मैपिंग के साथ आयात करें</value></data>
+  <data name="TransferPlaintextExportHeading" xml:space="preserve"><value>प्लेनटेक्स्ट CSV निर्यात</value></data>
+  <data name="TransferPlaintextExportWarning" xml:space="preserve"><value>एन्क्रिप्टेड बैकअप की सलाह दी जाती है। प्लेनटेक्स्ट निर्यात पढ़ने योग्य उपयोगकर्ता नाम, सीक्रेट, URL, नोट्स, टैग और कलेक्शन उजागर करता है। अटैचमेंट जानबूझकर शामिल नहीं किए जाते।</value></data>
+  <data name="TransferMasterPlaceholder" xml:space="preserve"><value>मास्टर पासफ्रेज़ की पुष्टि करें</value></data>
+  <data name="TransferConfirmationPlaceholder" xml:space="preserve"><value>EXPORT PLAINTEXT टाइप करें</value></data>
+  <data name="TransferExportButton" xml:space="preserve"><value>प्लेनटेक्स्ट CSV निर्यात करें</value></data>
+  <data name="TransferCleanCacheButton" xml:space="preserve"><value>प्लेनटेक्स्ट निर्यात कैश साफ़ करें</value></data>
+  <data name="TransferExportMasterSemanticDescription" xml:space="preserve"><value>प्लेनटेक्स्ट निर्यात के लिए मास्टर पासफ्रेज़ पुष्टि</value></data>
+  <data name="TransferExportPhraseSemanticDescription" xml:space="preserve"><value>प्लेनटेक्स्ट निर्यात के लिए आवश्यक स्वीकृति वाक्यांश</value></data>
+  <data name="TransferExportButtonSemanticDescription" xml:space="preserve"><value>संवेदनशील प्लेनटेक्स्ट CSV बनाएँ और ऑपरेटिंग-सिस्टम शेयर प्रवाह खोलें</value></data>
+  <data name="TransferCleanCacheSemanticDescription" xml:space="preserve"><value>CipherNest का अस्थायी प्लेनटेक्स्ट निर्यात कैश हटाएँ</value></data>
+  <data name="TransferNoCsvSelected" xml:space="preserve"><value>कोई CSV चयनित नहीं है।</value></data>
+  <data name="TransferFilePickerTitle" xml:space="preserve"><value>मैप और आयात करने के लिए CSV फ़ाइल चुनें</value></data>
+  <data name="TransferReviewMappingsStatus" xml:space="preserve"><value>आयात से पहले हर मैपिंग की समीक्षा करें। बिना मैप किए गए कॉलम अनदेखे किए जाते हैं।</value></data>
+  <data name="TransferCsvSelectFailureStatus" xml:space="preserve"><value>CSV को सुरक्षित रूप से चुना या खोला नहीं जा सका। फ़ाइल पहुँच और प्रारूप जाँचें, फिर दोबारा प्रयास करें।</value></data>
+  <data name="TransferSelectAndMapTitleStatus" xml:space="preserve"><value>पहले CSV चुनें और उसका शीर्षक कॉलम मैप करें।</value></data>
+  <data name="TransferImportConfirmTitle" xml:space="preserve"><value>प्लेनटेक्स्ट CSV आयात करें?</value></data>
+  <data name="TransferImportConfirmBody" xml:space="preserve"><value>चयनित CSV CipherNest के बाहर प्लेनटेक्स्ट है। आयातित फ़ील्ड वॉल्ट में एन्क्रिप्ट किए जाएँगे, लेकिन CipherNest मूल स्रोत फ़ाइल को हटा नहीं सकता। पहले मैपिंग की समीक्षा करें।</value></data>
+  <data name="TransferImportConfirmAccept" xml:space="preserve"><value>आयात करें</value></data>
+  <data name="TransferImportConfirmFailureStatus" xml:space="preserve"><value>आयात पुष्टि सुरक्षित रूप से दिखाई नहीं जा सकी। कोई आयात शुरू नहीं हुआ।</value></data>
+  <data name="TransferImportResultFormat" xml:space="preserve"><value>{0} आइटम आयात हुए; {1} छोड़े गए।</value></data>
+  <data name="TransferImportResultWithWarningsFormat" xml:space="preserve"><value>{0} आइटम आयात हुए; {1} छोड़े गए। कुछ छोड़ी गई पंक्तियाँ स्थानीय CSV या वॉल्ट-आइटम सत्यापन नियमों पर खरी नहीं उतरीं।</value></data>
+  <data name="TransferImportFailureStatus" xml:space="preserve"><value>आयात सुरक्षित रूप से रोक दिया गया। दोबारा प्रयास करने तक इस फ़ाइल से कोई अतिरिक्त पंक्ति आयात नहीं होगी।</value></data>
+  <data name="TransferExportPhraseRequiredFormat" xml:space="preserve"><value>यह स्वीकार करने के लिए कि निर्यात में प्लेनटेक्स्ट सीक्रेट होंगे, बिल्कुल {0} टाइप करें।</value></data>
+  <data name="TransferMasterConfirmFailureStatus" xml:space="preserve"><value>मास्टर-पासफ्रेज़ पुष्टि सुरक्षित रूप से पूरी नहीं हो सकी। प्लेनटेक्स्ट निर्यात शुरू नहीं हुआ।</value></data>
+  <data name="TransferMasterFailedStatus" xml:space="preserve"><value>मास्टर-पासफ्रेज़ पुष्टि विफल रही। प्लेनटेक्स्ट निर्यात की पुष्टि के लिए रिकवरी कुंजियाँ स्वीकार नहीं की जातीं।</value></data>
+  <data name="TransferExportConfirmTitle" xml:space="preserve"><value>प्लेनटेक्स्ट निर्यात बनाएँ?</value></data>
+  <data name="TransferExportConfirmBody" xml:space="preserve"><value>इस फ़ाइल में पढ़ने योग्य वॉल्ट फ़ील्ड होंगे और शेयर लक्ष्य, बैकअप, खोज इंडेक्सिंग, एंटीवायरस या ऑपरेटिंग सिस्टम इसकी प्रतिलिपि बना सकते हैं। एन्क्रिप्टेड बैकअप अधिक सुरक्षित है। केवल प्लेनटेक्स्ट इंटरऑपरेबिलिटी की आवश्यकता होने पर ही जारी रखें।</value></data>
+  <data name="TransferExportConfirmAccept" xml:space="preserve"><value>प्लेनटेक्स्ट निर्यात करें</value></data>
+  <data name="TransferExportConfirmFailureStatus" xml:space="preserve"><value>प्लेनटेक्स्ट-निर्यात पुष्टि सुरक्षित रूप से दिखाई नहीं जा सकी। कोई प्लेनटेक्स्ट फ़ाइल नहीं बनाई गई।</value></data>
+  <data name="TransferExportTemporaryStatus" xml:space="preserve"><value>ऑपरेटिंग-सिस्टम शेयर प्रवाह के लिए प्लेनटेक्स्ट CSV अस्थायी रूप से बनाई गई। शेयरिंग लौटते ही CipherNest अपनी स्टेजिंग प्रति हटाने का प्रयास करेगा। प्राप्त करने वाले ऐप द्वारा बनाई गई प्रतियाँ CipherNest के नियंत्रण से बाहर रहती हैं।</value></data>
+  <data name="TransferShareTitle" xml:space="preserve"><value>CipherNest प्लेनटेक्स्ट निर्यात — संवेदनशील</value></data>
+  <data name="TransferExportFailureStatus" xml:space="preserve"><value>प्लेनटेक्स्ट निर्यात या शेयरिंग सुरक्षित रूप से विफल रही। प्लेनटेक्स्ट इंटरऑपरेबिलिटी आवश्यक न हो तो एन्क्रिप्टेड बैकअप का उपयोग करें।</value></data>
+  <data name="TransferCleanupWarningSuffix" xml:space="preserve"><value> CipherNest अपनी अस्थायी प्लेनटेक्स्ट स्टेजिंग फ़ाइल हटने की पुष्टि नहीं कर सका; संवेदनशील काम जारी रखने से पहले 'प्लेनटेक्स्ट निर्यात कैश साफ़ करें' का उपयोग करें।</value></data>
+  <data name="TransferCacheCleanedStatus" xml:space="preserve"><value>CipherNest का प्लेनटेक्स्ट निर्यात कैश हटा दिया गया। अन्य ऐप, बैकअप, फ़ाइलसिस्टम स्नैपशॉट या शेयर लक्ष्य द्वारा बनाई गई प्रतियाँ CipherNest के नियंत्रण से बाहर रहती हैं।</value></data>
+  <data name="TransferCacheCleanFailureStatus" xml:space="preserve"><value>CipherNest अपने प्लेनटेक्स्ट निर्यात कैश के पूर्ण हटने की पुष्टि नहीं कर सका। स्टोरेज पहुँच जाँचे जाने तक संवेदनशील काम से बचें।</value></data>
+</root>
