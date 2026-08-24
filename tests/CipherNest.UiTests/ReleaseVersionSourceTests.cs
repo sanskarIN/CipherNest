@@ -5,17 +5,28 @@ namespace CipherNest.UiTests;
 public sealed class ReleaseVersionSourceTests
 {
     [Fact]
-    public void AppProject_DeclaresVersion248AndMonotonicBuildCode()
+    public void PackagingAndRuntimeMetadata_DeclareVersion248AndMonotonicBuildCode()
     {
         var projectPath = PathAt("src", "CipherNest.App", "CipherNest.App.csproj");
         var document = XDocument.Load(projectPath);
         var displayVersion = document.Descendants("ApplicationDisplayVersion").Single().Value;
         var applicationVersion = document.Descendants("ApplicationVersion").Single().Value;
+        var constants = File.ReadAllText(PathAt("src", "CipherNest.Shared", "AppConstants.cs"));
 
         Assert.Equal("2.4.8", displayVersion);
         Assert.Equal("20408", applicationVersion);
+        Assert.Contains("public const string Version = \"2.4.8\";", constants, StringComparison.Ordinal);
         Assert.True(int.TryParse(applicationVersion, out var buildCode));
         Assert.True(buildCode > 1);
+    }
+
+    [Fact]
+    public void RedactedDiagnostics_UsesTheSharedReleaseVersion()
+    {
+        var developer = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "DeveloperViewModel.cs"));
+
+        Assert.Contains("AppVersion: {AppConstants.Version}", developer, StringComparison.Ordinal);
+        Assert.DoesNotContain("AppVersion: 0.1.0", developer, StringComparison.Ordinal);
     }
 
     [Fact]
