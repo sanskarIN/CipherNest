@@ -17,14 +17,15 @@ Configuration values are not all equivalent: some are **user preferences**, some
 
 ## 2. Product metadata
 
-Current source values from `CipherNest.Shared.AppConstants` and the MAUI project:
+Current source values from `CipherNest.Shared.AppConstants`, the MAUI project, and the Windows package manifest:
 
 | Setting | Value |
 |---|---|
 | Product name | `CipherNest` |
-| Product/source version | `0.1.0` |
-| MAUI display version | `0.1.0` |
-| MAUI application version | `1` |
+| Product/source version | `2.4.8` |
+| MAUI display version | `2.4.8` |
+| MAUI application version | `20408` |
+| Windows package version | `2.4.8.0` |
 | Application ID | `in.sanskar.ciphernest` |
 | Database filename | `ciphernest.db` |
 | Attachment directory | `attachments` |
@@ -36,7 +37,9 @@ Current source values from `CipherNest.Shared.AppConstants` and the MAUI project
 | Buy Me a Coffee | `https://buymeacoffee.com/sanskarIN` |
 | Creator watermark | `Made by the Sanskar` |
 
-When product metadata changes, update `AppConstants`, MAUI metadata where applicable, README/support/legal/store documentation, tests that guard centralized metadata, and release provenance.
+Version `2.4.8` is currently release-preparation metadata. It must not be described as shipped or exact-head verified until the immutable candidate completes the configured automated/platform gates and the documented external release validation.
+
+When product metadata changes, update `AppConstants`, MAUI metadata, platform-specific package metadata where applicable, README/support/legal/store documentation, tests that guard centralized metadata, and release provenance.
 
 ## 3. Target frameworks and minimum OS versions
 
@@ -528,7 +531,7 @@ Current compatibility identifiers:
 
 | Surface | Version/value |
 |---|---|
-| Product version | `0.1.0` |
+| Product version | `2.4.8` |
 | Database schema | `1` |
 | Core encrypted envelope | `1` |
 | Minimum supported vault-header document | `1` |
@@ -536,6 +539,8 @@ Current compatibility identifiers:
 | Encrypted backup format | `2` |
 | Backup magic | `CNBK0002` |
 | Attachment magic | `CNAT0001` |
+
+The product/release version is independent from persistence/cryptographic compatibility versions. Version 2.4.8 therefore does **not** change database schema, encrypted-envelope, vault-header, backup, or attachment format compatibility merely because the app release number changed.
 
 The TOTP setup-URI codec is transient text interoperability and does not introduce a new persisted format/schema version. The setup URI is parsed into or formatted from existing TOTP item fields.
 
@@ -732,7 +737,7 @@ Mac Catalyst: passed
 CodeQL v4: passed
 ```
 
-Later commits, including the August 18 TOTP setup-URI continuation, must rerun exact-head gates before being described as release-candidate verified.
+The historical evidence above remains attached only to that exact SHA. Later commits, including the current 2.4.8 release-preparation changes, must rerun exact-head gates before being described as release-candidate verified.
 
 ## 23. Configuration changes requiring documentation/review
 
