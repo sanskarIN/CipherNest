@@ -12,4 +12,14 @@
   <data name="AuditNoFindingsSummary" xml:space="preserve"><value>No findings were detected by the local checks.</value></data>
   <data name="AuditFindingsSummaryFormat" xml:space="preserve"><value>{0} local security finding(s). Review them before changing credentials or deleting entries.</value></data>
   <data name="AuditFailureSummary" xml:space="preserve"><value>The local security audit could not be completed safely. Lock and unlock the vault, then retry.</value></data>
+  <data name="AuditKindMissingTitle" xml:space="preserve"><value>Missing title</value></data>
+  <data name="AuditKindWeakSecret" xml:space="preserve"><value>Weak secret</value></data>
+  <data name="AuditKindExpiredReview" xml:space="preserve"><value>Review overdue</value></data>
+  <data name="AuditKindReusedSecret" xml:space="preserve"><value>Reused secret</value></data>
+  <data name="AuditKindDuplicateEntry" xml:space="preserve"><value>Duplicate entry</value></data>
+  <data name="AuditMessageMissingTitle" xml:space="preserve"><value>Item is missing a title.</value></data>
+  <data name="AuditMessageWeakSecret" xml:space="preserve"><value>Secret appears weak; replace it with a long unique value where possible.</value></data>
+  <data name="AuditMessageExpiredReview" xml:space="preserve"><value>This item is due for review.</value></data>
+  <data name="AuditMessageReusedSecret" xml:space="preserve"><value>This secret is reused by another vault item.</value></data>
+  <data name="AuditMessageDuplicateEntry" xml:space="preserve"><value>This item is an exact duplicate of another active vault entry. Review both before deleting either copy.</value></data>
 </root>
