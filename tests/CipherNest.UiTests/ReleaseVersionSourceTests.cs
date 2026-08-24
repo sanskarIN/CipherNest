@@ -12,10 +12,13 @@ public sealed class ReleaseVersionSourceTests
         var displayVersion = document.Descendants("ApplicationDisplayVersion").Single().Value;
         var applicationVersion = document.Descendants("ApplicationVersion").Single().Value;
         var constants = File.ReadAllText(PathAt("src", "CipherNest.Shared", "AppConstants.cs"));
+        var windowsManifest = XDocument.Load(PathAt("src", "CipherNest.App", "Platforms", "Windows", "Package.appxmanifest"));
+        var identity = windowsManifest.Descendants().Single(static element => element.Name.LocalName == "Identity");
 
         Assert.Equal("2.4.8", displayVersion);
         Assert.Equal("20408", applicationVersion);
         Assert.Contains("public const string Version = \"2.4.8\";", constants, StringComparison.Ordinal);
+        Assert.Equal("2.4.8.0", (string?)identity.Attribute("Version"));
         Assert.True(int.TryParse(applicationVersion, out var buildCode));
         Assert.True(buildCode > 1);
     }
