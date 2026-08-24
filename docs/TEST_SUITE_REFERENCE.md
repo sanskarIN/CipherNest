@@ -86,8 +86,9 @@ Project: `tests/CipherNest.IntegrationTests/CipherNest.IntegrationTests.csproj` 
 
 # 4. UI/source-contract tests
 
-Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/documentation/lifecycle/privacy/localization/cancellation/architecture guards runnable without booting a MAUI device target. They complement, not replace, target-device validation.
+Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/documentation/lifecycle/privacy/localization/cancellation/architecture guards runnable without booting a MAUI target. They complement, not replace, target-device validation.
 
+- `tests/CipherNest.UiTests/AboutFailureContainmentSourceTests.cs` — About async-void navigation, external-launcher, and secondary-alert failure containment with privacy-safe reporting.
 - `tests/CipherNest.UiTests/AboutSecurityLocalizationSourceTests.cs` — About/Security privacy wording across localization catalogs.
 - `tests/CipherNest.UiTests/AttachmentFramingSourceTests.cs` — attachment framing constants/ordering alignment.
 - `tests/CipherNest.UiTests/AttachmentMetadataSafetySourceTests.cs` — attachment metadata validation remains wired.
@@ -95,11 +96,13 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/AttachmentStagingSourceTests.cs` — collision-safe bounded staging.
 - `tests/CipherNest.UiTests/AttachmentStoreSecuritySourceTests.cs` — encrypted attachment-store security invariants.
 - `tests/CipherNest.UiTests/AuditFailureContainmentSourceTests.cs` — audit failure containment/redacted errors and localized safe-failure publication.
+- `tests/CipherNest.UiTests/AuditLifecycleSourceTests.cs` — single-run audit gating plus stale finding/status cleanup when locked or leaving the Audit page.
 - `tests/CipherNest.UiTests/AuditLocalizationSourceTests.cs` — Security Audit feature-catalog registration, XAML migration, runtime summary/finding/severity localization, exact neutral/Hindi key parity, reviewed Hindi values, and format-placeholder preservation.
 - `tests/CipherNest.UiTests/AuthenticationLocalizationCatalogSourceTests.cs` — authentication English/Hindi key/value coverage.
 - `tests/CipherNest.UiTests/AuthenticationLocalizationRoadmapSourceTests.cs` — authentication localization scope/non-claims.
 - `tests/CipherNest.UiTests/BackupArchiveSourceTests.cs` — source archive count/path/size defenses.
 - `tests/CipherNest.UiTests/BackupChunkFramingSourceTests.cs` — backup chunk framing/authentication contract.
+- `tests/CipherNest.UiTests/BackupExportCompletionStateSourceTests.cs` — successful encrypted-backup creation remains successful if later reminder persistence, share-sheet handoff, or unlock navigation fails.
 - `tests/CipherNest.UiTests/BackupExportPublicationCancellationSourceTests.cs` — cancelled backup cannot publish false-success output.
 - `tests/CipherNest.UiTests/BackupFormatSourceTests.cs` — backup version/header/framing source-document alignment.
 - `tests/CipherNest.UiTests/BackupRestoreHardeningSourceTests.cs` — restore staging/validation/replacement/rollback/cleanup composition.
@@ -112,8 +115,9 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/DatabaseRecoverySourceTests.cs` — stale recovery/replacement ordering.
 - `tests/CipherNest.UiTests/DatabaseReplacementSourceTests.cs` — candidate validation before active mutation.
 - `tests/CipherNest.UiTests/DecryptedRecordValidationSourceTests.cs` — decrypted item validation before publication/use.
+- `tests/CipherNest.UiTests/DeveloperFailureContainmentSourceTests.cs` — Developer storage enumeration, redacted-diagnostics share/cleanup, and simulated-lock/navigation failure containment.
 - `tests/CipherNest.UiTests/DocumentationCoverageSourceTests.cs` — canonical docs, public security disclaimers, feature wording, and required-document presence.
-- `tests/CipherNest.UiTests/GeneratorFailureContainmentSourceTests.cs` — privacy-safe generator failure handling.
+- `tests/CipherNest.UiTests/GeneratorFailureContainmentSourceTests.cs` — privacy-safe generator failure handling and stale generated-value/strength-state clearing after invalid or unexpected generation failures.
 - `tests/CipherNest.UiTests/GeneratorMemorySourceTests.cs` — generated-sensitive-value cleanup at owned lifecycle boundaries.
 - `tests/CipherNest.UiTests/ItemEditorClipboardFailureSourceTests.cs` — clipboard failure containment.
 - `tests/CipherNest.UiTests/ItemEditorSaveFailureContainmentSourceTests.cs` — save failure cannot publish false success/raw sensitive errors.
@@ -126,7 +130,7 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/OnboardingFailureContainmentSourceTests.cs` — onboarding failure containment/sensitive-state cleanup.
 - `tests/CipherNest.UiTests/OnboardingLocalizationSourceTests.cs` — onboarding/recovery security localization.
 - `tests/CipherNest.UiTests/OnboardingPassphraseBoundsSourceTests.cs` — onboarding passphrase bounds before expensive work.
-- `tests/CipherNest.UiTests/ReleaseVersionSourceTests.cs` — guards 2.4.8 display/build metadata and requires release documentation to keep the candidate explicitly unreleased/unverified until exact-head evidence exists.
+- `tests/CipherNest.UiTests/ReleaseVersionSourceTests.cs` — guards 2.4.8 display/build/runtime/Windows-package/current-documentation metadata and requires release documentation to keep the candidate explicitly unreleased/unverified until exact-head evidence exists.
 - `tests/CipherNest.UiTests/RepositoryDocumentationInventorySourceTests.cs` — canonical document/hub presence plus exhaustive `git ls-files` mapping of every tracked path to `REPOSITORY_FILE_REFERENCE.md`, `SOURCE_CODE_REFERENCE.md`, or `TEST_SUITE_REFERENCE.md`; representative layer/suite assertions remain as secondary ownership checks.
 - `tests/CipherNest.UiTests/RepositoryUiStructureTests.cs` — expected pages/ViewModels/routes/resources/project structure.
 - `tests/CipherNest.UiTests/RestoreCompletionStateSourceTests.cs` — restore completion state only after required completion/reset.
@@ -137,6 +141,7 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/SettingsSecurityLocalizationSourceTests.cs` — security-decision Settings localization.
 - `tests/CipherNest.UiTests/SettingsSecurityOperationLocalizationSourceTests.cs` — security operation status localization.
 - `tests/CipherNest.UiTests/SettingsSurfaceLocalizationSourceTests.cs` — remaining fixed Settings neutral/Hindi localization.
+- `tests/CipherNest.UiTests/StartupFailureContainmentSourceTests.cs` — Startup retry-state restoration plus secondary failure-alert/reporter containment for the async-void lifecycle callback.
 - `tests/CipherNest.UiTests/StartupPreferenceFallbackSourceTests.cs` — startup preference failures use safe fallback.
 - `tests/CipherNest.UiTests/StorageMaintenanceSourceTests.cs` — cache cleanup cannot intentionally target protected vault/attachment/backup data.
 - `tests/CipherNest.UiTests/TotpDocumentationSourceTests.cs` — public/security/release TOTP text-URI boundary wording.
@@ -147,14 +152,17 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/TotpUiSourceTests.cs` — TOTP editor controls/bindings/workflow structure.
 - `tests/CipherNest.UiTests/TransferCsvFailureStateSourceTests.cs` — CSV selection failure resets localized no-selection state and stale mappings; import faults remain contained without false success.
 - `tests/CipherNest.UiTests/TransferLocalizationSourceTests.cs` — Transfer fixed/runtime plaintext-boundary localization, feature-catalog registration/parity, exact `EXPORT PLAINTEXT` token and format-placeholder preservation, security caveats, semantic metadata, and suppression of raw infrastructure warning strings from localized import-result status.
+- `tests/CipherNest.UiTests/TransferOperationSerializationSourceTests.cs` — single-operation gating for picker/import/plaintext export/cache cleanup plus one-attempt consumption of the exact plaintext acknowledgement before async re-authentication.
 - `tests/CipherNest.UiTests/TranslationExtensionSourceTests.cs` — registered localization-service resolution and missing-key behavior.
-- `tests/CipherNest.UiTests/TrashLocalizationSourceTests.cs` — Trash fixed/runtime destructive-action localization, feature-catalog registration/parity, safety caveat and format-placeholder preservation, and empty-trash success-state regression.
+- `tests/CipherNest.UiTests/TrashFailureContainmentSourceTests.cs` — Trash load/restore/confirmation/reauth/delete/empty failure containment, early master-passphrase clearing, operation serialization, and stale-list suppression after partial empty-trash failure.
+- `tests/CipherNest.UiTests/TrashLocalizationSourceTests.cs` — Trash fixed/runtime destructive-action localization, feature-catalog registration/parity, failure-state catalogs, security caveats and format-placeholder preservation, and empty-trash success-state regression.
 - `tests/CipherNest.UiTests/UnlockCapabilityFailureContainmentSourceTests.cs` — biometric/capability failures safely fall back to master auth.
 - `tests/CipherNest.UiTests/UnlockLocalizationSourceTests.cs` — unlock/recovery/biometric security localization.
 - `tests/CipherNest.UiTests/VaultDeletionOrderingSourceTests.cs` — record deletion, attachment cleanup, and authorization ordering.
 - `tests/CipherNest.UiTests/VaultHeaderSafetySourceTests.cs` — strict header parser/resource/version safeguards.
 - `tests/CipherNest.UiTests/VaultKeyLeaseSourceTests.cs` — private disposable/cancellable key leases rather than shared key references.
 - `tests/CipherNest.UiTests/VaultSearchFailureContainmentSourceTests.cs` — search failure/cancellation containment.
+- `tests/CipherNest.UiTests/VaultSensitiveStateLifecycleSourceTests.cs` — decrypted vault-list cleanup on page exit/lock, pending-search cancellation, overlapping-load prevention, and off-screen result-publication gating.
 - `tests/CipherNest.UiTests/VaultSessionTransitionSourceTests.cs` — serialized security transition/session cancellation source contract.
 - `tests/CipherNest.UiTests/VaultStorageBoundsSourceTests.cs` — hard persistence/storage ceilings remain wired.
 - `tests/CipherNest.UiTests/ViewModelAotSourceTests.cs` — ViewModel/source-generation trimming/AOT compatibility guards.
