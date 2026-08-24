@@ -3,14 +3,15 @@ namespace CipherNest.UiTests;
 public sealed class AuditFailureContainmentSourceTests
 {
     [Fact]
-    public void AuditCommand_ReportsAndClearsOnFailure()
+    public void AuditCommand_ReportsClearsAndUsesLocalizedFailureState()
     {
         var source = File.ReadAllText(PathAt("src", "CipherNest.App", "ViewModels", "AuditViewModel.cs"));
 
         Assert.Contains("IPrivacySafeExceptionReporter _exceptions", source, StringComparison.Ordinal);
         Assert.Contains("_exceptions.Report(\"Audit.Run\", ex);", source, StringComparison.Ordinal);
         Assert.Contains("Findings.Clear();", source, StringComparison.Ordinal);
-        Assert.Contains("The local security audit could not be completed safely.", source, StringComparison.Ordinal);
+        Assert.Contains("Summary = AuditText(\"AuditFailureSummary\");", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("The local security audit could not be completed safely.", source, StringComparison.Ordinal);
     }
 
     private static string PathAt(params string[] segments)
