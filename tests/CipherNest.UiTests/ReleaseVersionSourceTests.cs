@@ -39,6 +39,7 @@ public sealed class ReleaseVersionSourceTests
         var changelog = File.ReadAllText(PathAt("CHANGELOG.md"));
         var configuration = File.ReadAllText(PathAt("docs", "CONFIGURATION_REFERENCE.md"));
         var packaging = File.ReadAllText(PathAt("docs", "releases", "PACKAGING.md"));
+        var quickStart = File.ReadAllText(PathAt("docs", "QUICK_START.md"));
 
         Assert.Contains("2.4.8", status, StringComparison.Ordinal);
         Assert.Contains("release candidate", status, StringComparison.OrdinalIgnoreCase);
@@ -52,6 +53,9 @@ public sealed class ReleaseVersionSourceTests
         Assert.Contains("Build/application version | `20408`", packaging, StringComparison.Ordinal);
         Assert.Contains("Windows package version | `2.4.8.0`", packaging, StringComparison.Ordinal);
         Assert.Contains("CipherNest-2.4.8-win-x64.msix", packaging, StringComparison.Ordinal);
+        Assert.Contains("Version in source: **2.4.8 (unreleased release preparation)**", quickStart, StringComparison.Ordinal);
+        Assert.Contains("MAUI build/application version: **20408**", quickStart, StringComparison.Ordinal);
+        Assert.Contains("Windows package version: **2.4.8.0**", quickStart, StringComparison.Ordinal);
     }
 
     private static string PathAt(params string[] segments)
