@@ -2,9 +2,11 @@
 
 All notable changes are documented here following Semantic Versioning principles.
 
-## [Unreleased]
+## [2.4.8] - Unreleased
 
 ### Added
+- Version 2.4.8 release preparation with MAUI display version `2.4.8`, numeric build code `20408`, and source regression coverage preventing accidental version drift before the candidate is frozen.
+- Security Audit feature localization with neutral English and reviewed Hindi (`hi-IN`) catalogs covering page chrome, summaries, failure state, finding-kind labels, finding explanations, and culture-aware severity formatting while preserving the language-neutral infrastructure audit engine.
 - Bounded local TOTP `otpauth://totp/...` setup-URI interoperability with the new Application `TotpUriProfile` model and `ITotpUriCodec` contract, Infrastructure `TotpUriCodec` parser/formatter, MAUI dependency-injection registration, masked Item Editor import input, explicit setup-URI copy, and dedicated unit/UI/source regression coverage.
 - TOTP setup-URI hardening limits URI text to 8,192 characters and 16 query pairs, rejects user-info/custom ports/fragments/HOTP/`counter`/duplicate query keys/invalid percent encoding/unsafe display metadata, bounds account/issuer metadata, enforces issuer consistency, and reuses the authoritative Base32/algorithm/digits/period TOTP validation before imported settings are accepted.
 - TOTP setup-URI sensitive-state handling clears the dedicated import field after each import attempt and on Item Editor sensitive-state cleanup, routes setup-URI copy through the existing timed secret-clipboard service, and deliberately avoids persisting the URI as a duplicate vault field.
@@ -75,9 +77,11 @@ All notable changes are documented here following Semantic Versioning principles
 - `DocumentationCoverageSourceTests` and `docs/verification/DOCUMENTATION_SUITE_2026_08_12.md` to guard required documentation files, canonical entry-point links, and explicit independent-audit disclaimers.
 
 ### Changed
+- CipherNest application packaging metadata is prepared for version `2.4.8` / build `20408`; this remains an **unreleased candidate** until exact-head automated, platform, device, signing, store, and security-review gates are recorded.
+- The local Security Audit UI no longer presents its known finding categories/messages through hard-coded English-only bindings; the App layer maps stable `SecurityFindingKind` values to localized presentation resources without changing the Infrastructure analyzer’s detection logic.
 - Current TOTP documentation, feature matrix, project status, roadmap, quick start, FAQ, user/developer/maintainer/API/limits/UI references, and root/documentation READMEs now treat bounded `otpauth://totp/...` text import/formatting as implemented while keeping QR/camera enrollment, HOTP, and provider/autofill integration explicitly deferred.
 - TOTP setup-URI import/export remains local-only: no camera, QR library, network/provider enrollment, cloud dependency, or new persisted setup-URI field was introduced.
-- Current public README, FAQ, Developer Guide, Build guide, CI gates, project status, and roadmap continue to preserve immutable implementation baseline `8566980ff981b8b4072f9010ec7b7ba54aba051e`: 346 Unit + 98 Integration + 111 UI/source = **555 passed**, with Windows default/funding-disabled, Android, iOS simulator, Mac Catalyst, and CodeQL all successful for that exact historical SHA; the August 18 continuation requires its own final exact-head evidence before inheriting that status.
+- Current public README, FAQ, Developer Guide, Build guide, CI gates, project status, and roadmap continue to preserve immutable implementation baseline `8566980ff981b8b4072f9010ec7b7ba54aba051e`: 346 Unit + 98 Integration + 111 UI/source = **555 passed**, with Windows default/funding-disabled, Android, iOS simulator, Mac Catalyst, and CodeQL all successful for that exact historical SHA; the newer 2.4.8 preparation requires its own final exact-head evidence before inheriting that status.
 - Current documentation correctly treats local TOTP seed storage/generation, bounded TOTP setup-URI text interoperability, and the reviewed Hindi `hi-IN` resource-backed catalog as implemented, while keeping TOTP QR/camera/HOTP/provider/autofill integration and complete translation of remaining literals deferred.
 - Final repository-side hardening now clears the owned TOTP normalization scratch buffer, safely clamps TOTP validity at the maximum representable timestamp, bounds CSV mapped-tag materialization to the canonical 100-tag/128-character policy before item construction, and requires actual backup ZIP extraction bytes to exactly match declared uncompressed lengths within the shared 1 GiB budget. The final defect sweep also corrected a missing source final newline and an xUnit duplicate-theory-ID condition that had prevented one intended hostile TOTP surrogate case from executing independently.
 - Vault header reads now validate strict structure before typed deserialization/wrapped-key unwrap; current mutations self-validate and deliberately upgrade valid legacy v1 headers to v2, preventing an undocumented v1-plus-`secondary` hybrid shape.
