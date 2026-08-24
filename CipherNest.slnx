@@ -5,6 +5,7 @@
     <Project Path="src/CipherNest.Application/CipherNest.Application.csproj" />
     <Project Path="src/CipherNest.Infrastructure/CipherNest.Infrastructure.csproj" />
     <Project Path="src/CipherNest.App/CipherNest.App.csproj" />
+    <Project Path="src/CipherNest.Web/CipherNest.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CipherNest.UnitTests/CipherNest.UnitTests.csproj" />

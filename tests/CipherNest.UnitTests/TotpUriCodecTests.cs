@@ -63,7 +63,7 @@ public sealed class TotpUriCodecTests
         var uri = codec.Format(source);
         var parsed = codec.Parse(uri);
 
-        Assert.True(uri.StartsWith("otpauth://totp/", StringComparison.Ordinal));
+        Assert.StartsWith("otpauth://totp/", uri, StringComparison.Ordinal);
         Assert.Contains("secret=JBSWY3DPEHPK3PXP", uri, StringComparison.Ordinal);
         Assert.Contains("issuer=Example%20Org", uri, StringComparison.Ordinal);
         Assert.Contains("algorithm=SHA512", uri, StringComparison.Ordinal);
@@ -78,7 +78,7 @@ public sealed class TotpUriCodecTests
         var codec = new TotpUriCodec();
         var uri = codec.Format(new TotpUriProfile("account@example.com", string.Empty, Secret, TotpAlgorithm.Sha1, 6, 30));
 
-        Assert.True(uri.StartsWith("otpauth://totp/account%40example.com?", StringComparison.Ordinal));
+        Assert.StartsWith("otpauth://totp/account%40example.com?", uri, StringComparison.Ordinal);
         Assert.DoesNotContain("&issuer=", uri, StringComparison.Ordinal);
         Assert.Equal(string.Empty, codec.Parse(uri).Issuer);
     }
