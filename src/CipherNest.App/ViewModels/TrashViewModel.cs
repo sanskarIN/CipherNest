@@ -13,6 +13,7 @@ public partial class TrashViewModel : ObservableObject
 {
     private readonly IVaultService _vault;
     private readonly ISettingsStore _settings;
+    private readonly IPrivacySafeExceptionReporter _exceptions;
     public ObservableCollection<VaultItem> Items { get; } = [];
 
     [ObservableProperty]
@@ -24,82 +25,196 @@ public partial class TrashViewModel : ObservableObject
     [ObservableProperty]
     public partial string DeletionPassphrase { get; set; } = string.Empty;
 
-    public TrashViewModel(IVaultService vault, ISettingsStore settings)
+    public TrashViewModel(IVaultService vault, ISettingsStore settings, IPrivacySafeExceptionReporter exceptions)
     {
         _vault = vault;
         _settings = settings;
+        _exceptions = exceptions;
     }
 
     [RelayCommand]
     public async Task LoadAsync()
     {
-        if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
+        if (IsBusy) return;
         IsBusy = true;
         try
         {
-            var preferences = await _settings.LoadAsync();
-            var all = await _vault.GetItemsAsync(includeTrash: true);
-            var expiredIds = TrashRetentionPolicy.FindExpiredItemIds(all, DateTimeOffset.UtcNow, preferences.TrashRetentionDays);
-            foreach (var id in expiredIds) await _vault.DeletePermanentlyAsync(id);
+            if (!_vault.IsUnlocked)
+            {
+                ClearSensitiveState();
+                await Shell.Current.GoToAsync("//unlock");
+                return;
+            }
 
-            var trash = (await _vault.GetItemsAsync(includeTrash: true)).Where(static item => item.DeletedUtc is not null).OrderByDescending(static item => item.DeletedUtc).ToArray();
-            Items.Clear();
-            foreach (var item in trash) Items.Add(item);
-            StatusMessage = trash.Length == 0
-                ? TrashText("TrashEmptyStatus")
-                : TrashFormat("TrashStatusFormat", trash.Length, preferences.TrashRetentionDays);
+            await LoadCoreAsync();
         }
-        finally { IsBusy = false; }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Trash.Load", ex);
+            Items.Clear();
+            StatusMessage = TrashText("TrashLoadFailureStatus");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
     private async Task RestoreAsync(VaultItem item)
     {
-        if (item is null) return;
-        await _vault.RestoreFromTrashAsync(item.Id);
-        await LoadAsync();
+        if (item is null || IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            await _vault.RestoreFromTrashAsync(item.Id);
+            await LoadCoreAsync();
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Trash.Restore", ex);
+            Items.Clear();
+            StatusMessage = TrashText("TrashRestoreFailureStatus");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
     private async Task DeleteAsync(VaultItem item)
     {
-        if (item is null) return;
-        if (!await ConfirmMasterPassphraseAsync()) return;
-        var confirm = await Shell.Current.DisplayAlertAsync(
-            TrashText("TrashDeleteConfirmTitle"),
-            TrashText("TrashDeleteConfirmBody"),
-            TrashText("TrashDeleteConfirmAccept"),
-            TrashText("CancelButton"));
-        if (!confirm) return;
-        await _vault.DeletePermanentlyAsync(item.Id);
-        await LoadAsync();
+        if (item is null || IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            if (!await ConfirmMasterPassphraseAsync()) return;
+
+            bool confirm;
+            try
+            {
+                confirm = await Shell.Current.DisplayAlertAsync(
+                    TrashText("TrashDeleteConfirmTitle"),
+                    TrashText("TrashDeleteConfirmBody"),
+                    TrashText("TrashDeleteConfirmAccept"),
+                    TrashText("CancelButton"));
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Trash.Delete.Confirm", ex);
+                StatusMessage = TrashText("TrashDeleteConfirmFailureStatus");
+                return;
+            }
+
+            if (!confirm) return;
+
+            try
+            {
+                await _vault.DeletePermanentlyAsync(item.Id);
+                await LoadCoreAsync();
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Trash.Delete", ex);
+                Items.Clear();
+                StatusMessage = TrashText("TrashDeleteFailureStatus");
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
     private async Task EmptyTrashAsync()
     {
-        if (Items.Count == 0) { StatusMessage = TrashText("TrashAlreadyEmptyStatus"); return; }
-        if (!await ConfirmMasterPassphraseAsync()) return;
-        var confirm = await Shell.Current.DisplayAlertAsync(
-            TrashText("TrashEmptyConfirmTitle"),
-            TrashFormat("TrashEmptyConfirmBodyFormat", Items.Count),
-            TrashText("TrashEmptyConfirmAccept"),
-            TrashText("CancelButton"));
-        if (!confirm) return;
+        if (IsBusy) return;
+        if (Items.Count == 0)
+        {
+            StatusMessage = TrashText("TrashAlreadyEmptyStatus");
+            return;
+        }
 
         IsBusy = true;
         try
         {
-            foreach (var id in Items.Select(static item => item.Id).ToArray()) await _vault.DeletePermanentlyAsync(id);
-            Items.Clear();
-            StatusMessage = TrashText("TrashEmptiedStatus");
+            if (!await ConfirmMasterPassphraseAsync()) return;
+
+            bool confirm;
+            try
+            {
+                confirm = await Shell.Current.DisplayAlertAsync(
+                    TrashText("TrashEmptyConfirmTitle"),
+                    TrashFormat("TrashEmptyConfirmBodyFormat", Items.Count),
+                    TrashText("TrashEmptyConfirmAccept"),
+                    TrashText("CancelButton"));
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Trash.Empty.Confirm", ex);
+                StatusMessage = TrashText("TrashEmptyConfirmFailureStatus");
+                return;
+            }
+
+            if (!confirm) return;
+
+            try
+            {
+                foreach (var id in Items.Select(static item => item.Id).ToArray())
+                {
+                    await _vault.DeletePermanentlyAsync(id);
+                }
+
+                Items.Clear();
+                StatusMessage = TrashText("TrashEmptiedStatus");
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Trash.Empty", ex);
+                // A multi-item destructive operation can fail after an earlier item was already deleted.
+                // Clear the presentation rather than showing a stale list that implies those records still exist.
+                Items.Clear();
+                StatusMessage = TrashText("TrashEmptyFailureStatus");
+            }
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
-    public void ClearSensitiveState() => DeletionPassphrase = string.Empty;
+    public void ClearSensitiveState()
+    {
+        DeletionPassphrase = string.Empty;
+        Items.Clear();
+        StatusMessage = string.Empty;
+    }
 
     [RelayCommand] private async Task BackAsync() => await Shell.Current.GoToAsync("//vault");
+
+    private async Task LoadCoreAsync()
+    {
+        var preferences = await _settings.LoadAsync();
+        var all = await _vault.GetItemsAsync(includeTrash: true);
+        var expiredIds = TrashRetentionPolicy.FindExpiredItemIds(all, DateTimeOffset.UtcNow, preferences.TrashRetentionDays);
+        foreach (var id in expiredIds)
+        {
+            await _vault.DeletePermanentlyAsync(id);
+        }
+
+        var trash = (await _vault.GetItemsAsync(includeTrash: true))
+            .Where(static item => item.DeletedUtc is not null)
+            .OrderByDescending(static item => item.DeletedUtc)
+            .ToArray();
+
+        Items.Clear();
+        foreach (var item in trash) Items.Add(item);
+        StatusMessage = trash.Length == 0
+            ? TrashText("TrashEmptyStatus")
+            : TrashFormat("TrashStatusFormat", trash.Length, preferences.TrashRetentionDays);
+    }
 
     private async Task<bool> ConfirmMasterPassphraseAsync()
     {
@@ -109,15 +224,29 @@ public partial class TrashViewModel : ObservableObject
             return false;
         }
 
-        var authenticated = await _vault.ReauthenticateAsync(DeletionPassphrase);
+        var passphrase = DeletionPassphrase;
         DeletionPassphrase = string.Empty;
-        if (!authenticated)
+        try
         {
-            StatusMessage = TrashText("TrashMasterConfirmationFailedStatus");
+            var authenticated = await _vault.ReauthenticateAsync(passphrase);
+            if (!authenticated)
+            {
+                StatusMessage = TrashText("TrashMasterConfirmationFailedStatus");
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Trash.Reauthenticate", ex);
+            StatusMessage = TrashText("TrashMasterConfirmationErrorStatus");
             return false;
         }
-
-        return true;
+        finally
+        {
+            passphrase = string.Empty;
+        }
     }
 
     private static string TrashText(string key) =>
