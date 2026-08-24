@@ -2,7 +2,7 @@
 
 This file is the canonical **production-source and application-asset file reference** for CipherNest. It is intentionally path-oriented so a maintainer can map a repository file to its responsibility, security boundary, and deeper documentation without reverse-engineering the solution first.
 
-Baseline used for this inventory: Transfer localization implementation head `0eec0f1e60de5ecf4576820935b8684ead42574b` on 2026-08-20. Later files must be added here in the same change that adds them.
+Baseline used for this inventory: version 2.4.8 release-preparation continuation on 2026-08-24. The final immutable 2.4.8 candidate SHA must be recorded only after source/tests/documentation synchronization stops changing the head.
 
 > This is a source map, not an audit certificate. CipherNest has not completed an independent professional security audit. Current executable source and focused tests remain authoritative when prose and implementation disagree.
 
@@ -16,7 +16,7 @@ The intended dependency direction is documented in `architecture/ARCHITECTURE.md
 
 ## Application composition
 
-- `src/CipherNest.App/CipherNest.App.csproj` — MAUI application project; target frameworks, application identity, resources, package references, and build-time funding-link behavior are rooted here.
+- `src/CipherNest.App/CipherNest.App.csproj` — MAUI application project; target frameworks, application identity, resources, package references, build-time funding-link behavior, and release metadata. The current preparation declares display version `2.4.8` and numeric build code `20408`.
 - `src/CipherNest.App/App.xaml` — application-level XAML resources and startup resource composition.
 - `src/CipherNest.App/App.xaml.cs` — application lifecycle coordination, startup wiring, session/background behavior, theme/localization preference application, and fail-closed lifecycle handling.
 - `src/CipherNest.App/AppShell.xaml` — Shell navigation container and route-facing visual structure.
@@ -42,7 +42,7 @@ The intended dependency direction is documented in `architecture/ARCHITECTURE.md
 - `src/CipherNest.App/Services/IPrivacySafeExceptionReporter.cs` — diagnostic reporting contract that avoids raw sensitive exception content.
 - `src/CipherNest.App/Services/IScreenshotProtectionService.cs` — platform screenshot/task-preview mitigation abstraction.
 - `src/CipherNest.App/Services/IStorageMaintenanceService.cs` — local cache/storage inspection and safe-maintenance abstraction.
-- `src/CipherNest.App/Services/LocalizationService.cs` — neutral English / reviewed Hindi culture application plus ordered primary/feature resource-catalog resolution, currently including Trash and Transfer feature catalogs; missing keys fail visibly by returning the key name.
+- `src/CipherNest.App/Services/LocalizationService.cs` — neutral English / reviewed Hindi culture application plus ordered primary/feature resource-catalog resolution, currently including Security Audit, Trash, and Transfer feature catalogs; missing keys fail visibly by returning the key name.
 - `src/CipherNest.App/Services/PrivacySafeExceptionReporter.cs` — redacted/fixed diagnostic reporting implementation; raw paths, vault data, credentials, and exception details must not become user-facing telemetry.
 - `src/CipherNest.App/Services/ScreenshotProtectionService.cs` — target-specific screenshot/privacy-control implementation with honest unsupported-target behavior.
 - `src/CipherNest.App/Services/ServiceProviderHelper.cs` — controlled access helper for application service resolution where XAML/application integration requires it.
@@ -52,7 +52,7 @@ The intended dependency direction is documented in `architecture/ARCHITECTURE.md
 
 ## ViewModels
 
-- `src/CipherNest.App/ViewModels/AuditViewModel.cs` — drives the local decrypted-content security audit while unlocked and contains failure reporting.
+- `src/CipherNest.App/ViewModels/AuditViewModel.cs` — drives the local decrypted-content security audit while unlocked; converts stable audit findings into localized presentation labels/messages/severity text, publishes culture-aware summaries, and contains privacy-safe failure reporting.
 - `src/CipherNest.App/ViewModels/DeveloperViewModel.cs` — developer-information surface without turning debug information into a secret-exposure path.
 - `src/CipherNest.App/ViewModels/GeneratorDefaultsViewModel.cs` — edits and persists non-secret password/passphrase generator defaults.
 - `src/CipherNest.App/ViewModels/GeneratorViewModel.cs` — password/passphrase generation workflow, strength guidance, clipboard interaction, and sensitive generated-value lifetime.
@@ -80,7 +80,7 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 
 - `src/CipherNest.App/Views/AboutPage.xaml` — product identity, creator/support, legal/privacy/security entry points, and funding surface where enabled.
 - `src/CipherNest.App/Views/AboutPage.xaml.cs` — About lifecycle/event glue.
-- `src/CipherNest.App/Views/AuditPage.xaml` — local audit results and audit controls.
+- `src/CipherNest.App/Views/AuditPage.xaml` — local audit results and controls with resource-backed title, back action, empty-state text, run-again action, and localized presentation bindings for finding labels/messages/severity.
 - `src/CipherNest.App/Views/AuditPage.xaml.cs` — Audit page glue.
 - `src/CipherNest.App/Views/DeveloperPage.xaml` — developer/build information UI.
 - `src/CipherNest.App/Views/DeveloperPage.xaml.cs` — Developer page glue.
@@ -132,6 +132,8 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 - `src/CipherNest.App/Resources/Images/bmc_support.svg` — Buy Me a Coffee support artwork; funding remains optional and feature-neutral.
 - `src/CipherNest.App/Resources/Localization/AppStrings.resx` — neutral English primary localization catalog for shared and previously migrated UI surfaces.
 - `src/CipherNest.App/Resources/Localization/AppStrings.hi-IN.resx` — reviewed Hindi primary catalog; primary-catalog key parity is regression-tested, but complete translation of every application literal is not claimed.
+- `src/CipherNest.App/Resources/Localization/AuditStrings.resx` — neutral English feature catalog for the Security Audit page, summaries, failure state, finding-kind labels, finding messages, and culture-aware severity format.
+- `src/CipherNest.App/Resources/Localization/AuditStrings.hi-IN.resx` — reviewed Hindi Security Audit feature catalog with exact key parity, non-empty/distinct-value checks, and placeholder regression coverage.
 - `src/CipherNest.App/Resources/Localization/TrashStrings.resx` — neutral English feature catalog for Trash listing/permanent-deletion fixed text, confirmations, status formats, and safety wording.
 - `src/CipherNest.App/Resources/Localization/TrashStrings.hi-IN.resx` — reviewed Hindi Trash feature catalog with exact key parity, distinct-value, placeholder, and security-meaning regression coverage.
 - `src/CipherNest.App/Resources/Localization/TransferStrings.resx` — neutral English feature catalog for generic CSV mapping and the guarded plaintext import/export boundary, including confirmation/status formats and accessibility descriptions.
@@ -231,7 +233,7 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 - `src/CipherNest.Infrastructure/Services/JsonSettingsStore.cs` — bounded non-secret JSON settings persistence, normalization/fallback, and cancellation behavior.
 - `src/CipherNest.Infrastructure/Services/PassphraseWordList.cs` — validates/loads the local passphrase word list used by the generator.
 - `src/CipherNest.Infrastructure/Services/PasswordGenerator.cs` — cryptographically secure password/passphrase generation implementation.
-- `src/CipherNest.Infrastructure/Services/SecurityAuditService.cs` — local decrypted-item audit implementation for weakness/reuse/duplicate/title/review checks.
+- `src/CipherNest.Infrastructure/Services/SecurityAuditService.cs` — local decrypted-item audit implementation for weakness/reuse/duplicate/title/review checks. It remains language-neutral; the App presentation layer maps stable finding kinds to localized display resources.
 - `src/CipherNest.Infrastructure/Services/SystemClock.cs` — production UTC time source.
 - `src/CipherNest.Infrastructure/Services/TotpService.cs` — RFC-compatible local TOTP generation and Base32 processing with bounded settings.
 - `src/CipherNest.Infrastructure/Services/TotpUriCodec.cs` — strict bounded TOTP-only setup-URI parser/formatter; rejects HOTP/counter, duplicates, malformed/oversized input, issuer disagreement, and unsupported settings.
