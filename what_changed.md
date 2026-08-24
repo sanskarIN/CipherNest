@@ -446,3 +446,158 @@ This Transfer localization phase does **not** claim:
 - that recovery keys can authorize plaintext export;
 - that every remaining CipherNest screen is fully translated;
 - that external/device/release/security-review gates are complete.
+
+---
+
+## 2026-08-24 — Security Audit localization and version 2.4.8 preparation
+
+### Goal and starting head
+
+The continuation started from repository head:
+
+`a8a9ffbb519127840f22d2285673899619387f45`
+
+The two repository-completable goals were:
+
+1. continue the remaining reviewed English/Hindi localization work on the still-English Security Audit surface;
+2. prepare application/release metadata for requested version **2.4.8** without claiming final release verification that has not yet been observed for the resulting exact head.
+
+### Security Audit feature catalog
+
+Added:
+
+- `src/CipherNest.App/Resources/Localization/AuditStrings.resx`
+- `src/CipherNest.App/Resources/Localization/AuditStrings.hi-IN.resx`
+
+The catalogs cover:
+
+- page title;
+- no-findings empty state;
+- culture-aware severity format;
+- run-again action;
+- initial/no-findings/finding-count/failure summaries;
+- all current `SecurityFindingKind` labels;
+- reviewed user-facing explanations for missing title, weak secret, overdue review, reused secret, and duplicate entry findings.
+
+The Hindi catalog preserves exact key parity with the neutral catalog and preserves required `{0}` placeholders.
+
+### Localization registration and presentation boundary
+
+Updated:
+
+`src/CipherNest.App/Services/LocalizationService.cs`
+
+The ordered feature-catalog list now contains:
+
+1. `AuditStrings`;
+2. `TrashStrings`;
+3. `TransferStrings`.
+
+Updated:
+
+`src/CipherNest.App/ViewModels/AuditViewModel.cs`
+
+The Infrastructure `SecurityAuditService` remains language-neutral and continues producing stable finding kinds/messages. The App presentation layer now maps current `SecurityFindingKind` values to reviewed localized labels/messages and formats severity/count text using `CultureInfo.CurrentUICulture`.
+
+Unknown future finding kinds still retain a visible neutral fallback rather than becoming blank.
+
+Updated:
+
+`src/CipherNest.App/Views/AuditPage.xaml`
+
+The page now uses resource-backed title, Back action, empty state, and run-again action. Finding cards bind to the localized presentation model rather than using the old hard-coded `Severity: {0}/4` XAML format.
+
+### Security Audit regression coverage
+
+Added:
+
+`tests/CipherNest.UiTests/AuditLocalizationSourceTests.cs`
+
+The test guards:
+
+- feature-catalog registration;
+- resource-backed Audit XAML;
+- localized ViewModel summaries/findings/severity;
+- active-UI-culture formatting;
+- exact neutral/Hindi key parity;
+- non-empty/distinct reviewed Hindi values;
+- required formatting placeholders.
+
+Updated:
+
+`tests/CipherNest.UiTests/AuditFailureContainmentSourceTests.cs`
+
+The failure-containment guard now verifies the localized safe-failure key while preserving privacy-safe exception reporting and clearing stale findings.
+
+### Version 2.4.8 metadata
+
+Updated:
+
+`src/CipherNest.App/CipherNest.App.csproj`
+
+Current release-preparation metadata is now:
+
+```text
+ApplicationDisplayVersion = 2.4.8
+ApplicationVersion = 20408
+```
+
+`20408` is deliberately numeric for MAUI target packaging and is greater than the prior build code. The metadata change does not itself mean that stores, signing systems, or target devices have accepted the package.
+
+Added:
+
+`tests/CipherNest.UiTests/ReleaseVersionSourceTests.cs`
+
+The version source test guards both `2.4.8` and `20408` and requires project status/changelog wording to keep the candidate explicitly unreleased/unverified until exact-head evidence is recorded.
+
+### Status, changelog, and exhaustive inventories
+
+Updated:
+
+- `PROJECT_STATUS.md`
+- `CHANGELOG.md`
+- `docs/SOURCE_CODE_REFERENCE.md`
+- `docs/TEST_SUITE_REFERENCE.md`
+- `what_changed.md`
+
+The current release line is now documented as **2.4.8 release preparation**, not as a shipped or exact-head-verified release.
+
+The source inventory maps the new Audit resources, updated Audit ViewModel/page responsibilities, localization-service catalog order, and 2.4.8 app metadata.
+
+The test inventory maps both new UI/source test files so the repository's tracked-file documentation contract has canonical ownership for those paths.
+
+### Commits in this continuation before this ledger commit
+
+- `dd6b9405efef87a46def5d0b012616a5cd261bf5` — `feat(localization): add Security Audit neutral catalog`
+- `b5e2d5afd0ea4d56ff8e37726dbaf9ed72b3ffb9` — `feat(localization): add reviewed Hindi Security Audit catalog`
+- `9961fbd82cf57a32cc5fbdbbf42ae34511ad4e35` — `feat(localization): register Security Audit feature catalog`
+- `d7943338ecec52bcb882394ff9a95927fcb07f49` — `feat(localization): cover Security Audit finding presentation`
+- `5d095e5631143fd1a95e46fd1a2223c1eb4d198b` — `feat(localization): translate Security Audit findings into Hindi`
+- `ffa7e31331554a9634a5256bc0a10b15d6d78b28` — `feat(audit): localize Security Audit runtime presentation`
+- `93e07b0a12c495751f90329d869522e931fa0541` — `feat(ui): localize Security Audit page surface`
+- `249e71b1bced4a6eb4ca2d3931ee15de60a83b63` — `test(localization): guard Security Audit translations`
+- `d12d470fb94b7acfb5827fc17a7b44fdd67601d1` — `test(audit): align failure containment guard with localization`
+- `5d64ef094305655444da69df617c602d8c545ea2` — `release: set CipherNest display version to 2.4.8`
+- `2555f907b559f1a339247484a3cb4c7a5c9ca247` — `test(release): guard version 2.4.8 metadata`
+- `3d41843cda760d678dd94b89b3d9ead019d9c48a` — `docs(status): prepare project status for version 2.4.8`
+- `1964b22c8d8d320ece8219b36cbbd65b9f70bd6a` — `docs(changelog): prepare unreleased version 2.4.8`
+- `2b4cec5ab93040156fc2e2fef3ef7dce78d59425` — `docs(source): map Security Audit localization and 2.4.8 metadata`
+- `ea77adb3de0a24e5cd877dec2e54913685173128` — `docs(tests): map Audit localization and 2.4.8 version guards`
+
+All commits use the sign-off identity `Sanskar <sanskarin@outlook.in>`.
+
+### Verification status
+
+No exact-head pass claim is made by this ledger entry. Historical 555-test/platform/CodeQL evidence remains tied only to its documented historical candidate.
+
+The final head after this continuation still requires observable exact-SHA automated test/format/platform/CodeQL evidence plus the already-documented physical-device, lifecycle, clipboard, screenshot/privacy, accessibility/translated-layout, signing/notarization/store, dependency/license, and independent professional security-review gates.
+
+### Explicit non-claims for 2.4.8 preparation
+
+This continuation does **not** claim that:
+
+- version 2.4.8 is already shipped;
+- the newest exact head has passed all configured CI/platform/CodeQL gates;
+- every remaining UI literal is translated;
+- physical biometric/clipboard/screenshot/accessibility/store validation is complete;
+- an independent professional security audit is complete.
