@@ -2,7 +2,7 @@
 
 This is the canonical file-by-file map of the automated test projects under `tests/`. It records what each test source protects and how unit, integration, and UI/source-contract coverage divide responsibility.
 
-Inventory baseline: Transfer localization regression head `0eec0f1e60de5ecf4576820935b8684ead42574b` on 2026-08-20. New test files must be added here in the same change series.
+Inventory baseline: version 2.4.8 release-preparation continuation on 2026-08-24. New test files must be added here in the same change series.
 
 > A test file documents intended regression coverage. Its presence is not evidence that a later commit passed. Exact-head pass claims require observable execution for that immutable SHA.
 
@@ -94,7 +94,8 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/AttachmentMutationSourceTests.cs` — attachment mutation authorization/session/save ordering.
 - `tests/CipherNest.UiTests/AttachmentStagingSourceTests.cs` — collision-safe bounded staging.
 - `tests/CipherNest.UiTests/AttachmentStoreSecuritySourceTests.cs` — encrypted attachment-store security invariants.
-- `tests/CipherNest.UiTests/AuditFailureContainmentSourceTests.cs` — audit failure containment/redacted errors.
+- `tests/CipherNest.UiTests/AuditFailureContainmentSourceTests.cs` — audit failure containment/redacted errors and localized safe-failure publication.
+- `tests/CipherNest.UiTests/AuditLocalizationSourceTests.cs` — Security Audit feature-catalog registration, XAML migration, runtime summary/finding/severity localization, exact neutral/Hindi key parity, reviewed Hindi values, and format-placeholder preservation.
 - `tests/CipherNest.UiTests/AuthenticationLocalizationCatalogSourceTests.cs` — authentication English/Hindi key/value coverage.
 - `tests/CipherNest.UiTests/AuthenticationLocalizationRoadmapSourceTests.cs` — authentication localization scope/non-claims.
 - `tests/CipherNest.UiTests/BackupArchiveSourceTests.cs` — source archive count/path/size defenses.
@@ -125,6 +126,7 @@ Project: `tests/CipherNest.UiTests/CipherNest.UiTests.csproj` — XAML/source/do
 - `tests/CipherNest.UiTests/OnboardingFailureContainmentSourceTests.cs` — onboarding failure containment/sensitive-state cleanup.
 - `tests/CipherNest.UiTests/OnboardingLocalizationSourceTests.cs` — onboarding/recovery security localization.
 - `tests/CipherNest.UiTests/OnboardingPassphraseBoundsSourceTests.cs` — onboarding passphrase bounds before expensive work.
+- `tests/CipherNest.UiTests/ReleaseVersionSourceTests.cs` — guards 2.4.8 display/build metadata and requires release documentation to keep the candidate explicitly unreleased/unverified until exact-head evidence exists.
 - `tests/CipherNest.UiTests/RepositoryDocumentationInventorySourceTests.cs` — canonical document/hub presence plus exhaustive `git ls-files` mapping of every tracked path to `REPOSITORY_FILE_REFERENCE.md`, `SOURCE_CODE_REFERENCE.md`, or `TEST_SUITE_REFERENCE.md`; representative layer/suite assertions remain as secondary ownership checks.
 - `tests/CipherNest.UiTests/RepositoryUiStructureTests.cs` — expected pages/ViewModels/routes/resources/project structure.
 - `tests/CipherNest.UiTests/RestoreCompletionStateSourceTests.cs` — restore completion state only after required completion/reset.
