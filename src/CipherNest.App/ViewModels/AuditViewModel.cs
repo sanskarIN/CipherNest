@@ -41,15 +41,17 @@ public partial class AuditViewModel : ObservableObject
     [RelayCommand]
     public async Task RunAsync()
     {
-        if (!_vault.IsUnlocked)
-        {
-            await Shell.Current.GoToAsync("//unlock");
-            return;
-        }
-
+        if (IsBusy) return;
         IsBusy = true;
         try
         {
+            if (!_vault.IsUnlocked)
+            {
+                ClearSensitiveState();
+                await Shell.Current.GoToAsync("//unlock");
+                return;
+            }
+
             var items = await _vault.GetItemsAsync();
             var findings = _audit.Analyze(items, DateTimeOffset.UtcNow);
             Findings.Clear();
@@ -75,6 +77,12 @@ public partial class AuditViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    public void ClearSensitiveState()
+    {
+        Findings.Clear();
+        Summary = AuditText("AuditInitialSummary");
     }
 
     [RelayCommand]
