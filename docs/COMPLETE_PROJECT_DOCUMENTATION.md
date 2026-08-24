@@ -6,6 +6,8 @@ This is the consolidated end-to-end reference for the current CipherNest reposit
 
 > **Security status:** CipherNest has **not** completed an independent professional security audit. It must not be described as unhackable, military-grade, 100% secure, capable of guaranteed managed-memory erasure, or capable of guaranteed physical-media sanitization.
 
+> **Release status:** version **2.4.8** is current unreleased release-preparation metadata. It is not a shipped or exact-head-verified release until the immutable 2.4.8 candidate completes the configured automated/platform gates and documented external validation.
+
 ---
 
 ## Table of contents
@@ -70,7 +72,9 @@ This is the consolidated end-to-end reference for the current CipherNest reposit
 | Field | Value |
 |---|---|
 | Product | **CipherNest** |
-| Current source version | **0.1.0** |
+| Current source version | **2.4.8 (unreleased release preparation)** |
+| MAUI application/build version | **20408** |
+| Windows package version | **2.4.8.0** |
 | Primary language | C# |
 | Runtime/framework | .NET 10 / .NET MAUI |
 | Architecture | Local-first encrypted vault |
@@ -84,7 +88,7 @@ This is the consolidated end-to-end reference for the current CipherNest reposit
 | Optional development support | `https://buymeacoffee.com/sanskarIN` |
 | Creator watermark | `Made by the Sanskar` |
 
-Public application/project metadata used by source is centralized through `CipherNest.Shared.AppConstants` so links/emails do not need to be duplicated throughout code.
+Public application/project metadata used by source is centralized through `CipherNest.Shared.AppConstants` so links/emails do not need to be duplicated throughout code. Release-version consistency is guarded across `AppConstants.Version`, MAUI display/build metadata, the Windows package identity, and current release documentation.
 
 ---
 
@@ -133,7 +137,7 @@ CipherNest is designed to provide:
 
 # 4. Explicit non-goals and deferred scope
 
-The current release does not claim completed support for:
+The current source/release-preparation line does not claim completed support for:
 
 - CipherNest-hosted cloud synchronization;
 - user accounts;
@@ -862,6 +866,8 @@ The application audit can report:
 - missing titles;
 - overdue review dates.
 
+The Security Audit presentation now uses neutral English and reviewed Hindi feature resources for the page title/actions, summaries, contained failure state, all current finding-kind labels, reviewed finding explanations, and culture-aware severity formatting. The Infrastructure audit engine remains language-neutral so changing UI culture does not change which findings are produced.
+
 TOTP seeds are deliberately excluded from password weakness/reuse heuristics because they are authentication seeds rather than user-chosen passwords. Exact duplicate semantics can still include TOTP parameters.
 
 The in-app audit is **not** an independent security audit of CipherNest itself.
@@ -1293,11 +1299,17 @@ English
 Hindi
 ```
 
-Neutral English is the fallback catalog. A reviewed `hi-IN` satellite catalog exists for the currently resource-backed interface, including security-sensitive wording that was included in that migration/review.
+Neutral English is the fallback. The primary `AppStrings` catalog and reviewed `hi-IN` satellite cover shared and previously migrated interface strings. Ordered feature-catalog pairs currently cover:
+
+- Security Audit (`AuditStrings.resx` / `AuditStrings.hi-IN.resx`);
+- Trash/permanent deletion (`TrashStrings.resx` / `TrashStrings.hi-IN.resx`);
+- CSV/guarded plaintext Transfer (`TransferStrings.resx` / `TransferStrings.hi-IN.resx`).
+
+The Security Audit feature catalog includes current finding labels/explanations, count/no-result/failure summaries, and severity formatting while the audit engine remains culture-neutral. Trash preserves current-master/recovery-key/destructive-remnant meanings. Transfer preserves the exact `EXPORT PLAINTEXT` authorization token while translating surrounding guidance and safety text.
 
 Not every remaining UI literal has been migrated to resources. Therefore CipherNest does not claim a completely translated Hindi UI.
 
-Language preference must not alter encrypted formats or stored vault semantics.
+Language preference must not alter encrypted formats, stored vault semantics, authorization rules, destructive confirmation tokens, or audit detection behavior.
 
 New TOTP URI warning/error strings must remain security-accurate if/when migrated into additional resource catalogs.
 
@@ -1333,6 +1345,8 @@ It intentionally does not record:
 - filesystem paths likely to identify user content.
 
 Sensitive UI paths use fixed user-facing text plus the redacted reporter instead of surfacing raw exception context.
+
+The redacted developer diagnostic text resolves its app version through `AppConstants.Version`, which is synchronized to the current 2.4.8 product/source version by release regression tests.
 
 See `privacy/DIAGNOSTICS.md` and `PRIVACY.md`.
 
@@ -1520,6 +1534,8 @@ Protect source/documentation/workflow invariants without requiring a running MAU
 - CI/workflow/script presence;
 - TOTP URI local-only architecture/DI/source safety;
 - sensitive TOTP URI field-clearing/copy-path behavior;
+- Security Audit English/Hindi feature-catalog parity and presentation mapping;
+- 2.4.8 package/runtime/Windows/documentation version consistency;
 - security-sensitive source ordering/invariants.
 
 Source tests are regression signals, not runtime platform proof.
@@ -1571,7 +1587,7 @@ iOS RID: iossimulator-arm64
 Mac Catalyst RID: maccatalyst-arm64
 ```
 
-The August 18 TOTP setup-URI implementation/documentation commits are later than that immutable baseline. They require their own exact-head configured CI/CodeQL evidence before the newer head can be described as an exact-head verified release candidate.
+The current 2.4.8 preparation commits are later than that immutable baseline. They require their own exact-head configured CI/CodeQL/platform evidence before the newer head can be described as an exact-head verified release candidate.
 
 See `verification/CI_GATES.md`, `verification/TOTP_URI_INTEROPERABILITY_2026_08_18.md`, and the verification history.
 
@@ -1677,13 +1693,17 @@ Current version surfaces are independent:
 
 | Surface | Current version/value |
 |---|---|
-| Product | `0.1.0` |
+| Product | `2.4.8` |
+| MAUI application/build | `20408` |
+| Windows package | `2.4.8.0` |
 | Database schema | `1` |
 | Core crypto envelope | `1` |
 | Vault-header document | current 2; minimum supported 1 |
 | Attachment container | magic `CNAT0001` |
 | Backup container | version 2 / `CNBK0002` |
 | TOTP setup URI | external text interoperability; no CipherNest persisted-format version added |
+
+The product/package release version is independent from persisted format/schema identifiers. Preparing 2.4.8 therefore does not require a database or cryptographic-format bump when those structures remain compatible.
 
 Compatibility rule: never silently change an incompatible persisted structure under an existing version identifier.
 
@@ -1713,6 +1733,14 @@ Canonical format docs:
 # 42. Release and packaging
 
 A successful developer build is not a release.
+
+Current prepared package identity is:
+
+```text
+Product/source: 2.4.8
+MAUI application/build: 20408
+Windows package: 2.4.8.0
+```
 
 Release candidate work includes:
 
@@ -2111,4 +2139,4 @@ The ordered source/release roadmap is in `NEXT_STEPS.md`.
 
 ## Final documentation note
 
-The pre-documentation implementation baseline `8566980ff981b8b4072f9010ec7b7ba54aba051e` completed the configured hosted CI and CodeQL paths successfully with **555 passing tests** and successful Windows default/funding-disabled, Android, iOS simulator, and Mac Catalyst Release compilation. The August 18 TOTP setup-URI continuation occurs after that immutable baseline and has added/expanded source, tests, documentation, threat/release gates, and a dedicated verification record. The newer final head must execute its own configured CI/CodeQL gates before it is called an exact-head verified release candidate; historical evidence is not silently inherited.
+The pre-documentation implementation baseline `8566980ff981b8b4072f9010ec7b7ba54aba051e` completed the configured hosted CI and CodeQL paths successfully with **555 passing tests** and successful Windows default/funding-disabled, Android, iOS simulator, and Mac Catalyst Release compilation. The current 2.4.8 release-preparation continuation occurs after that immutable baseline and has added/expanded source, tests, localization, release/version metadata, packaging synchronization, and documentation. The newer final head must execute its own configured CI/CodeQL/platform gates before it is called an exact-head verified release candidate; historical evidence is not silently inherited.
