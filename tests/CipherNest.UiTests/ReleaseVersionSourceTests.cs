@@ -9,14 +9,12 @@ public sealed class ReleaseVersionSourceTests
     {
         var projectPath = PathAt("src", "CipherNest.App", "CipherNest.App.csproj");
         var document = XDocument.Load(projectPath);
-        var properties = document.Root!
-            .Elements("PropertyGroup")
-            .SelectMany(static group => group.Elements())
-            .ToDictionary(static element => element.Name.LocalName, static element => element.Value, StringComparer.Ordinal);
+        var displayVersion = document.Descendants("ApplicationDisplayVersion").Single().Value;
+        var applicationVersion = document.Descendants("ApplicationVersion").Single().Value;
 
-        Assert.Equal("2.4.8", properties["ApplicationDisplayVersion"]);
-        Assert.Equal("20408", properties["ApplicationVersion"]);
-        Assert.True(int.TryParse(properties["ApplicationVersion"], out var buildCode));
+        Assert.Equal("2.4.8", displayVersion);
+        Assert.Equal("20408", applicationVersion);
+        Assert.True(int.TryParse(applicationVersion, out var buildCode));
         Assert.True(buildCode > 1);
     }
 
