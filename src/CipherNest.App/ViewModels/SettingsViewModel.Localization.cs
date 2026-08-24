@@ -15,29 +15,58 @@ public partial class SettingsViewModel
 
     public async Task LoadLanguageAsync()
     {
-        var preferences = await _settings.LoadAsync();
-        SelectedLanguage = preferences.Language;
-        ServiceProviderHelper.GetRequiredService<ILocalizationService>().Apply(SelectedLanguage);
+        try
+        {
+            var preferences = await _settings.LoadAsync();
+            SelectedLanguage = preferences.Language;
+            ServiceProviderHelper.GetRequiredService<ILocalizationService>().Apply(SelectedLanguage);
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.Language.Load", ex);
+            SelectedLanguage = AppLanguagePreference.System;
+            StatusMessage = SafeSettingsText("SettingsLoadFailure", "Language preference could not be loaded safely. CipherNest kept the current interface language where possible.");
+        }
     }
 
     [RelayCommand]
     private async Task SaveLanguageAsync()
     {
-        var preferences = await _settings.LoadAsync();
-        await _settings.SaveAsync(preferences with { Language = SelectedLanguage });
-
-        var localization = ServiceProviderHelper.GetRequiredService<ILocalizationService>();
-        localization.Apply(SelectedLanguage);
-        StatusMessage = SelectedLanguage switch
+        try
         {
-            AppLanguagePreference.English => localization.Get("EnglishPreferenceSaved"),
-            AppLanguagePreference.Hindi => localization.Get("HindiPreferenceSaved"),
-            _ => localization.Get("SystemPreferenceSaved")
-        };
+            var preferences = await _settings.LoadAsync();
+            await _settings.SaveAsync(preferences with { Language = SelectedLanguage });
+
+            var localization = ServiceProviderHelper.GetRequiredService<ILocalizationService>();
+            localization.Apply(SelectedLanguage);
+            StatusMessage = SelectedLanguage switch
+            {
+                AppLanguagePreference.English => localization.Get("EnglishPreferenceSaved"),
+                AppLanguagePreference.Hindi => localization.Get("HindiPreferenceSaved"),
+                _ => localization.Get("SystemPreferenceSaved")
+            };
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Settings.Language.Save", ex);
+            StatusMessage = SafeSettingsText("SettingsSaveFailure", "Language preference could not be saved or applied safely. The previous setting remains authoritative.");
+        }
     }
 
     private static string SettingsText(string key) =>
         ServiceProviderHelper.GetRequiredService<ILocalizationService>().Get(key);
+
+    private static string SafeSettingsText(string key, string fallback)
+    {
+        try
+        {
+            return SettingsText(key);
+        }
+        catch
+        {
+            return fallback;
+        }
+    }
 
     private static string SettingsFormat(string key, params object[] args) =>
         string.Format(CultureInfo.CurrentUICulture, SettingsText(key), args);
