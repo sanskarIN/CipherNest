@@ -26,4 +26,11 @@
   <data name="TrashEmptiedStatus" xml:space="preserve"><value>Trash emptied. CipherNest removed its encrypted records and attachment containers; physical storage remnants may remain outside application control.</value></data>
   <data name="TrashMasterRequiredStatus" xml:space="preserve"><value>Enter the current master passphrase before permanent deletion. Recovery keys are not accepted for this destructive confirmation.</value></data>
   <data name="TrashMasterConfirmationFailedStatus" xml:space="preserve"><value>Master-passphrase confirmation failed. Nothing was permanently deleted.</value></data>
+  <data name="TrashLoadFailureStatus" xml:space="preserve"><value>Trash could not be loaded safely. Lock and unlock the vault, then retry.</value></data>
+  <data name="TrashRestoreFailureStatus" xml:space="preserve"><value>The trashed item could not be restored safely. Reload Trash before retrying.</value></data>
+  <data name="TrashDeleteConfirmFailureStatus" xml:space="preserve"><value>Permanent-deletion confirmation could not be shown safely. Nothing was intentionally deleted.</value></data>
+  <data name="TrashDeleteFailureStatus" xml:space="preserve"><value>Permanent deletion could not be completed safely. Reload Trash before retrying.</value></data>
+  <data name="TrashEmptyConfirmFailureStatus" xml:space="preserve"><value>Empty-trash confirmation could not be shown safely. No empty-trash operation was started.</value></data>
+  <data name="TrashEmptyFailureStatus" xml:space="preserve"><value>Trash could not be emptied completely. Some items may already have been permanently deleted; reload Trash before retrying.</value></data>
+  <data name="TrashMasterConfirmationErrorStatus" xml:space="preserve"><value>Master-passphrase confirmation could not be completed safely. Nothing was intentionally deleted.</value></data>
 </root>
