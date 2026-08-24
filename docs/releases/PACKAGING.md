@@ -16,14 +16,16 @@ The executable project is:
 src/CipherNest.App/CipherNest.App.csproj
 ```
 
-Current project metadata:
+Current version 2.4.8 release-preparation metadata:
 
 | Setting | Current value/source |
 |---|---|
 | Product title | `CipherNest` |
 | Application ID | `in.sanskar.ciphernest` |
-| Display version | `0.1.0` |
-| Build/application version | `1` |
+| Display version | `2.4.8` |
+| Build/application version | `20408` |
+| Shared runtime version | `2.4.8` |
+| Windows package version | `2.4.8.0` |
 | Android minimum | API 26 |
 | iOS minimum | 15.0 |
 | Mac Catalyst minimum | 15.0 |
@@ -31,7 +33,7 @@ Current project metadata:
 | Default Android RID | `android-arm64` |
 | Optional funding build property | `CipherNestEnableFundingLink` |
 
-Before a public release, deliberately choose the version/build number and reconcile every platform-specific manifest with the project metadata. Do not assume a store accepts stale or mismatched versions.
+The values above prepare version 2.4.8 but do not mean that 2.4.8 has been shipped or exact-head verified. Before a public release, freeze one immutable candidate, run all configured gates against that exact SHA, reconcile every platform-specific manifest with the project metadata, and record signing/store/device evidence. Do not assume a store accepts stale or mismatched versions.
 
 ## 2. Artifact matrix
 
@@ -124,7 +126,7 @@ src/CipherNest.App/Platforms/Windows/App.xaml.cs
 src/CipherNest.App/Platforms/Windows/Package.appxmanifest
 ```
 
-`Package.appxmanifest` controls the packaged Windows identity/capabilities and currently declares publisher `CN=Sanskar`, package version `0.1.0.0`, minimum Windows `10.0.19041.0`, and `runFullTrust`. A certificate used to sign an MSIX must match the package publisher identity required by the release channel.
+`Package.appxmanifest` controls the packaged Windows identity/capabilities and currently declares publisher `CN=Sanskar`, package version `2.4.8.0`, minimum Windows `10.0.19041.0`, and `runFullTrust`. A certificate used to sign an MSIX must match the package publisher identity required by the release channel.
 
 ### 3.7 MAUI packaging resources
 
@@ -140,6 +142,12 @@ src/CipherNest.App/Resources/Images/ciphernest_logo.svg
 src/CipherNest.App/Resources/Images/ciphernest_logo_dark.svg
 src/CipherNest.App/Resources/Localization/AppStrings.resx
 src/CipherNest.App/Resources/Localization/AppStrings.hi-IN.resx
+src/CipherNest.App/Resources/Localization/AuditStrings.resx
+src/CipherNest.App/Resources/Localization/AuditStrings.hi-IN.resx
+src/CipherNest.App/Resources/Localization/TrashStrings.resx
+src/CipherNest.App/Resources/Localization/TrashStrings.hi-IN.resx
+src/CipherNest.App/Resources/Localization/TransferStrings.resx
+src/CipherNest.App/Resources/Localization/TransferStrings.hi-IN.resx
 src/CipherNest.App/Resources/Raw/wordlist_notice.txt
 src/CipherNest.App/Resources/Strings/AppResources.resx
 src/CipherNest.App/Resources/Styles/Colors.xaml
@@ -326,7 +334,7 @@ This build property changes the compiled app surface. It does not remove reposit
 
 ## 8. Windows — unpackaged `.exe`
 
-The current repository already verifies the Windows target with `win-x64` and `WindowsPackageType=None`.
+The current repository already verifies the Windows target with `win-x64` and `WindowsPackageType=None` on its documented historical verified baseline. The current 2.4.8 candidate must obtain its own exact-head result.
 
 ### 8.1 Framework-dependent unpackaged executable
 
@@ -383,7 +391,7 @@ The packaged Windows identity is defined by:
 src/CipherNest.App/Platforms/Windows/Package.appxmanifest
 ```
 
-Current publisher is `CN=Sanskar`. The signing certificate and package identity must be compatible with the selected distribution channel.
+Current publisher is `CN=Sanskar` and the prepared package version is `2.4.8.0`. The signing certificate and package identity must be compatible with the selected distribution channel.
 
 ### 9.1 Inspect available signing certificates
 
@@ -665,12 +673,15 @@ Before each release candidate:
 
 1. choose the semantic/display version;
 2. choose a monotonically valid platform build/version code;
-3. update `ApplicationDisplayVersion` and `ApplicationVersion` in `CipherNest.App.csproj` as required;
+3. update `AppConstants.Version`, `ApplicationDisplayVersion`, and `ApplicationVersion` together;
 4. reconcile Windows `Package.appxmanifest` identity version/publisher with the intended Windows package channel;
 5. ensure Android package ID/version code/version name resolve as intended;
 6. ensure Apple bundle identifier/version/build and provisioning profiles refer to the same app identity;
-7. rebuild every final artifact from the exact tagged candidate;
-8. do not reuse old output directories as evidence for a new source commit.
+7. run the release-version regression guards and current-configuration documentation checks;
+8. rebuild every final artifact from the exact tagged candidate;
+9. do not reuse old output directories as evidence for a new source commit.
+
+For the current preparation, the synchronized values are `2.4.8`, build code `20408`, and Windows package identity version `2.4.8.0`.
 
 ## 18. Release artifact discovery
 
@@ -753,15 +764,15 @@ Do not mark a package ready merely because it exists on disk.
 
 ## 21. Suggested artifact naming
 
-Keep generated SDK filenames if a store/tool requires them. For separately archived release copies, use an unambiguous naming scheme such as:
+Keep generated SDK filenames if a store/tool requires them. For separately archived 2.4.8 release copies, use an unambiguous naming scheme such as:
 
 ```text
-CipherNest-0.1.0-win-x64-unpackaged.zip
-CipherNest-0.1.0-win-x64.msix
-CipherNest-0.1.0-android-arm64.apk
-CipherNest-0.1.0-android.aab
-CipherNest-0.1.0-ios-arm64.ipa
-CipherNest-0.1.0-maccatalyst-arm64.pkg
+CipherNest-2.4.8-win-x64-unpackaged.zip
+CipherNest-2.4.8-win-x64.msix
+CipherNest-2.4.8-android-arm64.apk
+CipherNest-2.4.8-android.aab
+CipherNest-2.4.8-ios-arm64.ipa
+CipherNest-2.4.8-maccatalyst-arm64.pkg
 ```
 
 Do not rename a signed/store artifact if the distribution tool expects its generated name. The provenance record should map the original generated path to any archived release filename.
