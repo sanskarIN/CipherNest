@@ -10,6 +10,7 @@ public sealed class LocalizationService : ILocalizationService
     private static readonly ResourceManager PrimaryResources = new("CipherNest.App.Resources.Localization.AppStrings", typeof(LocalizationService).Assembly);
     private static readonly ResourceManager[] FeatureResources =
     [
+        new("CipherNest.App.Resources.Localization.AuditStrings", typeof(LocalizationService).Assembly),
         new("CipherNest.App.Resources.Localization.TrashStrings", typeof(LocalizationService).Assembly),
         new("CipherNest.App.Resources.Localization.TransferStrings", typeof(LocalizationService).Assembly)
     ];
