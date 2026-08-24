@@ -342,44 +342,84 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task ExportBackupAsync()
     {
+        if (IsBusy) return;
         if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
         if (BackupPassphrase.Length is < 12 or > MaximumPassphraseCharacters) { StatusMessage = SettingsFormat("SettingsBackupPassphraseRangeFormat", MaximumPassphraseCharacters); return; }
 
         var backupPassphrase = BackupPassphrase;
         BackupPassphrase = string.Empty;
+        IsBusy = true;
         try
         {
-            var confirm = await Shell.Current.DisplayAlertAsync(
-                SettingsText("SettingsBackupConfirmTitle"),
-                SettingsText("SettingsBackupConfirmBody"),
-                SettingsText("SettingsBackupConfirmAccept"),
-                SettingsText("CancelButton"));
+            bool confirm;
+            try
+            {
+                confirm = await Shell.Current.DisplayAlertAsync(
+                    SettingsText("SettingsBackupConfirmTitle"),
+                    SettingsText("SettingsBackupConfirmBody"),
+                    SettingsText("SettingsBackupConfirmAccept"),
+                    SettingsText("CancelButton"));
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Settings.BackupExport.Confirm", ex);
+                StatusMessage = SettingsText("SettingsBackupFailure");
+                return;
+            }
             if (!confirm) return;
 
-            IsBusy = true;
+            string path;
             try
             {
                 await _vault.LockAsync();
                 var directory = Path.Combine(FileSystem.Current.AppDataDirectory, "Backups");
                 Directory.CreateDirectory(directory);
-                var path = Path.Combine(directory, $"CipherNest-{DateTimeOffset.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}{AppConstants.BackupExtension}");
+                path = Path.Combine(directory, $"CipherNest-{DateTimeOffset.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}{AppConstants.BackupExtension}");
                 await _backup.ExportEncryptedAsync(path, backupPassphrase);
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Settings.BackupExport", ex);
+                StatusMessage = SettingsText("SettingsBackupFailure");
+                return;
+            }
+
+            // From this point onward the encrypted backup exists. Secondary reminder/share/navigation
+            // failures must not overwrite that successful creation state with a false backup failure.
+            StatusMessage = SettingsText("SettingsBackupCreatedStatus");
+
+            try
+            {
                 _loadedPreferences = (await _settings.LoadAsync()) with { LastSuccessfulBackupUtc = DateTimeOffset.UtcNow };
                 await _settings.SaveAsync(_loadedPreferences);
-                StatusMessage = SettingsText("SettingsBackupCreatedStatus");
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Settings.BackupExport.Reminder", ex);
+            }
+
+            try
+            {
                 await Share.Default.RequestAsync(new ShareFileRequest(SettingsText("SettingsBackupShareTitle"), new ShareFile(path)));
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Settings.BackupExport.Share", ex);
+            }
+
+            try
+            {
                 await Shell.Current.GoToAsync("//unlock");
             }
-            finally { IsBusy = false; }
-        }
-        catch (Exception ex)
-        {
-            _exceptions.Report("Settings.BackupExport", ex);
-            StatusMessage = SettingsText("SettingsBackupFailure");
+            catch (Exception ex)
+            {
+                _exceptions.Report("Settings.BackupExport.Navigation", ex);
+            }
         }
         finally
         {
             backupPassphrase = string.Empty;
+            IsBusy = false;
         }
     }
 
