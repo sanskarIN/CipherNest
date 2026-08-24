@@ -16,6 +16,7 @@ public partial class VaultPage : ContentPage
         base.OnAppearing();
         if (BindingContext is VaultViewModel vm)
         {
+            vm.Activate();
             await vm.LoadAsync();
         }
     }
