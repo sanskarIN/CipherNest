@@ -74,6 +74,7 @@ public partial class GeneratorViewModel : ObservableObject
         catch (Exception ex)
         {
             _exceptions.Report("Generator.LoadDefaults", ex);
+            ClearGeneratedState();
             ErrorMessage = "Generator defaults could not be loaded safely. Review settings access and try again.";
         }
     }
@@ -102,7 +103,14 @@ public partial class GeneratorViewModel : ObservableObject
         }
         catch (ArgumentException)
         {
+            ClearGeneratedState();
             ErrorMessage = "The generator settings are invalid. Review the length, word count, and enabled character groups.";
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report("Generator.Generate", ex);
+            ClearGeneratedState();
+            ErrorMessage = "A generated value could not be created safely. Review the generator settings and try again.";
         }
     }
 
@@ -120,6 +128,12 @@ public partial class GeneratorViewModel : ObservableObject
             _exceptions.Report("Generator.Copy", ex);
             ErrorMessage = "The generated value could not be copied safely. Generate a new value or retry after checking clipboard access.";
         }
+    }
+
+    private void ClearGeneratedState()
+    {
+        GeneratedValue = string.Empty;
+        StrengthLabel = string.Empty;
     }
 
     [RelayCommand] private async Task BackAsync() => await Shell.Current.GoToAsync("//vault");
