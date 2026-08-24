@@ -19,6 +19,7 @@ public partial class VaultViewModel : ObservableObject
     private CancellationTokenSource? _searchCts;
     private IReadOnlyList<VaultItem> _lastResults = Array.Empty<VaultItem>();
     private IReadOnlyList<VaultItem> _orderedFilteredResults = Array.Empty<VaultItem>();
+    private bool _suppressSearch;
 
     public ObservableCollection<VaultItem> Items { get; } = [];
     public IReadOnlyList<string> SortModes { get; } = ["Favorites & title", "Recently used", "Recently modified", "Title"];
@@ -67,8 +68,8 @@ public partial class VaultViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel();
-        _searchCts?.Dispose();
+        if (_suppressSearch) return;
+        CancelPendingSearch();
         _searchCts = new CancellationTokenSource();
         _ = SearchDelayedAsync(value, _searchCts.Token);
     }
@@ -80,7 +81,14 @@ public partial class VaultViewModel : ObservableObject
     [RelayCommand]
     public async Task LoadAsync()
     {
-        if (!_vault.IsUnlocked) { await Shell.Current.GoToAsync("//unlock"); return; }
+        if (IsBusy) return;
+        if (!_vault.IsUnlocked)
+        {
+            ClearSensitiveState();
+            await Shell.Current.GoToAsync("//unlock");
+            return;
+        }
+
         IsBusy = true;
         ErrorMessage = string.Empty;
         try
@@ -112,6 +120,7 @@ public partial class VaultViewModel : ObservableObject
         catch (Exception ex)
         {
             _exceptions.Report("Vault.Load", ex);
+            ClearResultState();
             ErrorMessage = "Could not load the vault safely. Lock and unlock again, then retry.";
         }
         finally { IsBusy = false; }
@@ -138,11 +147,7 @@ public partial class VaultViewModel : ObservableObject
         await _vault.LockAsync();
         try { await _clipboard.ClearAsync(); }
         catch (Exception exception) { _exceptions.Report("Vault.ManualLock.Clipboard", exception); }
-        Items.Clear();
-        _lastResults = Array.Empty<VaultItem>();
-        _orderedFilteredResults = Array.Empty<VaultItem>();
-        CanLoadMore = false;
-        ResultCountMessage = string.Empty;
+        ClearSensitiveState();
         await Shell.Current.GoToAsync("//unlock");
     }
 
@@ -151,6 +156,27 @@ public partial class VaultViewModel : ObservableObject
     [RelayCommand] private async Task TrashAsync() => await Shell.Current.GoToAsync("//trash");
     [RelayCommand] private async Task SettingsAsync() => await Shell.Current.GoToAsync("//settings");
     [RelayCommand] private async Task AboutAsync() => await Shell.Current.GoToAsync("//about");
+
+    public void ClearSensitiveState()
+    {
+        CancelPendingSearch();
+        ClearResultState();
+
+        _suppressSearch = true;
+        try
+        {
+            SearchText = string.Empty;
+        }
+        finally
+        {
+            _suppressSearch = false;
+        }
+
+        CollectionFilter = string.Empty;
+        ErrorMessage = string.Empty;
+        BackupReminderMessage = string.Empty;
+        ReviewReminderMessage = string.Empty;
+    }
 
     private async Task SearchDelayedAsync(string query, CancellationToken cancellationToken)
     {
@@ -207,5 +233,22 @@ public partial class VaultViewModel : ObservableObject
         ResultCountMessage = _orderedFilteredResults.Count == 0
             ? "No matching items."
             : $"Showing {Items.Count:N0} of {_orderedFilteredResults.Count:N0} matching item(s).";
+    }
+
+    private void CancelPendingSearch()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = null;
+    }
+
+    private void ClearResultState()
+    {
+        Items.Clear();
+        _lastResults = Array.Empty<VaultItem>();
+        _orderedFilteredResults = Array.Empty<VaultItem>();
+        CanLoadMore = false;
+        IsEmpty = true;
+        ResultCountMessage = string.Empty;
     }
 }
