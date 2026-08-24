@@ -7,22 +7,22 @@ CipherNest ships neutral English resources and reviewed Hindi (`hi-IN`) satellit
 - `AppLanguagePreference` persists `System`, `English`, or `Hindi`.
 - `Resources/Localization/AppStrings.resx` is the primary neutral English catalog for shared and previously migrated strings.
 - `Resources/Localization/AppStrings.hi-IN.resx` is the reviewed Hindi satellite catalog for the same primary-catalog keys.
-- Feature catalogs keep cohesive workflows maintainable without turning `AppStrings` into one unbounded file. Current feature pairs are `TrashStrings.resx` / `TrashStrings.hi-IN.resx` and `TransferStrings.resx` / `TransferStrings.hi-IN.resx`.
+- Feature catalogs keep cohesive workflows maintainable without turning `AppStrings` into one unbounded file. Current feature pairs are `AuditStrings.resx` / `AuditStrings.hi-IN.resx`, `TrashStrings.resx` / `TrashStrings.hi-IN.resx`, and `TransferStrings.resx` / `TransferStrings.hi-IN.resx`.
 - `LocalizationService` owns UI-culture selection and ordered resource lookup: the primary `AppStrings` catalog is checked first, then registered feature catalogs. If no catalog contains a key, the service returns the key name so missing resources remain visible during development instead of becoming blank text.
-- Each culture-specific feature catalog must retain exact key parity with its neutral feature catalog; focused source tests enforce this for Trash and Transfer.
+- Each culture-specific feature catalog must retain exact key parity with its neutral feature catalog; focused source tests enforce this for Security Audit, Trash, and Transfer.
 - `Localization/TranslateExtension.cs` provides a reusable XAML markup extension so fixed page text and semantic/accessibility descriptions can resolve the active reviewed catalog without duplicating `ResourceManager` access in views.
 - `TranslateExtension` is marked `AcceptEmptyServiceProvider` because it does not consume XAML's supplied service-provider context; its lookup deliberately uses the registered application localization service instead.
-- Dynamic TOTP period/validity text, TOTP operation status/error messages, Unlock workflow statuses, onboarding strength labels, vault-creation statuses, Settings security-operation statuses, Trash destructive-action statuses, and Transfer import/plaintext-export statuses resolve reviewed resources and use `CultureInfo.CurrentUICulture` where formatting is required.
+- Dynamic TOTP period/validity text, TOTP operation status/error messages, Unlock workflow statuses, onboarding strength labels, vault-creation statuses, Settings security-operation statuses, Security Audit summaries/findings/severity, Trash destructive-action statuses, and Transfer import/plaintext-export statuses resolve reviewed resources and use `CultureInfo.CurrentUICulture` where formatting is required.
 - Explicit English maps to `en-US`; explicit Hindi maps to `hi-IN`; System preserves the process-start system UI culture.
 - The saved preference is applied at startup/resume and when the user changes it in Settings.
 - Missing culture-specific translations fall back to neutral English through normal `ResourceManager` fallback within the catalog that owns the key.
 - Markup-extension values are resolved when the XAML element is constructed. A page that was already constructed before a language change can retain its existing fixed text until that page is reconstructed; do not claim live in-place translation for every existing visual tree.
 - `LocalizationSourceTests` protects primary-catalog parity, preference wiring, fallback behavior, and honest completeness wording.
-- Dedicated localization source tests guard TOTP, Unlock, onboarding/recovery, About security/privacy, Settings, Trash, and Transfer resource catalogs, XAML usage, dynamic/status formatting, fail-safe messages, required tokens/placeholders, and removal of selected previous hard-coded security copy.
+- Dedicated localization source tests guard TOTP, Unlock, onboarding/recovery, About security/privacy, Settings, Security Audit, Trash, and Transfer resource catalogs, XAML usage, dynamic/status formatting, fail-safe messages, required tokens/placeholders, and removal of selected previous hard-coded security copy.
 
 ## Reviewed Hindi scope
 
-The reviewed Hindi resources cover the resource-backed product/title/navigation controls already represented by `AppStrings` plus the security-sensitive local-only, audit-status, recovery-limitation, language-preference status messages, migrated TOTP workflow, initial Unlock workflow, initial vault-onboarding/recovery workflow, About security/privacy claims, migrated Settings fixed surface/security operations, the complete fixed/runtime Trash permanent-deletion surface, and the generic CSV/plaintext Transfer boundary.
+The reviewed Hindi resources cover the resource-backed product/title/navigation controls already represented by `AppStrings` plus the security-sensitive local-only, audit-status, recovery-limitation, language-preference status messages, migrated TOTP workflow, initial Unlock workflow, initial vault-onboarding/recovery workflow, About security/privacy claims, migrated Settings fixed surface/security operations, the complete Security Audit presentation, the complete fixed/runtime Trash permanent-deletion surface, and the generic CSV/plaintext Transfer boundary.
 
 ### TOTP workflow
 
@@ -85,6 +85,20 @@ The resource-backed Settings surface includes:
 
 Some Settings values are generated dynamically at runtime (for example measured storage usage). A migrated fixed Settings surface does not by itself mean every dynamic message or every other screen in the application is fully localized.
 
+### Security Audit workflow
+
+`AuditStrings.resx` and `AuditStrings.hi-IN.resx` own the current local Security Audit presentation as a cohesive feature catalog. The migrated surface includes:
+
+- page title, Back action, empty-findings view, and run-again action;
+- initial guidance, no-findings summary, count-formatted findings summary, and contained failure summary;
+- localized labels for `MissingTitle`, `WeakSecret`, `ExpiredReview`, `ReusedSecret`, and `DuplicateEntry`;
+- reviewed explanations for each current finding kind;
+- culture-aware severity formatting.
+
+`SecurityAuditService` remains language-neutral and continues returning stable `SecurityFindingKind` values plus neutral diagnostic text. `AuditViewModel` maps known stable kinds to reviewed App-layer presentation resources. This keeps detection logic independent of culture and avoids making audit behavior differ by selected language. A future unknown finding kind deliberately falls back to a visible neutral representation instead of becoming blank.
+
+TOTP items continue to be excluded from ordinary password weakness/reuse heuristics by the audit engine; localization does not change that policy. The in-app Security Audit is a local vault-content check and must never be presented as an independent professional audit of CipherNest source code.
+
 ### Trash and permanent deletion workflow
 
 `TrashStrings.resx` and `TrashStrings.hi-IN.resx` own the Trash workflow as a cohesive feature catalog. The migrated surface includes:
@@ -121,6 +135,8 @@ Translated security text must preserve these meanings:
 
 - the vault remains local to the device in ordinary operation;
 - CipherNest has not completed an independent professional security audit;
+- the local Security Audit evaluates decrypted vault content while unlocked and must not be described as an independent source-code/cryptographic audit;
+- Security Audit translations must not alter which findings are produced, their severity values, or TOTP exclusion behavior;
 - a forgotten master passphrase is not remotely recoverable and recovery depends on retained configured recovery material;
 - an optional recovery key is shown during setup and must be retained separately because CipherNest cannot later retrieve it for the user;
 - biometric unlock is convenience authentication and never removes the configured periodic master-passphrase requirement or recovery limitation;
@@ -155,7 +171,7 @@ Hindi is therefore a supported **resource-backed language preference**, not a cl
 7. Keep custom MAUI markup extensions explicit about XAML service-provider requirements (`RequireService` when consuming services supplied by XAML, or `AcceptEmptyServiceProvider` when the extension intentionally does not require that context).
 8. For dynamic formatted values or ViewModel operation messages, resolve reviewed resource keys and format with the active UI culture rather than embedding English-only `StringFormat` or status literals.
 9. Keep exact control/protocol values outside translation semantics when application behavior depends on exact equality; translate surrounding instructions but regression-test the unchanged token/skeleton and required formatting placeholders.
-10. Keep authoritative validation/scoring/authorization logic language-neutral; translate presentation labels and messages rather than branching security policy by culture.
+10. Keep authoritative validation/scoring/authorization/audit-detection logic language-neutral; translate presentation labels and messages rather than branching security policy by culture.
 11. Do not surface infrastructure/parser exception or warning text merely to make a localized presentation complete; publish reviewed user-facing messages and keep lower-level detail inside the appropriate test/diagnostic boundary.
 12. Move remaining literal UI copy to resource-backed bindings/services screen by screen; do not mark a screen translated until every user-facing/security-sensitive literal on it has been reviewed.
 13. Keep resource keys language-neutral and stable. Do not encode a language into persistence, vault records, cryptographic associated data, or backup formats.
@@ -172,9 +188,10 @@ For each language-enabled release candidate:
 - verify required formatting placeholders remain present in every translated dynamic format;
 - verify exact behavioral tokens/protocol skeletons required by the application remain byte-for-byte unchanged where the contract requires it;
 - exercise language selection, page reconstruction/navigation, app restart, suspend/resume, and fallback behavior on target platforms;
-- review every translated recovery, biometric, TOTP, Trash/destructive-action, Transfer/plaintext-export, funding, storage/cache, and audit warning against the canonical English security documentation;
+- review every translated recovery, biometric, TOTP, Security Audit, Trash/destructive-action, Transfer/plaintext-export, funding, storage/cache, and audit warning against the canonical English security documentation;
 - test Unlock and onboarding/recovery flows with disposable synthetic vault credentials only;
 - test localized TOTP generation/setup-URI import/copy controls without placing real seeds, URIs, or codes in screenshots/logs/test artifacts;
+- test Security Audit in English/Hindi/System using synthetic vaults that produce every current finding kind; confirm labels/messages/severity/count/failure states remain readable and finding counts/severities do not change with language;
 - test Settings language switching, fixed-text reconstruction, funding-disabled builds, reminder/privacy copy, and cache/storage layouts;
 - test Trash retention presentation, current-master destructive confirmation, per-item deletion, empty-trash confirmation, success-state visibility, and storage-remnant caveats using disposable synthetic vault data only;
 - test Transfer with synthetic CSV data: file picker, mapping labels/layout, import confirmation/result, exact `EXPORT PLAINTEXT` token behavior, current-master rejection/failure, plaintext export/share confirmation, share-return staging cleanup, cache cleanup, and external-copy warnings;
@@ -188,4 +205,4 @@ See:
 - `../verification/AUTHENTICATION_LOCALIZATION_2026_08_19.md`;
 - `../verification/SETTINGS_SURFACE_LOCALIZATION_2026_08_19.md`.
 
-Localization remains presentation-only and must not change vault data, crypto formats, database schema, backup compatibility, recovery behavior, authorization semantics, or security boundaries.
+Localization remains presentation-only and must not change vault data, crypto formats, database schema, backup compatibility, recovery behavior, authorization semantics, audit detection, or security boundaries.
