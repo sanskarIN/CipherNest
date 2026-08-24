@@ -3,7 +3,7 @@ namespace CipherNest.Shared;
 public static class AppConstants
 {
     public const string ProductName = "CipherNest";
-    public const string Version = "0.1.0";
+    public const string Version = "2.4.8";
     public const int DatabaseSchemaVersion = 1;
     public const int CryptoFormatVersion = 1;
     public const string DatabaseFileName = "ciphernest.db";
