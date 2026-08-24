@@ -1,6 +1,8 @@
 # CipherNest Application API Reference
 
-This document describes the current public application/domain contracts used across CipherNest source projects. It is an internal developer reference for the repository, not a network API: the current release exposes no CipherNest application server or remote account API.
+This document describes the current public application/domain contracts used across CipherNest source projects. It is an internal developer reference for the repository, not a network API: the current source exposes no CipherNest application server or remote account API.
+
+Version `2.4.8` is the current unreleased release-preparation product/source version. Product release numbering is independent from persisted schema/cryptographic format compatibility unless a specific change explicitly requires a compatibility-version migration.
 
 Namespace locations are shown so changes can be reviewed against the actual source.
 
@@ -493,7 +495,7 @@ Defaults/bounds are documented in `LIMITS_AND_DEFAULTS.md`. Do not treat setting
 
 ```text
 ProductName = CipherNest
-Version = 0.1.0
+Version = 2.4.8
 DatabaseSchemaVersion = 1
 CryptoFormatVersion = 1
 DatabaseFileName = ciphernest.db
