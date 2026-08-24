@@ -20,6 +20,7 @@ public partial class VaultViewModel : ObservableObject
     private IReadOnlyList<VaultItem> _lastResults = Array.Empty<VaultItem>();
     private IReadOnlyList<VaultItem> _orderedFilteredResults = Array.Empty<VaultItem>();
     private bool _suppressSearch;
+    private bool _isPageActive;
 
     public ObservableCollection<VaultItem> Items { get; } = [];
     public IReadOnlyList<string> SortModes { get; } = ["Favorites & title", "Recently used", "Recently modified", "Title"];
@@ -78,10 +79,12 @@ public partial class VaultViewModel : ObservableObject
     partial void OnSelectedFilterModeChanged(string value) => ReplaceItems(_lastResults);
     partial void OnCollectionFilterChanged(string value) => ReplaceItems(_lastResults);
 
+    public void Activate() => _isPageActive = true;
+
     [RelayCommand]
     public async Task LoadAsync()
     {
-        if (IsBusy) return;
+        if (!_isPageActive || IsBusy) return;
         if (!_vault.IsUnlocked)
         {
             ClearSensitiveState();
@@ -102,7 +105,19 @@ public partial class VaultViewModel : ObservableObject
                 ? allWithTrash.Where(static item => item.DeletedUtc is null).ToArray()
                 : await _vault.GetItemsAsync();
 
+            if (!_isPageActive || !_vault.IsUnlocked)
+            {
+                ClearResultState();
+                return;
+            }
+
             ReplaceItems(string.IsNullOrWhiteSpace(SearchText) ? allItems : await _vault.SearchAsync(SearchText));
+            if (!_isPageActive || !_vault.IsUnlocked)
+            {
+                ClearResultState();
+                return;
+            }
+
             var backupDue = preferences.LastSuccessfulBackupUtc is null || DateTimeOffset.UtcNow - preferences.LastSuccessfulBackupUtc.Value >= TimeSpan.FromDays(Math.Clamp(preferences.BackupReminderDays, 1, 365));
             BackupReminderMessage = backupDue ? "Encrypted backup reminder: create and test a backup from Settings." : string.Empty;
 
@@ -159,6 +174,7 @@ public partial class VaultViewModel : ObservableObject
 
     public void ClearSensitiveState()
     {
+        _isPageActive = false;
         CancelPendingSearch();
         ClearResultState();
 
@@ -173,6 +189,7 @@ public partial class VaultViewModel : ObservableObject
         }
 
         CollectionFilter = string.Empty;
+        ResultCountMessage = string.Empty;
         ErrorMessage = string.Empty;
         BackupReminderMessage = string.Empty;
         ReviewReminderMessage = string.Empty;
@@ -183,15 +200,19 @@ public partial class VaultViewModel : ObservableObject
         try
         {
             await Task.Delay(150, cancellationToken);
-            if (!_vault.IsUnlocked) return;
+            if (!_isPageActive || !_vault.IsUnlocked) return;
             var results = await _vault.SearchAsync(query, cancellationToken);
-            await MainThread.InvokeOnMainThreadAsync(() => ReplaceItems(results));
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                if (_isPageActive && _vault.IsUnlocked && !cancellationToken.IsCancellationRequested)
+                    ReplaceItems(results);
+            });
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             _exceptions.Report("Vault.Search", ex);
-            if (!cancellationToken.IsCancellationRequested)
+            if (!cancellationToken.IsCancellationRequested && _isPageActive)
                 await MainThread.InvokeOnMainThreadAsync(() => ErrorMessage = "Search could not be completed safely. Lock and unlock again if the problem continues.");
         }
     }
