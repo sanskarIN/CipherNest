@@ -9,8 +9,8 @@
     <LangVersion>preview</LangVersion>
     <ApplicationTitle>CipherNest</ApplicationTitle>
     <ApplicationId>in.sanskar.ciphernest</ApplicationId>
-    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>2.4.8</ApplicationDisplayVersion>
+    <ApplicationVersion>20408</ApplicationVersion>
     <CipherNestEnableFundingLink Condition="'$(CipherNestEnableFundingLink)' == ''">true</CipherNestEnableFundingLink>
     <DefineConstants Condition="'$(CipherNestEnableFundingLink)' == 'false'">$(DefineConstants);CIPHERNEST_DISABLE_FUNDING_LINK</DefineConstants>
     <RuntimeIdentifier Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android-arm64</RuntimeIdentifier>
