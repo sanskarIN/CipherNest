@@ -12,4 +12,14 @@
   <data name="AuditNoFindingsSummary" xml:space="preserve"><value>स्थानीय जाँचों में कोई निष्कर्ष नहीं मिला।</value></data>
   <data name="AuditFindingsSummaryFormat" xml:space="preserve"><value>{0} स्थानीय सुरक्षा निष्कर्ष मिले। क्रेडेंशियल बदलने या प्रविष्टियाँ हटाने से पहले उनकी समीक्षा करें।</value></data>
   <data name="AuditFailureSummary" xml:space="preserve"><value>स्थानीय सुरक्षा ऑडिट सुरक्षित रूप से पूरा नहीं हो सका। वॉल्ट को लॉक करके फिर अनलॉक करें और पुनः प्रयास करें।</value></data>
+  <data name="AuditKindMissingTitle" xml:space="preserve"><value>शीर्षक अनुपस्थित</value></data>
+  <data name="AuditKindWeakSecret" xml:space="preserve"><value>कमजोर सीक्रेट</value></data>
+  <data name="AuditKindExpiredReview" xml:space="preserve"><value>समीक्षा लंबित</value></data>
+  <data name="AuditKindReusedSecret" xml:space="preserve"><value>दोबारा उपयोग किया गया सीक्रेट</value></data>
+  <data name="AuditKindDuplicateEntry" xml:space="preserve"><value>डुप्लिकेट प्रविष्टि</value></data>
+  <data name="AuditMessageMissingTitle" xml:space="preserve"><value>इस प्रविष्टि में शीर्षक नहीं है।</value></data>
+  <data name="AuditMessageWeakSecret" xml:space="preserve"><value>सीक्रेट कमजोर लगता है; जहाँ संभव हो इसे लंबे और अद्वितीय मान से बदलें।</value></data>
+  <data name="AuditMessageExpiredReview" xml:space="preserve"><value>इस प्रविष्टि की समीक्षा का समय हो चुका है।</value></data>
+  <data name="AuditMessageReusedSecret" xml:space="preserve"><value>यह सीक्रेट किसी अन्य वॉल्ट प्रविष्टि में भी उपयोग किया गया है।</value></data>
+  <data name="AuditMessageDuplicateEntry" xml:space="preserve"><value>यह प्रविष्टि किसी अन्य सक्रिय वॉल्ट प्रविष्टि की बिल्कुल समान प्रति है। किसी भी प्रति को हटाने से पहले दोनों की समीक्षा करें।</value></data>
 </root>
