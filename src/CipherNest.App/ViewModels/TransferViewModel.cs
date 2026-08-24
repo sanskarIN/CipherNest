@@ -69,6 +69,7 @@ public partial class TransferViewModel : ObservableObject
     [RelayCommand]
     private async Task PickCsvAsync()
     {
+        if (IsBusy) return;
         IsBusy = true;
         try
         {
@@ -105,42 +106,46 @@ public partial class TransferViewModel : ObservableObject
     [RelayCommand]
     private async Task ImportAsync()
     {
+        if (IsBusy) return;
         if (_selectedCsv is null || string.IsNullOrWhiteSpace(TitleColumn))
         {
             StatusMessage = Text("TransferSelectAndMapTitleStatus");
             return;
         }
 
-        bool confirmed;
-        try
-        {
-            confirmed = await Shell.Current.DisplayAlertAsync(
-                Text("TransferImportConfirmTitle"),
-                Text("TransferImportConfirmBody"),
-                Text("TransferImportConfirmAccept"),
-                Text("CancelButton"));
-        }
-        catch (Exception ex)
-        {
-            _exceptions.Report("Transfer.ImportConfirm", ex);
-            StatusMessage = Text("TransferImportConfirmFailureStatus");
-            return;
-        }
-        if (!confirmed) return;
-
         IsBusy = true;
         try
         {
-            await using var stream = await _selectedCsv.OpenReadAsync();
-            var result = await _transfer.ImportCsvAsync(stream, new CsvImportMapping(TitleColumn!, UsernameColumn, SecretColumn, UrlColumn, NotesColumn, TagsColumn, CollectionColumn, TypeColumn));
-            StatusMessage = result.Warnings.Count == 0
-                ? Format("TransferImportResultFormat", result.Imported, result.Skipped)
-                : Format("TransferImportResultWithWarningsFormat", result.Imported, result.Skipped);
-        }
-        catch (Exception ex)
-        {
-            _exceptions.Report("Transfer.ImportCsv", ex);
-            StatusMessage = Text("TransferImportFailureStatus");
+            bool confirmed;
+            try
+            {
+                confirmed = await Shell.Current.DisplayAlertAsync(
+                    Text("TransferImportConfirmTitle"),
+                    Text("TransferImportConfirmBody"),
+                    Text("TransferImportConfirmAccept"),
+                    Text("CancelButton"));
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Transfer.ImportConfirm", ex);
+                StatusMessage = Text("TransferImportConfirmFailureStatus");
+                return;
+            }
+            if (!confirmed) return;
+
+            try
+            {
+                await using var stream = await _selectedCsv.OpenReadAsync();
+                var result = await _transfer.ImportCsvAsync(stream, new CsvImportMapping(TitleColumn!, UsernameColumn, SecretColumn, UrlColumn, NotesColumn, TagsColumn, CollectionColumn, TypeColumn));
+                StatusMessage = result.Warnings.Count == 0
+                    ? Format("TransferImportResultFormat", result.Imported, result.Skipped)
+                    : Format("TransferImportResultWithWarningsFormat", result.Imported, result.Skipped);
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Transfer.ImportCsv", ex);
+                StatusMessage = Text("TransferImportFailureStatus");
+            }
         }
         finally
         {
@@ -151,74 +156,75 @@ public partial class TransferViewModel : ObservableObject
     [RelayCommand]
     private async Task ExportPlaintextAsync()
     {
+        if (IsBusy) return;
         if (!string.Equals(ExportConfirmationPhrase.Trim(), ExportPhrase, StringComparison.Ordinal))
         {
             StatusMessage = Format("TransferExportPhraseRequiredFormat", ExportPhrase);
             return;
         }
 
-        bool authenticated;
-        try
-        {
-            authenticated = await _vault.ReauthenticateAsync(ExportMasterPassphrase);
-        }
-        catch (Exception ex)
-        {
-            _exceptions.Report("Transfer.ExportPlaintext.Reauthenticate", ex);
-            StatusMessage = Text("TransferMasterConfirmFailureStatus");
-            return;
-        }
-        finally
-        {
-            ExportMasterPassphrase = string.Empty;
-        }
-
-        if (!authenticated)
-        {
-            StatusMessage = Text("TransferMasterFailedStatus");
-            return;
-        }
-
-        bool confirmed;
-        try
-        {
-            confirmed = await Shell.Current.DisplayAlertAsync(
-                Text("TransferExportConfirmTitle"),
-                Text("TransferExportConfirmBody"),
-                Text("TransferExportConfirmAccept"),
-                Text("CancelButton"));
-        }
-        catch (Exception ex)
-        {
-            _exceptions.Report("Transfer.ExportPlaintext.Confirm", ex);
-            StatusMessage = Text("TransferExportConfirmFailureStatus");
-            return;
-        }
-        if (!confirmed)
-        {
-            ExportConfirmationPhrase = string.Empty;
-            return;
-        }
-
+        // Consume the acknowledgement for this attempt before the first await so a second tap cannot reuse it.
         ExportConfirmationPhrase = string.Empty;
         IsBusy = true;
         string? plaintextPath = null;
         try
         {
-            var directory = Path.Combine(FileSystem.Current.CacheDirectory, "plaintext-exports");
-            Directory.CreateDirectory(directory);
-            plaintextPath = Path.Combine(directory, $"CipherNest-PLAINTEXT-{DateTimeOffset.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.csv");
-            await using (var stream = new FileStream(plaintextPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
+            bool authenticated;
+            try
             {
-                await _transfer.ExportCsvAsync(stream);
+                authenticated = await _vault.ReauthenticateAsync(ExportMasterPassphrase);
             }
-            StatusMessage = Text("TransferExportTemporaryStatus");
-            await Share.Default.RequestAsync(new ShareFileRequest(Text("TransferShareTitle"), new ShareFile(plaintextPath)));
-        }
-        catch (Exception ex)
-        {
-            _exceptions.Report("Transfer.ExportPlaintext", ex);
-            StatusMessage = Text("TransferExportFailureStatus");
+            catch (Exception ex)
+            {
+                _exceptions.Report("Transfer.ExportPlaintext.Reauthenticate", ex);
+                StatusMessage = Text("TransferMasterConfirmFailureStatus");
+                return;
+            }
+            finally
+            {
+                ExportMasterPassphrase = string.Empty;
+            }
+
+            if (!authenticated)
+            {
+                StatusMessage = Text("TransferMasterFailedStatus");
+                return;
+            }
+
+            bool confirmed;
+            try
+            {
+                confirmed = await Shell.Current.DisplayAlertAsync(
+                    Text("TransferExportConfirmTitle"),
+                    Text("TransferExportConfirmBody"),
+                    Text("TransferExportConfirmAccept"),
+                    Text("CancelButton"));
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Transfer.ExportPlaintext.Confirm", ex);
+                StatusMessage = Text("TransferExportConfirmFailureStatus");
+                return;
+            }
+            if (!confirmed) return;
+
+            try
+            {
+                var directory = Path.Combine(FileSystem.Current.CacheDirectory, "plaintext-exports");
+                Directory.CreateDirectory(directory);
+                plaintextPath = Path.Combine(directory, $"CipherNest-PLAINTEXT-{DateTimeOffset.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.csv");
+                await using (var stream = new FileStream(plaintextPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
+                {
+                    await _transfer.ExportCsvAsync(stream);
+                }
+                StatusMessage = Text("TransferExportTemporaryStatus");
+                await Share.Default.RequestAsync(new ShareFileRequest(Text("TransferShareTitle"), new ShareFile(plaintextPath)));
+            }
+            catch (Exception ex)
+            {
+                _exceptions.Report("Transfer.ExportPlaintext", ex);
+                StatusMessage = Text("TransferExportFailureStatus");
+            }
         }
         finally
         {
@@ -228,7 +234,7 @@ public partial class TransferViewModel : ObservableObject
                 {
                     if (File.Exists(plaintextPath)) File.Delete(plaintextPath);
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception ex)
                 {
                     _exceptions.Report("Transfer.ExportPlaintext.TempCleanup", ex);
                     StatusMessage += Text("TransferCleanupWarningSuffix");
@@ -241,13 +247,15 @@ public partial class TransferViewModel : ObservableObject
     [RelayCommand]
     private Task CleanPlaintextCacheAsync()
     {
+        if (IsBusy) return Task.CompletedTask;
+
         var directory = Path.Combine(FileSystem.Current.CacheDirectory, "plaintext-exports");
         try
         {
             if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
             StatusMessage = Text("TransferCacheCleanedStatus");
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
             _exceptions.Report("Transfer.CleanPlaintextCache", ex);
             StatusMessage = Text("TransferCacheCleanFailureStatus");
