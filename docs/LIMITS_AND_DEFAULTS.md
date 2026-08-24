@@ -8,7 +8,7 @@ From `CipherNest.Shared.AppConstants` and current format policies:
 
 | Setting | Current value |
 |---|---:|
-| Product version | `0.1.0` |
+| Product version | `2.4.8` |
 | Database schema version | `1` |
 | Cryptographic envelope version | `1` |
 | Current vault-header document version | `2` |
@@ -20,7 +20,7 @@ From `CipherNest.Shared.AppConstants` and current format policies:
 | Attachment directory | `attachments` |
 | Backup extension | `.cnbak` |
 
-A future format/schema change must not silently reuse an old version when compatibility changes.
+Product version `2.4.8` is current release-preparation metadata. It does not change the database, encrypted-envelope, vault-header, backup, or attachment compatibility versions by itself. A future format/schema change must not silently reuse an old version when compatibility changes.
 
 ## Cryptographic sizes/defaults
 
