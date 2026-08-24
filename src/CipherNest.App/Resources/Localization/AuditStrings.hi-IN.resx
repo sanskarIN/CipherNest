@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AuditTitle" xml:space="preserve"><value>सुरक्षा ऑडिट</value></data>
+  <data name="AuditEmptyView" xml:space="preserve"><value>स्थानीय जाँचों में कोई निष्कर्ष नहीं मिला।</value></data>
+  <data name="AuditSeverityFormat" xml:space="preserve"><value>गंभीरता: {0}/4</value></data>
+  <data name="AuditRunAgainButton" xml:space="preserve"><value>ऑडिट फिर चलाएँ</value></data>
+  <data name="AuditInitialSummary" xml:space="preserve"><value>कमजोर, दोबारा उपयोग किए गए, डुप्लिकेट, बिना शीर्षक वाले या समीक्षा-तिथि पार कर चुके वॉल्ट प्रविष्टियों को खोजने के लिए स्थानीय ऑडिट चलाएँ।</value></data>
+  <data name="AuditNoFindingsSummary" xml:space="preserve"><value>स्थानीय जाँचों में कोई निष्कर्ष नहीं मिला।</value></data>
+  <data name="AuditFindingsSummaryFormat" xml:space="preserve"><value>{0} स्थानीय सुरक्षा निष्कर्ष मिले। क्रेडेंशियल बदलने या प्रविष्टियाँ हटाने से पहले उनकी समीक्षा करें।</value></data>
+  <data name="AuditFailureSummary" xml:space="preserve"><value>स्थानीय सुरक्षा ऑडिट सुरक्षित रूप से पूरा नहीं हो सका। वॉल्ट को लॉक करके फिर अनलॉक करें और पुनः प्रयास करें।</value></data>
+</root>
