@@ -19,4 +19,10 @@ public partial class VaultPage : ContentPage
             await vm.LoadAsync();
         }
     }
+
+    protected override void OnDisappearing()
+    {
+        if (BindingContext is VaultViewModel vm) vm.ClearSensitiveState();
+        base.OnDisappearing();
+    }
 }
