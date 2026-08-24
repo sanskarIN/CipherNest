@@ -18,8 +18,8 @@ public partial class AboutPage : ContentPage
         SupportDevelopmentMetadataLabel.IsVisible = BuildFeatureFlags.IsFundingLinkEnabled;
     }
 
-    private async void OnBackClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//vault");
-    private async void OnSecurityInfoClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//security-info");
+    private async void OnBackClicked(object? sender, EventArgs e) => await NavigateSafelyAsync("//vault", "About.Navigate.Back");
+    private async void OnSecurityInfoClicked(object? sender, EventArgs e) => await NavigateSafelyAsync("//security-info", "About.Navigate.SecurityInfo");
     private async void OnRepositoryClicked(object? sender, EventArgs e) => await OpenExternalAsync(AppConstants.RepositoryUrl, "repository");
     private async void OnCreatorClicked(object? sender, EventArgs e) => await OpenExternalAsync(AppConstants.CreatorUrl, "creator profile");
     private async void OnBuyMeACoffeeClicked(object? sender, EventArgs e)
@@ -32,19 +32,21 @@ public partial class AboutPage : ContentPage
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
         {
-            await DisplayAlertAsync("Link unavailable", $"The configured {description} link is invalid.", "Close");
+            await ShowAlertSafelyAsync("Link unavailable", $"The configured {description} link is invalid.", "Close", "About.ExternalLink.Invalid.Alert");
             return;
         }
 
         try
         {
             if (!await Launcher.Default.OpenAsync(uri))
-                await DisplayAlertAsync("Could not open link", $"The system could not open the {description}.", "Close");
+            {
+                await ShowAlertSafelyAsync("Could not open link", $"The system could not open the {description}.", "Close", "About.ExternalLink.Unavailable.Alert");
+            }
         }
         catch (Exception ex)
         {
             _exceptions.Report("About.ExternalLink", ex);
-            await DisplayAlertAsync("Could not open link", $"The {description} is not available through the current system launcher.", "Close");
+            await ShowAlertSafelyAsync("Could not open link", $"The {description} is not available through the current system launcher.", "Close", "About.ExternalLink.Failure.Alert");
         }
     }
 
@@ -60,7 +62,37 @@ public partial class AboutPage : ContentPage
         if (_versionTaps >= 7)
         {
             _versionTaps = 0;
-            await Shell.Current.GoToAsync("//developer");
+            await NavigateSafelyAsync("//developer", "About.Navigate.Developer");
+        }
+    }
+
+    private async Task NavigateSafelyAsync(string route, string operation)
+    {
+        try
+        {
+            await Shell.Current.GoToAsync(route);
+        }
+        catch (Exception ex)
+        {
+            _exceptions.Report(operation, ex);
+            await ShowAlertSafelyAsync(
+                "Navigation unavailable",
+                "CipherNest could not open that local page safely. Return to the vault and try again.",
+                "Close",
+                $"{operation}.Alert");
+        }
+    }
+
+    private async Task ShowAlertSafelyAsync(string title, string message, string cancel, string operation)
+    {
+        try
+        {
+            await DisplayAlertAsync(title, message, cancel);
+        }
+        catch (Exception ex)
+        {
+            // Click handlers are async void. Contain secondary alert failures rather than leaking them through the native callback.
+            _exceptions.Report(operation, ex);
         }
     }
 }
