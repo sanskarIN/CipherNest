@@ -16,4 +16,10 @@ public partial class AuditPage : ContentPage
         base.OnAppearing();
         if (BindingContext is AuditViewModel vm) await vm.RunAsync();
     }
+
+    protected override void OnDisappearing()
+    {
+        if (BindingContext is AuditViewModel vm) vm.ClearSensitiveState();
+        base.OnDisappearing();
+    }
 }
