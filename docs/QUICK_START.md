@@ -7,7 +7,9 @@ This guide is the shortest safe path from a fresh checkout or installation to a 
 ## 1. Project at a glance
 
 - Product: **CipherNest**
-- Version in source: **0.1.0**
+- Version in source: **2.4.8 (unreleased release preparation)**
+- MAUI build/application version: **20408**
+- Windows package version: **2.4.8.0**
 - Technology: **C# / .NET 10 / .NET MAUI**
 - License: **GPL-3.0-or-later**
 - Repository: `https://github.com/sanskarIN/CipherNest`
@@ -21,6 +23,8 @@ This guide is the shortest safe path from a fresh checkout or installation to a 
 - Optional development support: `https://buymeacoffee.com/sanskarIN`
 
 CipherNest is local-first. Ordinary use does not require a CipherNest account, email address, phone number, cloud service, or application server.
+
+Version 2.4.8 is prepared in current source but must not be described as shipped or exact-head verified until the immutable 2.4.8 candidate completes the configured automated/platform gates and documented external release validation.
 
 ## 2. End-user quick start
 
@@ -392,7 +396,7 @@ The immutable implementation baseline immediately before this documentation expa
 - Mac Catalyst Release: passed;
 - CodeQL v4: passed after analyzable core and MAUI application builds.
 
-That remains historical evidence for that exact SHA. The August 18 TOTP setup-URI continuation creates a newer implementation/documentation head and therefore requires its own configured CI/CodeQL result before it can be described as exact-head verified.
+That remains historical evidence for that exact SHA. The current 2.4.8 release-preparation continuation creates a newer implementation/documentation head and therefore requires its own configured CI/CodeQL/platform result before it can be described as exact-head verified.
 
 ## 23. Before editing security-sensitive code
 
