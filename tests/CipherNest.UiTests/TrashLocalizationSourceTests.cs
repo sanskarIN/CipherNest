@@ -27,7 +27,14 @@ public sealed class TrashLocalizationSourceTests
         "TrashEmptyConfirmAccept",
         "TrashEmptiedStatus",
         "TrashMasterRequiredStatus",
-        "TrashMasterConfirmationFailedStatus"
+        "TrashMasterConfirmationFailedStatus",
+        "TrashLoadFailureStatus",
+        "TrashRestoreFailureStatus",
+        "TrashDeleteConfirmFailureStatus",
+        "TrashDeleteFailureStatus",
+        "TrashEmptyConfirmFailureStatus",
+        "TrashEmptyFailureStatus",
+        "TrashMasterConfirmationErrorStatus"
     ];
 
     [Fact]
@@ -71,7 +78,7 @@ public sealed class TrashLocalizationSourceTests
         }
         Assert.Contains("TrashText(\"CancelButton\")", source, StringComparison.Ordinal);
         Assert.Contains("string.Format(CultureInfo.CurrentUICulture", source, StringComparison.Ordinal);
-        Assert.Contains("Items.Clear();\n            StatusMessage = TrashText(\"TrashEmptiedStatus\");", source, StringComparison.Ordinal);
+        Assert.Contains("Items.Clear();\n                StatusMessage = TrashText(\"TrashEmptiedStatus\");", source, StringComparison.Ordinal);
 
         Assert.DoesNotContain("\"Delete permanently?\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("\"Empty trash permanently?\"", source, StringComparison.Ordinal);
@@ -97,8 +104,10 @@ public sealed class TrashLocalizationSourceTests
 
         Assert.Contains("Recovery keys are not accepted", neutral["TrashPermanentDeletionSummary"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("remnants", neutral["TrashDeleteConfirmBody"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Some items may already have been permanently deleted", neutral["TrashEmptyFailureStatus"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("रिकवरी कुंजियाँ", hindi["TrashPermanentDeletionSummary"], StringComparison.Ordinal);
         Assert.Contains("फॉरेंसिक", hindi["TrashDeleteConfirmBody"], StringComparison.Ordinal);
+        Assert.Contains("पहले ही स्थायी रूप से हटाए", hindi["TrashEmptyFailureStatus"], StringComparison.Ordinal);
     }
 
     [Fact]
