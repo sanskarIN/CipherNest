@@ -52,36 +52,36 @@ The intended dependency direction is documented in `architecture/ARCHITECTURE.md
 
 ## ViewModels
 
-- `src/CipherNest.App/ViewModels/AuditViewModel.cs` — drives the local decrypted-content security audit while unlocked; converts stable audit findings into localized presentation labels/messages/severity text, publishes culture-aware summaries, and contains privacy-safe failure reporting.
-- `src/CipherNest.App/ViewModels/DeveloperViewModel.cs` — developer-information surface without turning debug information into a secret-exposure path.
+- `src/CipherNest.App/ViewModels/AuditViewModel.cs` — drives the local decrypted-content security audit while unlocked; converts stable audit findings into localized presentation labels/messages/severity text, prevents overlapping audit runs, clears stale findings when locked/leaving the screen, and contains privacy-safe failure reporting.
+- `src/CipherNest.App/ViewModels/DeveloperViewModel.cs` — developer-information and redacted-diagnostics surface with guarded filesystem enumeration, privacy-safe export/share/cleanup failure reporting, and separated simulated-lock/navigation outcomes.
 - `src/CipherNest.App/ViewModels/GeneratorDefaultsViewModel.cs` — edits and persists non-secret password/passphrase generator defaults.
-- `src/CipherNest.App/ViewModels/GeneratorViewModel.cs` — password/passphrase generation workflow, strength guidance, clipboard interaction, and sensitive generated-value lifetime.
+- `src/CipherNest.App/ViewModels/GeneratorViewModel.cs` — password/passphrase generation workflow, strength guidance, clipboard interaction, sensitive generated-value lifetime, and stale generated-output clearing when loading/generation fails.
 - `src/CipherNest.App/ViewModels/ItemEditorViewModel.cs` — primary item-editor orchestration, loading, validation, save/delete state, fields, tags, attachments, and per-item security behavior.
 - `src/CipherNest.App/ViewModels/ItemEditorViewModel.Clipboard.cs` — username/secret/custom-secret copy paths and clipboard-failure containment.
 - `src/CipherNest.App/ViewModels/ItemEditorViewModel.Preview.cs` — bounded attachment/text preview and plaintext-export/share interaction.
 - `src/CipherNest.App/ViewModels/ItemEditorViewModel.Totp.cs` — TOTP generation, refresh, bounded setup-URI import/copy, localized status text, transient-code handling, and seed-bearing field cleanup.
 - `src/CipherNest.App/ViewModels/OnboardingViewModel.cs` — first-vault creation, master-passphrase/recovery setup, navigation, and initialization state.
 - `src/CipherNest.App/ViewModels/OnboardingViewModel.Security.cs` — security-sensitive onboarding helpers, passphrase/recovery handling, cleanup, and localized security status behavior.
-- `src/CipherNest.App/ViewModels/SettingsViewModel.cs` — settings orchestration and persisted non-secret preference state.
+- `src/CipherNest.App/ViewModels/SettingsViewModel.cs` — settings orchestration and persisted non-secret preference state; encrypted backup creation is separated from later reminder/share/navigation completion so a successfully created backup cannot be relabeled as failed by an optional follow-up error.
 - `src/CipherNest.App/ViewModels/SettingsViewModel.Accessibility.cs` — accessibility/theme/language-related settings behavior.
 - `src/CipherNest.App/ViewModels/SettingsViewModel.Localization.cs` — localized settings/status helpers and culture-sensitive presentation.
 - `src/CipherNest.App/ViewModels/SettingsViewModel.Navigation.cs` — settings navigation to transfer, security, legal, generator-default, and related screens.
 - `src/CipherNest.App/ViewModels/SettingsViewModel.Security.cs` — master-passphrase rotation, biometric enable/disable, backup/restore, destructive vault deletion, security confirmations, and related authorization-sensitive operations.
-- `src/CipherNest.App/ViewModels/TransferViewModel.cs` — generic CSV import and guarded plaintext CSV export orchestration, reviewed localized fixed/runtime safety text, exact `EXPORT PLAINTEXT` acknowledgement handling, current-master confirmation, privacy-safe result publication, temporary-share cleanup, and localized cache-removal status.
+- `src/CipherNest.App/ViewModels/TransferViewModel.cs` — generic CSV import and guarded plaintext CSV export orchestration, reviewed localized fixed/runtime safety text, single-operation gating, one-attempt exact `EXPORT PLAINTEXT` acknowledgement consumption before async re-authentication, privacy-safe result publication, temporary-share cleanup, and localized cache-removal status.
 - `src/CipherNest.App/ViewModels/TransferViewModel.Security.cs` — current-master/plaintext-export authorization, confirmation, and sensitive transfer state handling.
-- `src/CipherNest.App/ViewModels/TrashViewModel.cs` — trash listing, restore, retention cleanup, permanent deletion, empty-trash authorization, reviewed localized destructive-action text, and success-state publication without immediately overwriting the completed empty-trash message.
+- `src/CipherNest.App/ViewModels/TrashViewModel.cs` — trash listing/retention/restore/permanent deletion/empty-trash orchestration with single-operation gating, reviewed localized destructive/failure states, early current-master field clearing before re-authentication awaits, privacy-safe exception reporting, honest partial-empty failure handling, and decrypted-list cleanup on page exit.
 - `src/CipherNest.App/ViewModels/UnlockViewModel.cs` — master/recovery/secondary unlock orchestration and startup unlock state.
 - `src/CipherNest.App/ViewModels/UnlockViewModel.Security.cs` — unlock security decisions, localized failures, rate limiting, capability checks, and sensitive credential cleanup.
-- `src/CipherNest.App/ViewModels/VaultViewModel.cs` — unlocked vault list/search/filter/sort/load-more/recent-access behavior and navigation to item workflows.
+- `src/CipherNest.App/ViewModels/VaultViewModel.cs` — unlocked vault list/search/filter/sort/load-more/recent-access behavior with overlapping-load prevention, pending-search cancellation, decrypted result cleanup on page exit/lock, and an active-page publication gate preventing off-screen async work from repopulating cleared results.
 
 ## Views
 
 Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns narrow lifecycle/event glue. Security/business logic belongs in services/ViewModels rather than being duplicated in code-behind.
 
 - `src/CipherNest.App/Views/AboutPage.xaml` — product identity, creator/support, legal/privacy/security entry points, and funding surface where enabled.
-- `src/CipherNest.App/Views/AboutPage.xaml.cs` — About lifecycle/event glue.
+- `src/CipherNest.App/Views/AboutPage.xaml.cs` — About callback/navigation/external-launch glue with privacy-safe containment for launcher, Shell navigation, and secondary alert failures.
 - `src/CipherNest.App/Views/AuditPage.xaml` — local audit results and controls with resource-backed title, back action, empty-state text, run-again action, and localized presentation bindings for finding labels/messages/severity.
-- `src/CipherNest.App/Views/AuditPage.xaml.cs` — Audit page glue.
+- `src/CipherNest.App/Views/AuditPage.xaml.cs` — Audit page glue; clears the in-memory finding presentation when leaving the screen.
 - `src/CipherNest.App/Views/DeveloperPage.xaml` — developer/build information UI.
 - `src/CipherNest.App/Views/DeveloperPage.xaml.cs` — Developer page glue.
 - `src/CipherNest.App/Views/GeneratorDefaultsPage.xaml` — generator-default settings UI.
@@ -97,15 +97,15 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 - `src/CipherNest.App/Views/SettingsPage.xaml` — appearance, language, accessibility, privacy timers, reminders, storage, backup/security, optional funding, and About/legal navigation.
 - `src/CipherNest.App/Views/SettingsPage.xaml.cs` — settings lifecycle/glue.
 - `src/CipherNest.App/Views/StartupPage.xaml` — startup routing/initialization surface.
-- `src/CipherNest.App/Views/StartupPage.xaml.cs` — startup navigation glue.
+- `src/CipherNest.App/Views/StartupPage.xaml.cs` — startup navigation glue with retry-state restoration before secondary failure UI and containment of diagnostics/alert failures from the async-void lifecycle callback.
 - `src/CipherNest.App/Views/TransferPage.xaml` — generic CSV import mapping plus guarded plaintext-export UI with reviewed resource-backed fixed text, translated semantic descriptions, current-master input, exact acknowledgement phrase guidance, and explicit sensitive-data warnings.
 - `src/CipherNest.App/Views/TransferPage.xaml.cs` — transfer lifecycle/glue.
 - `src/CipherNest.App/Views/TrashPage.xaml` — trash/restore/permanent-delete UI with reviewed resource-backed fixed text and semantic labels for the destructive-action surface.
-- `src/CipherNest.App/Views/TrashPage.xaml.cs` — Trash page glue.
+- `src/CipherNest.App/Views/TrashPage.xaml.cs` — Trash page lifecycle glue; clears bound destructive credentials and decrypted Trash item objects on disappearance.
 - `src/CipherNest.App/Views/UnlockPage.xaml` — master/recovery/biometric convenience unlock UI and security warnings.
 - `src/CipherNest.App/Views/UnlockPage.xaml.cs` — unlock lifecycle cleanup/glue.
 - `src/CipherNest.App/Views/VaultPage.xaml` — main vault list/search/filter/sort/load-more UI.
-- `src/CipherNest.App/Views/VaultPage.xaml.cs` — vault page lifecycle/navigation glue.
+- `src/CipherNest.App/Views/VaultPage.xaml.cs` — vault page lifecycle glue; activates result publication on entry and clears/cancels decrypted list/search state on disappearance.
 
 ## Platform entry points and manifests
 
@@ -120,7 +120,7 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 - `src/CipherNest.App/Platforms/MacCatalyst/Program.cs` — Mac Catalyst process entry point.
 - `src/CipherNest.App/Platforms/Windows/App.xaml` — WinUI host resources.
 - `src/CipherNest.App/Platforms/Windows/App.xaml.cs` — WinUI host bootstrap.
-- `src/CipherNest.App/Platforms/Windows/Package.appxmanifest` — Windows package identity, assets, and target declarations.
+- `src/CipherNest.App/Platforms/Windows/Package.appxmanifest` — Windows package identity, assets, target declarations, and prepared package version `2.4.8.0`.
 
 ## Resources and assets
 
@@ -134,8 +134,8 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 - `src/CipherNest.App/Resources/Localization/AppStrings.hi-IN.resx` — reviewed Hindi primary catalog; primary-catalog key parity is regression-tested, but complete translation of every application literal is not claimed.
 - `src/CipherNest.App/Resources/Localization/AuditStrings.resx` — neutral English feature catalog for the Security Audit page, summaries, failure state, finding-kind labels, finding messages, and culture-aware severity format.
 - `src/CipherNest.App/Resources/Localization/AuditStrings.hi-IN.resx` — reviewed Hindi Security Audit feature catalog with exact key parity, non-empty/distinct-value checks, and placeholder regression coverage.
-- `src/CipherNest.App/Resources/Localization/TrashStrings.resx` — neutral English feature catalog for Trash listing/permanent-deletion fixed text, confirmations, status formats, and safety wording.
-- `src/CipherNest.App/Resources/Localization/TrashStrings.hi-IN.resx` — reviewed Hindi Trash feature catalog with exact key parity, distinct-value, placeholder, and security-meaning regression coverage.
+- `src/CipherNest.App/Resources/Localization/TrashStrings.resx` — neutral English feature catalog for Trash listing/permanent-deletion fixed text, confirmations, status formats, destructive safety wording, and privacy-safe load/restore/confirmation/delete/empty/reauthentication failures.
+- `src/CipherNest.App/Resources/Localization/TrashStrings.hi-IN.resx` — reviewed Hindi Trash feature catalog with exact parity, distinct values, placeholder/security-meaning checks, and honest partial-empty failure wording.
 - `src/CipherNest.App/Resources/Localization/TransferStrings.resx` — neutral English feature catalog for generic CSV mapping and the guarded plaintext import/export boundary, including confirmation/status formats and accessibility descriptions.
 - `src/CipherNest.App/Resources/Localization/TransferStrings.hi-IN.resx` — reviewed Hindi Transfer feature catalog with exact key parity, exact `EXPORT PLAINTEXT` token preservation, dynamic-placeholder coverage, and plaintext/security-limit wording.
 - `src/CipherNest.App/Resources/Raw/wordlist_notice.txt` — notice accompanying the bundled local passphrase word-list resource path.
@@ -244,7 +244,7 @@ Each `.xaml` file defines the visual/semantic surface; its `.xaml.cs` file owns 
 # 5. CipherNest.Shared
 
 - `src/CipherNest.Shared/CipherNest.Shared.csproj` — small shared project used across layers.
-- `src/CipherNest.Shared/AppConstants.cs` — application/product/version/public contact/link constants and other small shared constants; public project metadata should remain centralized here instead of being duplicated across ViewModels.
+- `src/CipherNest.Shared/AppConstants.cs` — application/product/version/public contact/link constants and other small shared constants; current runtime product version is `2.4.8`, and public project metadata should remain centralized here instead of being duplicated across ViewModels.
 - `src/CipherNest.Shared/VaultStorageLimits.cs` — shared hard resource ceilings for vault/database/item/attachment/search-related storage safety; changes require synchronized boundary tests and documentation.
 
 # 6. Source-change synchronization checklist
