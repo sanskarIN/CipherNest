@@ -26,4 +26,11 @@
   <data name="TrashEmptiedStatus" xml:space="preserve"><value>ट्रैश खाली कर दिया गया। CipherNest ने अपने एन्क्रिप्टेड रिकॉर्ड और अटैचमेंट कंटेनर हटा दिए; भौतिक स्टोरेज के अवशेष ऐप के नियंत्रण से बाहर रह सकते हैं।</value></data>
   <data name="TrashMasterRequiredStatus" xml:space="preserve"><value>स्थायी रूप से हटाने से पहले वर्तमान मास्टर पासफ्रेज़ दर्ज करें। इस विनाशकारी पुष्टि के लिए रिकवरी कुंजियाँ स्वीकार नहीं की जातीं।</value></data>
   <data name="TrashMasterConfirmationFailedStatus" xml:space="preserve"><value>मास्टर-पासफ्रेज़ पुष्टि विफल रही। कुछ भी स्थायी रूप से नहीं हटाया गया।</value></data>
+  <data name="TrashLoadFailureStatus" xml:space="preserve"><value>ट्रैश सुरक्षित रूप से लोड नहीं हो सका। वॉल्ट को लॉक करके फिर अनलॉक करें और पुनः प्रयास करें।</value></data>
+  <data name="TrashRestoreFailureStatus" xml:space="preserve"><value>ट्रैश किया गया आइटम सुरक्षित रूप से पुनर्स्थापित नहीं हो सका। पुनः प्रयास से पहले ट्रैश को फिर लोड करें।</value></data>
+  <data name="TrashDeleteConfirmFailureStatus" xml:space="preserve"><value>स्थायी हटाने की पुष्टि सुरक्षित रूप से नहीं दिखाई जा सकी। जानबूझकर कुछ भी नहीं हटाया गया।</value></data>
+  <data name="TrashDeleteFailureStatus" xml:space="preserve"><value>स्थायी हटाना सुरक्षित रूप से पूरा नहीं हो सका। पुनः प्रयास से पहले ट्रैश को फिर लोड करें।</value></data>
+  <data name="TrashEmptyConfirmFailureStatus" xml:space="preserve"><value>ट्रैश खाली करने की पुष्टि सुरक्षित रूप से नहीं दिखाई जा सकी। ट्रैश खाली करने की कोई प्रक्रिया शुरू नहीं हुई।</value></data>
+  <data name="TrashEmptyFailureStatus" xml:space="preserve"><value>ट्रैश पूरी तरह खाली नहीं हो सका। कुछ आइटम पहले ही स्थायी रूप से हटाए जा चुके हो सकते हैं; पुनः प्रयास से पहले ट्रैश को फिर लोड करें।</value></data>
+  <data name="TrashMasterConfirmationErrorStatus" xml:space="preserve"><value>मास्टर-पासफ्रेज़ पुष्टि सुरक्षित रूप से पूरी नहीं हो सकी। जानबूझकर कुछ भी नहीं हटाया गया।</value></data>
 </root>
