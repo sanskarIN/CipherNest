@@ -33,15 +33,20 @@ public sealed class ReleaseVersionSourceTests
     }
 
     [Fact]
-    public void ReleaseDocumentation_Identifies248AsPreparationNotVerifiedRelease()
+    public void CurrentReleaseDocumentation_Identifies248AsPreparationNotVerifiedRelease()
     {
         var status = File.ReadAllText(PathAt("PROJECT_STATUS.md"));
         var changelog = File.ReadAllText(PathAt("CHANGELOG.md"));
+        var configuration = File.ReadAllText(PathAt("docs", "CONFIGURATION_REFERENCE.md"));
 
         Assert.Contains("2.4.8", status, StringComparison.Ordinal);
         Assert.Contains("release candidate", status, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("2.4.8", changelog, StringComparison.Ordinal);
         Assert.Contains("unreleased", changelog, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Product/source version | `2.4.8`", configuration, StringComparison.Ordinal);
+        Assert.Contains("MAUI application version | `20408`", configuration, StringComparison.Ordinal);
+        Assert.Contains("Windows package version | `2.4.8.0`", configuration, StringComparison.Ordinal);
+        Assert.Contains("must not be described as shipped or exact-head verified", configuration, StringComparison.Ordinal);
     }
 
     private static string PathAt(params string[] segments)
