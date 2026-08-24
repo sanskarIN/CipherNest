@@ -2,7 +2,9 @@
 
 ## Current release line
 
-**0.1.0 + unreleased hardening/documentation**
+**2.4.8 release preparation (unreleased; not exact-head verified)**
+
+The MAUI application metadata now declares display version `2.4.8` with monotonic numeric build code `20408`. This is release-candidate preparation, not a claim that version 2.4.8 has passed its final exact-head CI, device, signing, store, or independent-security-review gates.
 
 This status separates:
 
@@ -36,7 +38,7 @@ For that exact SHA:
 - Mac Catalyst Release passed;
 - CodeQL v4 passed after analyzable core and MAUI application builds.
 
-That is exact evidence only for `8566980f...`. The August 18 TOTP setup-URI continuation is newer implementation/documentation work and requires its own final exact-head runs before the later SHA can be called release-candidate verified.
+That evidence remains historical and applies only to `8566980f...`. The newer localization/hardening work and the 2.4.8 version-preparation commits require their own final exact-head runs before the resulting SHA can be called release-candidate verified.
 
 Historical 240-test and 554-test verification records remain preserved for their original exact candidates.
 
@@ -58,7 +60,7 @@ The project now has a full canonical documentation suite including:
 - full architecture/security/privacy/format/build/testing/release/operations documentation;
 - documentation verification records and source-regression tests.
 
-The complete-documentation source-to-doc gate is `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`. A dedicated August 18 TOTP setup-URI verification record is added by the current continuation once its exact scope/evidence is frozen.
+The complete-documentation source-to-doc gate is `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`. Later continuation records preserve their own exact scopes and evidence rather than rewriting historical verification claims.
 
 # 3. Implemented core architecture
 
@@ -160,6 +162,8 @@ The vault-content audit reports:
 - exact duplicate entries;
 - missing titles;
 - overdue review dates.
+
+The Security Audit presentation now uses neutral English and reviewed Hindi feature resources for the page surface, run summaries, failure state, finding-kind labels, finding explanations, and severity formatting while the infrastructure audit engine remains language-neutral.
 
 TOTP seeds are excluded from ordinary password weakness/reuse heuristics. This audit is not an independent audit of CipherNest source code.
 
@@ -335,6 +339,7 @@ Lifecycle fail-closed paths contain/report secondary lock/clipboard errors rathe
 - Neutral English fallback resources.
 - System/English/Hindi persisted preference.
 - Reviewed `hi-IN` resource-backed catalog.
+- Feature catalogs for Trash, Transfer, and Security Audit workflows.
 
 Complete translation of every remaining literal is not claimed. Physical assistive-technology validation remains external.
 
@@ -448,15 +453,15 @@ Canonical entry points:
 - `docs/LIMITS_AND_DEFAULTS.md`
 - architecture/security/privacy/format/testing/release/operations specialist docs.
 
-The complete-documentation verification contract is `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`. The current continuation adds a dedicated TOTP setup-URI verification record rather than rewriting historical verification evidence.
+The complete-documentation verification contract is `docs/verification/COMPLETE_DOCUMENTATION_2026_08_16.md`. Later continuations add dedicated verification/history records rather than rewriting historical verification evidence.
 
 # 23. Next steps
 
 The ordered external-validation/release/future-development roadmap is maintained in `docs/NEXT_STEPS.md`.
 
-Immediate release-oriented sequence:
+Immediate 2.4.8 release-oriented sequence:
 
-1. preserve one immutable candidate after the current TOTP URI/documentation work stops changing the head;
+1. finish repository-completable 2.4.8 source/tests/documentation synchronization and preserve one immutable candidate;
 2. run exact-head CI/CodeQL/dependency/documentation gates;
 3. execute device security/lifecycle/clipboard/screenshot tests;
 4. validate backup/restore/recovery and TOTP URI interoperability on targets with synthetic data;
@@ -465,4 +470,4 @@ Immediate release-oriented sequence:
 7. package/sign/notarize;
 8. complete store privacy/policy review including BMC setting;
 9. obtain independent security review before broader security claims;
-10. tag/publish only with recorded evidence.
+10. tag/publish 2.4.8 only with recorded exact-candidate evidence.
