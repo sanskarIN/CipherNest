@@ -40,6 +40,8 @@ public sealed class ReleaseVersionSourceTests
         var configuration = File.ReadAllText(PathAt("docs", "CONFIGURATION_REFERENCE.md"));
         var packaging = File.ReadAllText(PathAt("docs", "releases", "PACKAGING.md"));
         var quickStart = File.ReadAllText(PathAt("docs", "QUICK_START.md"));
+        var api = File.ReadAllText(PathAt("docs", "API_REFERENCE.md"));
+        var limits = File.ReadAllText(PathAt("docs", "LIMITS_AND_DEFAULTS.md"));
 
         Assert.Contains("2.4.8", status, StringComparison.Ordinal);
         Assert.Contains("release candidate", status, StringComparison.OrdinalIgnoreCase);
@@ -56,6 +58,9 @@ public sealed class ReleaseVersionSourceTests
         Assert.Contains("Version in source: **2.4.8 (unreleased release preparation)**", quickStart, StringComparison.Ordinal);
         Assert.Contains("MAUI build/application version: **20408**", quickStart, StringComparison.Ordinal);
         Assert.Contains("Windows package version: **2.4.8.0**", quickStart, StringComparison.Ordinal);
+        Assert.Contains("Version = 2.4.8", api, StringComparison.Ordinal);
+        Assert.Contains("Product version | `2.4.8`", limits, StringComparison.Ordinal);
+        Assert.Contains("does not change the database, encrypted-envelope, vault-header, backup, or attachment compatibility versions", limits, StringComparison.Ordinal);
     }
 
     private static string PathAt(params string[] segments)
